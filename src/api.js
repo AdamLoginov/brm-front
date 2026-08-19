@@ -2,7 +2,9 @@ import axios from 'axios';
 import router from './router/index';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8080/'
+
+    baseURL: '/api/'
+    // baseURL: 'http://localhost:8080/api/'
     // baseURL: 'http://192.168.0.180:8080'
 });
 
