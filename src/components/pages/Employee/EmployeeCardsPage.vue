@@ -37,7 +37,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import api from '../../api';
+import api from '../../../api';
 
 const cards = ref(null);
 
@@ -53,7 +53,7 @@ const deleteEmployeeCardHandler = async(id) =>{
 const getEmployeeCardHandler = async() =>{
     try{
         const res = await api.get('/employeecards');
-        cards.value = res.data;
+        cards.value = res.data.sort((a, b) =>(a.surname || '').localeCompare(b.surname || '', 'ru'))
         console.log('[Employee] ', res.data);
     }catch(err){
         console.log('[Error] ', err);

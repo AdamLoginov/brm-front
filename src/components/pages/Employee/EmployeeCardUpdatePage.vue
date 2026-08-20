@@ -1,10 +1,10 @@
 <template>
     <div class="container-fluid">
         <div class="pt-3">
-            <h4>Создать карточку сотрудника</h4>
+            <h4>Изменить карточку сотрудника</h4>
             <hr>
         </div>
-        <form class="col-8" @submit.prevent="createEmployeeCardHandler">
+        <form class="col-8" @submit.prevent="updateEmployeeCardHandler">
             <div class="row fw-semibold" style="font-size: 12px;">
                 <div class="col-4">
                     <label class="form-label">Фамилия</label>
@@ -91,7 +91,7 @@
                 </div>
 
                 <div class="d-flex align-items-end pt-3">
-                    <button type="submit" class="btn btn-primary btn-sm" :disabled="isSubmit">Создать</button>
+                    <button type="submit" class="btn btn-primary btn-sm" :disabled="isSubmit">Сохранить</button>
                 </div>
             </div>
         </form>
@@ -101,6 +101,9 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import api from '../../../api';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
 
 const isSubmit = ref(false);
 
@@ -110,11 +113,10 @@ const formData = reactive({
     middle_name: "",
     date_of_birth: "",
     place_of_residence: "",
-    marital_status: "",
     start_date: "",
     salary_rate: "",
-    experience: "",
     education: "",
+    experience: "",
     pasport_serial: "",
     pasport_number: "",
     snils: "",
@@ -137,29 +139,39 @@ const getAgreementHandler = async()=>{
     }
 }
 
-const createEmployeeCardHandler = async() =>{
+const getEmployeeCardDetailHandler = async() =>{
+  try{
+    const res = await api.get(`/employeescard/${route.params.id}/detail`);
+    formData.name = res.data.name;
+    formData.surname = res.data.surname;
+    formData.middle_name = res.data.middle_name;
+    formData.date_of_birth = res.data.date_of_birth;
+    formData.place_of_residence = res.data.place_of_residence;
+    formData.marital_status = res.data.marital_status;
+    formData.start_date = res.data.start_date;
+    formData.salary_rate = res.data.salary_rate;
+    formData.education = res.data.education;
+    formData.experience = res.data.experience;
+    formData.pasport_serial = res.data.pasport_serial;
+    formData.pasport_number = res.data.pasport_number;
+    formData.snils = res.data.snils;
+    formData.phone = res.data.phone;
+    formData.email = res.data.email;
+    formData.profession = res.data.profession;
+    formData.agreement_id = res.data.agreement_id;
+    formData.status = res.data.status;
+
+    console.log(formData)
+  }catch(err){
+    console.log(err);
+  }
+}
+
+const updateEmployeeCardHandler = async() =>{
     try{
         isSubmit.value = true;
-        const res = await api.post('/employeescard/create', formData);
-
-        formData.name = "",
-        formData.surname = "";
-        formData.middle_name = "";
-        formData.date_of_birth = "";
-        formData.place_of_residence = "";
-        formData.marital_status = "";
-        formData.start_date = "";
-        formData.salary_rate = "";
-        formData.education = "";
-        formData.experience = "";
-        formData.pasport_serial = "";
-        formData.pasport_number = "";
-        formData.snils = "";
-        formData.phone = "";
-        formData.email = "";
-        formData.profession = "";
-        formData.agreement_id = 0;
-        formData.status = false;
+        console.log(formData)
+        const res = await api.post(`/employeescard/${route.params.id}/update`, formData);
     }catch(err){
         console.log('[Error] ', err);
     }finally{
@@ -167,6 +179,7 @@ const createEmployeeCardHandler = async() =>{
     }
 }
 
+onMounted(getEmployeeCardDetailHandler);
 onMounted(getAgreementHandler);
 </script>
 

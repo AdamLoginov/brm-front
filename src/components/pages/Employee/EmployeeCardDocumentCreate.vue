@@ -9,7 +9,11 @@
 
                 <div class="mb-3">
                     <label for="exampleFormControlInput1" class="form-label">Наименование документа:</label>
-                    <input v-model="formData.document_name" type="text" class="form-control" placeholder="Наименование документа">
+                    <select v-model="formData.category_employee_document_id" class="form-select " aria-label="Default select example">
+                        <option value="no">Выберете категорию</option>
+                        <option v-for="category in categorys" :key="category.ID" :value="category.ID">{{ category.category_name }}</option>
+                    </select>
+                    <router-link :to="{name:'employee-document-category'}">Создать новую категорию</router-link>
                 </div>
 
                 <div class="mb-3">
@@ -26,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue';
+import { ref, computed, reactive, onMounted } from 'vue';
 
 import { useRoute } from 'vue-router';
 import api from '../../../api';
@@ -34,8 +38,10 @@ import api from '../../../api';
 const route = useRoute();
 
 const formData = reactive({
-    document_name: ""
+    category_employee_document_id: "no"
 });
+
+const categorys = ref([]);
 
 const SelectFile = ref(null);
 const isSubmit = ref(false);
@@ -44,25 +50,35 @@ const handleFileChange = (event) =>{
     SelectFile.value = event.target.files[0];
 };
 
+const getCategoryEmployeeCardDocumentHandler = async() =>{
+    try{
+        const res = await api.get('/employeescard/document/category');
+        categorys.value = res.data.sort((a, b) =>(a.category_name || '').localeCompare(b.category_name || '', 'ru'));
+        console.log("[Категории]: ", categorys.value);
+    }catch(err){
+        console.log(err);
+    }
+}
+
 const SendEmail = async()=>{
     try{
         isSubmit.value = true;
         
         const SendFormData = new FormData();
-        SendFormData.append('document_name', formData.document_name);
+        SendFormData.append('category_employee_document_id', formData.category_employee_document_id);
         SendFormData.append('file', SelectFile.value);
 
         const res = await api.post(`/employeescard/${route.params.id}/document/create`, SendFormData);
 
         SelectFile.value = null;
-        formData.document_name = "";
+        formData.category_employee_document_id = "no";
     }catch(err){
         console.log(err);
     }finally{
         isSubmit.value = false;
     }
 };
-
+onMounted(getCategoryEmployeeCardDocumentHandler);
 </script>
 
 <style>

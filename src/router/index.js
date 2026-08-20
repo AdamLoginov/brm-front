@@ -42,11 +42,13 @@ import EmailsPage from '../components/pages/EmailsPage.vue'
 //tools
 import ToolsAgreementpage from '../components/pages/ToolsAgreementpage.vue'
 // EmployeeCards
-import EmployeeCardsPage from '../components/pages/EmployeeCardsPage.vue'
+import EmployeeCardsPage from '../components/pages/Employee/EmployeeCardsPage.vue'
 import EmployeeCardCreatePage from '../components/pages/Employee/EmployeeCardCreatePage.vue'
 import AgreementAppendEmployee from '../components/pages/AgreementAppendEmployee.vue'
 import EmployeeCardDetailPage from '../components/pages/Employee/EmployeeCardDetailPage.vue'
 import EmployeeCardDocumentCreate from '../components/pages/Employee/EmployeeCardDocumentCreate.vue'
+import EmployeeCardUpdatePage from '../components/pages/Employee/EmployeeCardUpdatePage.vue'
+import EmployeeCardDocumentCategory from '../components/pages/Employee/EmployeeCardDocumentCategory.vue'
 
 
 const routes = [
@@ -148,6 +150,19 @@ const routes = [
     path: '/employeecards/:id', name :`employee-card-detail`, component: EmployeeCardDetailPage, meta:{requiresAuth: true,breadcrumb: [
         { title: 'Сотрудники', name: 'employee-cards' },
         { title: 'Подробнее', name: 'employee-cards-detail' },
+      ]
+    } 
+  }, 
+
+  { 
+    path: '/employeecards/:id/update', name :`employee-card-update`, component: EmployeeCardUpdatePage, meta:{requiresAuth: true,breadcrumb: [
+        { title: 'Сотрудники', name: 'employee-cards' },
+      ]
+    } 
+  }, 
+  { 
+    path: '/employeecards/document/category', name :`employee-document-category`, component: EmployeeCardDocumentCategory, meta:{requiresAuth: true,breadcrumb: [
+        { title: 'Сотрудники', name: 'employee-cards' },
       ]
     } 
   }, 
