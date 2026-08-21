@@ -31,15 +31,19 @@
                 </div>
                 <div class="col-2">{{ card.profession }}</div>
                 <div class="col-3 text-truncate" :class="card.agreement_id === 0 ? 'text-danger' : ''">{{ card.agreement_id !== 0 ? card.agreement.name : 'Никуда не приписан' }}</div>
-                <div class="col-2">{{ card.phone }}</div>
-                <div class="col-1 d-flex justify-content-end">
-                    <div class="dropdown">
-                        <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item text-danger" type="button" @click="deleteEmployeeCardHandler(card.ID)">Удалить</a></li>
-                        </ul>
+                <div class="col-2 d-flex">
+                    <div class="col-10">
+                        {{ card.phone }}
+                    </div>
+                    <div class="col-2 d-flex justify-content-end">
+                        <div class="dropdown">
+                            <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item text-danger" type="button" @click="deleteEmployeeCardHandler(card.ID)">Удалить</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
