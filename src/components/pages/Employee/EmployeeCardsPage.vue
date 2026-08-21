@@ -7,19 +7,31 @@
         </div> 
         <div class="list-group">
             <div class="list-group-item d-flex">
-                <div class="col-1 fw-semibold">#</div>  
-                <div class="col-4 fw-semibold">ФИО</div>  
-                <div class="col-3 fw-semibold">Номер телефона</div>  
-                <div class="col-3 fw-semibold">Специализация</div>  
+                <div class="col-2 d-flex fw-semibold">
+                    <div class="col-4">#</div>
+                    <div class="col-8 d-flex justify-content-center">Статус</div>
+                </div>  
+                <div class="col-3 fw-semibold">ФИО</div>  
+                <div class="col-2 fw-semibold">Должность</div>  
+                <div class="col-3 fw-semibold">Место работы</div>  
+                <div class="col-2 fw-semibold">Номер телефона</div>  
             </div>
 
-            <div v-for="(card, index) in cards" :key="card.ID" class="list-group-item d-flex">
-                <div class="col-1">{{ index + 1 }}</div>
-                <div class="col-4">
+            <div v-for="(card, index) in cards" :key="card.ID" class="list-group-item d-flex" style="font-size: 14px;">
+                <div class="col-2 d-flex">
+                    <div class="col-4">{{ index + 1 }}</div>
+                    <div class="col-8 d-flex justify-content-center align-items-center fw-semibold"  style="font-size: 10px;">
+                        <div class="border rounded-4 px-2 py-1" :class="card.status ? 'text-danger border-danger' : 'text-success border-success'">
+                            {{ card.status ? 'Уволен':'Работает' }}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-3">
                     <router-link :to="{name: 'employee-card-detail', params: {id:card.ID}}">{{ card.surname }} {{ card.name }} {{ card.middle_name }}</router-link>
                 </div>
-                <div class="col-3">{{ card.phone }}</div>
-                <div class="col-3">{{ card.profession }}</div>
+                <div class="col-2">{{ card.profession }}</div>
+                <div class="col-3 text-truncate" :class="card.agreement_id === 0 ? 'text-danger' : ''">{{ card.agreement_id !== 0 ? card.agreement.name : 'Никуда не приписан' }}</div>
+                <div class="col-2">{{ card.phone }}</div>
                 <div class="col-1 d-flex justify-content-end">
                     <div class="dropdown">
                         <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
