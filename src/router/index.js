@@ -12,7 +12,7 @@ import MaterialPage from '../components/pages/MaterialPage.vue'
 import AgreementDetailPage from '../components/pages/AgreementDetailPage.vue'
 import AgreementsPage from '../components/pages/AgreementsPage.vue'
 import AgreementCreatePage from '../components/pages/AgreementCreatePage.vue'
-import AgreementEmployee from '../components/pages/AgreementEmployee.vue'
+import AgreementEmployee from '../components/pages/Agreement/AgreementEmployee.vue'
 
 //Сметы
 import EstimatesCreatePage from '../components/pages/EstimatesCreatePage.vue'
