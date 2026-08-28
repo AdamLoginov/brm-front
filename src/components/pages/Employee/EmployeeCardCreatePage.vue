@@ -101,6 +101,9 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import api from '../../../api';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const isSubmit = ref(false);
 
@@ -141,6 +144,8 @@ const createEmployeeCardHandler = async() =>{
     try{
         isSubmit.value = true;
         const res = await api.post('/employeescard/create', formData);
+
+        router.push({name: 'employee-cards'});
 
         formData.name = "",
         formData.surname = "";

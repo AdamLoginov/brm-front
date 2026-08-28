@@ -46,6 +46,9 @@
 <script setup>
     import { onMounted, reactive, ref } from 'vue';
     import api from '../../api';
+import { useRouter } from 'vue-router';
+
+    const router = useRouter();
 
     const isSubmit = ref(false);
     const message = ref(''); 
@@ -65,6 +68,8 @@
             console.log(formData);
 
             const res = await api.post('/agreements/create', formData);
+
+            router.push({name: 'agreements'})
 
             formData.name = "";
             formData.number = "";
