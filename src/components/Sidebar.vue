@@ -86,12 +86,10 @@
     
     <div class="dropdown"> 
       <a href="#" class="d-flex align-items-center link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"> 
-        <img v-if="!isColapsed" src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle me-2"> 
-        <strong>mdo</strong> 
+        <strong v-if="user">{{ user.login }}</strong> 
       </a> 
       <ul class="dropdown-menu text-small shadow"> 
-        <li><a class="dropdown-item" href="#">Настройки</a></li> 
-        <li><a class="dropdown-item" href="#">Профиль</a></li> 
+        <li><router-link :to="{name: 'users-all'}" class="dropdown-item"> Пользователи</router-link></li> 
         <li><hr class="dropdown-divider"></li> 
         <li>
           <!-- Обязательно .prevent и href="#" -->
@@ -105,13 +103,27 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import api from '../api';
 
 const router = useRouter();
 
 const emit = defineEmits(['isColapsed'])
 const isColapsed = ref(false);
+
+const userId = localStorage.getItem('user-id')
+const user = ref(null);
+
+const getUserHandler = async() =>{
+  try{
+    const res = await api.get(`/users/${userId}`)
+    user.value = res.data
+    console.log("[User] ", res.data)
+  }catch(err){
+    console.log(err)
+  }
+}
 
 const closeSidebar = () =>{
   if (isColapsed.value) {
@@ -127,6 +139,8 @@ const handleLogout = () => {
   localStorage.removeItem('user-token');
   router.push('/login'); 
 };
+
+onMounted(getUserHandler);
 </script>
 
 <style scoped>

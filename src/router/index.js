@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import Login from '../components/Login.vue'
-import Users from '../components/Users.vue'
 import Employee from '../components/Employee.vue'
 import EmployeeCreate from '../components/EmployeeCreate.vue'
 
@@ -50,11 +49,18 @@ import EmployeeCardDocumentCreate from '../components/pages/Employee/EmployeeCar
 import EmployeeCardUpdatePage from '../components/pages/Employee/EmployeeCardUpdatePage.vue'
 import EmployeeCardDocumentCategory from '../components/pages/Employee/EmployeeCardDocumentCategory.vue'
 
+import UsersPage from '../components/pages/Users/UsersPage.vue'
+import UserCreatePage from '../components/pages/Users/UserCreatePage.vue'
+import UserUploadPage from '../components/pages/Users/UserUploadPage.vue'
+
 
 const routes = [
   { path: '/', name: 'home', component: HomePage, meta:{requiresAuth: true} },
   { path: '/login', name: 'login', component: Login, meta:{requiresAuth: false} },
-  { path: '/users', name: 'users', component: Users, meta:{requiresAuth: true} },
+  
+  { path: '/users', name: 'users-all', component: UsersPage, meta:{requiresAuth: true} },
+  { path: '/users/create', name: 'user-create', component: UserCreatePage, meta:{requiresAuth: true} },
+  { path: '/users/upload/:id', name: 'user-upload', component: UserUploadPage, meta:{requiresAuth: true} },
 
   { path: '/materials/create', name: 'materials-creaate-one', component: MaterialPage, meta:{requiresAuth: true} },
   { path: '/materials', name: 'materials', component: MaterialPage, meta:{requiresAuth: true} },
