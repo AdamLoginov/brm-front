@@ -8,11 +8,11 @@
               v-if="avatar && avatar.length !== 0"
               :href="`${apiBaseurl}/employeescard/document/${avatar.at(-1).ID}/detail`"
               target="_blank"
-              class="d-block w-100 ratio-3x4"
+              class="d-block w-100 ratio-3x4" 
             >
               <img
-                :src="`${apiBaseurl}/employeescard/document/${avatar.at(-1).ID}/detail`"
-                class="w-100 h-100 object-fit-cover roundedl"
+                :src="avatarUrl"
+                class="w-100 h-100 object-fit-cover rounded"
                 alt="Фото сотрудника"
               >
             </a>
@@ -119,7 +119,7 @@
         {{ document.category_document_card.category_name }}
       </div>
       <div class="col-5">
-        <a :href="`${apiBaseurl}/employeescard/document/${document.ID}/detail`" target="_blank" class="mx-2 d-block text-truncate">
+        <a :href="`${apiBaseurl}/employeescard/document/${document.ID}/detail`" target="_blank" class="mx-2 d-block text-truncate" @click.prevent="openDocument(document)">
           <span class="">{{ document.file_name }}</span>
         </a>
       </div>
@@ -149,12 +149,14 @@ const apiBaseurl = api.defaults.baseURL
 
 const employeeCard = ref(null);
 const avatar = ref(null);
+const avatarUrl = ref(null)
 
 const getEmployeeCardDetailHandler = async() =>{
   try{
     const res = await api.get(`/employeescard/${route.params.id}/detail`);
     employeeCard.value = res.data;
     avatar.value = employeeCard.value.employee_documents.filter(item => item.category_document_card.category_name === "Фото")
+    getAvatarHandler();
     console.log(employeeCard.value)
     console.log(avatar.value)
   }catch(err){
@@ -169,6 +171,32 @@ const deleteEmployeeCardDocumentHandler = async(id) =>{
   }catch(err){
     console.log(err)
   }
+}
+
+const getAvatarHandler = async () => {
+    try {
+        if (!avatar.value || avatar.value.length === 0) {
+            avatarUrl.value = null
+            return
+        }
+        const document = avatar.value.at(-1)
+        const res = await api.get(`/employeescard/document/${document.ID}/detail`,{responseType: 'blob'})
+        avatarUrl.value = URL.createObjectURL(res.data)
+
+    } catch (err) {
+        console.error(err)
+    }
+}
+
+const openDocument = async (document) => {
+    try {
+        const res = await api.get(`/employeescard/document/${document.ID}/detail`,{responseType: 'blob'})
+        const url = URL.createObjectURL(res.data)
+        window.open(url, '_blank')
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err) {
+        console.error(err)
+    }
 }
 
 onMounted(getEmployeeCardDetailHandler);
