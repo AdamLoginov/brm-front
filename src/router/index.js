@@ -8,9 +8,9 @@ import HomePage from '../components/HomePage.vue'
 import MaterialPage from '../components/pages/MaterialPage.vue'
 
 
-import AgreementDetailPage from '../components/pages/AgreementDetailPage.vue'
-import AgreementsPage from '../components/pages/AgreementsPage.vue'
-import AgreementCreatePage from '../components/pages/AgreementCreatePage.vue'
+import AgreementDetailPage from '../components/pages/Agreement/AgreementDetailPage.vue'
+import AgreementsPage from '../components/pages/Agreement/AgreementsPage.vue'
+import AgreementCreatePage from '../components/pages/Agreement/AgreementCreatePage.vue'
 import AgreementEmployee from '../components/pages/Agreement/AgreementEmployee.vue'
 
 //Сметы
@@ -52,6 +52,7 @@ import EmployeeCardDocumentCategory from '../components/pages/Employee/EmployeeC
 import UsersPage from '../components/pages/Users/UsersPage.vue'
 import UserCreatePage from '../components/pages/Users/UserCreatePage.vue'
 import UserUploadPage from '../components/pages/Users/UserUploadPage.vue'
+import AgreementUpdatePage from '../components/pages/Agreement/AgreementUpdatePage.vue'
 
 
 const routes = [
@@ -83,6 +84,8 @@ const routes = [
       ]
     }
   },
+
+  { path: '/agreements/update/:id', name: 'agreement-update', component: AgreementUpdatePage, meta:{requiresAuth: true}},
 
   { path: '/agreements/detail/:id', 
     name: 'agreement', 

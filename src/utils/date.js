@@ -18,3 +18,11 @@ export const formatDate = (dateString) => {
 
   return `${timePart} ${datePart}`;
 };
+
+export const formatDateStr = (date) =>{
+  try{
+      return new Intl.DateTimeFormat('ru-RU').format(new Date(date));
+  }catch(err){
+      return ''
+  }
+}

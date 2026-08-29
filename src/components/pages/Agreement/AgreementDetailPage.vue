@@ -3,13 +3,27 @@
         <div class="col-md-8 m-5">
             <div class="row">
                 <div class="col-md-12 mb-5">
-                    <div class="card rounded-4">
-                        <div v-if="agreement" class="card-body">
-                            <p>Наименование договора: <span class="fw-semibold">{{ agreement.name }}</span></p>
+                    <div v-if="agreement" class="card rounded-4">
+                        <div class="card-body">
+                            <div class="d-flex pb-3">
+                                <div class="col-11 fw-semibold" style="font-size: 18px;">{{ agreement.name }}</div>
+                                <div class="col-1 d-flex me-2 justify-content-end">
+                                    <div class="dropdown">
+                                        <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </a>
+                                        <ul class="dropdown-menu">
+                                            <li><router-link :to="{name: 'agreement-update', params:{id: agreement.ID}}" class="dropdown-item">Редактировать</router-link></li>
+                                            <li><a class="dropdown-item text-danger" type="button" @click="deleteEmployeeCardHandler(card.ID)">Удалить</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <p>Коротное наименование договора: <span class="fw-semibold">{{ agreement.short_name }}</span></p>
                             <p>Заказчик: <span class="fw-semibold">{{ agreement.customer }}</span></p>
                             <p>Адрес: <span class="fw-semibold">{{ agreement.address }}</span></p>
                             <p>Цена договора: <span class="fw-semibold">{{ agreement.price }}</span></p>
-                            <p class="m-0">Срок выполнения: <span class="fw-semibold">{{ formatDate(agreement.due_date) }}</span></p>
+                            <p class="m-0">Срок выполнения: <span class="fw-semibold">{{ formatDateStr(agreement.date_end) }}</span></p>
                         </div>
                     </div>
                 </div>
@@ -17,8 +31,6 @@
                 <div class="mb-2">
                     <h5>Данные по договору</h5>
                 </div>
-    
-    
     
                 <div class="col-md-12 px-2 ">
                     <div class="list-group rounded-4">
@@ -112,9 +124,9 @@
 
 <script setup>
     import { onMounted, ref } from 'vue';
-    import api from '../../api';
+    import api from '../../../api';
     import { useRoute } from 'vue-router';
-import { formatDate } from '../../utils/date';
+import { formatDate, formatDateStr } from '../../../utils/date';
 
     const agreement = ref(null);
     const route = useRoute();

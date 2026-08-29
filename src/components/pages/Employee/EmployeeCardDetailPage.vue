@@ -30,7 +30,7 @@
             <div class="pt-3">
               <div class="d-flex">
                 <div class="col-4 pe-3 fw-semibold">Дата рождения:</div>
-                <div class="col-8 employeecard-text" >{{ employeeCard.date_of_birth }}</div>
+                <div class="col-8 employeecard-text" >{{ formatDateStr(employeeCard.date_of_birth) }}</div>
               </div>
               <div class="d-flex">
                 <div class="col-4 pe-3 fw-semibold">Город проживания:</div>
@@ -45,7 +45,7 @@
         <div class="pt-3">
           <div class="d-flex">
             <div class="col-4 pe-3 fw-semibold">Дата начала работы:</div>
-            <div class="col-8 employeecard-text" >{{ employeeCard.start_date }}</div>
+            <div class="col-8 employeecard-text" >{{ formatDateStr(employeeCard.start_date) }}</div>
           </div>
           <div class="d-flex">
             <div class="col-4 pe-3 fw-semibold">Образование:</div>
@@ -143,6 +143,7 @@
 import { useRoute } from 'vue-router';
 import api from '../../../api';
 import { onMounted, ref } from 'vue';
+import { formatDateStr } from '../../../utils/date';
 
 const route = useRoute();
 const apiBaseurl = api.defaults.baseURL
