@@ -11,7 +11,7 @@
             <div class="list-group-item d-flex">
                 <div class="col-5 d-flex align-items-center" style="font-size: 12px;">
                     <div class="fw-semibold">Правила заполнения:</div>
-                    <div class="ms-1"> <span class="bg-success fw-semibold px-1 rounded-1">0-24</span> - часы;</div>
+                    <div class="ms-1"> <span class="bg-success fw-semibold px-1 rounded-1">0-24</span> - Часы;</div>
                     <div class="ms-1"> <span class="bg-danger fw-semibold px-1 rounded-1">П</span> - Прогул;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #e97c17;">Б</span> - Болен;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #fff200;">В</span> - Выходной;</div>
@@ -39,6 +39,14 @@
                 </div>
                 <div class="col-1 ps-2">
                     <button type="button" class="btn  btn-sm" :class="isChange ? 'btn-success' : 'btn-primary'" @click="isChange ? postTimesheetHandler() : changeTimesheet()">{{ isChange ? 'Сохранить' : 'Изменить' }}</button>
+                </div>
+            </div>
+            <div class="list-group-item d-flex p-0">
+                <div class="col-3 px-2" style="font-size: 14px;"></div>
+                <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }" >
+                    <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center text-lowercase" :class="ifHollyday(getWeekDay(day, month, year)) ? 'bg-warning-subtle': ''"  style="font-size: 12px;">
+                        {{ getWeekDay(day, month, year) }}
+                    </div>
                 </div>
             </div>
             <div class="list-group-item d-flex p-0">
@@ -85,7 +93,7 @@ const timesheet_server = ref({});
 
 const timesheet_color = {
     '':   '#fff',
-    'Д':  '#8432dc',
+    'Д':  '#c07ff1',
     'В':  '#fff200',
     'П':  '#dd4433',
     'Б':  '#e97c17',
@@ -333,6 +341,30 @@ function getDate(day, month, year) {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 } 
 
+const ifHollyday = (week_day) => {
+    if (week_day === 'СБ' || week_day === 'ВС'){
+        return true
+    }
+
+    return false
+}
+
+const getWeekDay = (day, month, year) => {
+    const date = new Date(year, month - 1, day)
+
+    const weekDays = [
+        'ВС',
+        'ПН',
+        'ВТ',
+        'СР',
+        'ЧТ',
+        'ПТ',
+        'СБ'
+    ]
+
+    return weekDays[date.getDay()]
+}
+
 const daysInMonth = computed(() => {
 return new Date(
     new Date().getFullYear(),
@@ -384,7 +416,7 @@ onMounted(getAgreementEmployeeHandler);
 }
 
 .day-cell {
-    border-left: 1px solid #e97c17;
+    border-left: 1px solid #c07ff1;
     border-left: 1px solid #dee2e6;
     text-align: center;
     font-size: 10px;
