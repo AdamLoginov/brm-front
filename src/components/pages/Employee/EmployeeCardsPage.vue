@@ -30,7 +30,7 @@
                     <router-link :to="{name: 'employee-card-detail', params: {id:card.ID}}">{{ card.surname }} {{ card.name }} {{ card.middle_name }}</router-link>
                 </div>
                 <div class="col-2">{{ card.profession }}</div>
-                <div class="col-3 text-truncate" :class="card.agreement_id === 0 ? 'text-danger' : ''">{{ card.agreement_id !== 0 ? card.agreement.name : 'Никуда не приписан' }}</div>
+                <div class="col-3 text-truncate" :class="card.agreement_id === 0 ? 'text-danger' : ''">{{ card.agreement_id !== 0 ? card.agreement.short_name : 'Никуда не приписан' }}</div>
                 <div class="col-2 d-flex">
                     <div class="col-10">
                         {{ card.phone }}
