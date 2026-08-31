@@ -9,13 +9,15 @@
 
         <div class="list-group">
             <div class="list-group-item d-flex">
-                <div class="col-4 d-flex align-items-center" style="font-size: 12px;">
+                <div class="col-5 d-flex align-items-center" style="font-size: 12px;">
                     <div class="fw-semibold">Правила заполнения:</div>
                     <div class="ms-1"> <span class="bg-success fw-semibold px-1 rounded-1">0-24</span> - часы;</div>
                     <div class="ms-1"> <span class="bg-danger fw-semibold px-1 rounded-1">П</span> - Прогул;</div>
-                    <div class="ms-1"> <span class="bg-warning fw-semibold px-1 rounded-1">Б</span> - Болен;</div>
+                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #e97c17;">Б</span> - Болен;</div>
+                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #fff200;">В</span> - Выходной;</div>
+                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #8432dc;">Д</span> - В дороге;</div>
                 </div>
-                <div class="col-4"></div>
+                <div class="col-3"></div>
                 <div class="col-2">
                     <select v-model="month_change" class="form-select form-select-sm" aria-label=".form-select-sm example">
                         <option value="1">Январь</option>
@@ -83,8 +85,10 @@ const timesheet_server = ref({});
 
 const timesheet_color = {
     '':   '#fff',
+    'Д':  '#8432dc',
+    'В':  '#fff200',
     'П':  '#dd4433',
-    'Б':  '#fff200',
+    'Б':  '#e97c17',
     '0':  '#fff200',
     '1':  '#B8F0B5',
     '2':  '#A9EBAA',
@@ -257,7 +261,7 @@ const validateTimesheetInput = (employeeId, day) => {
         timesheet.value[employeeId][day]['state'] = "Delete"
     }
 
-    if (value === 'П' || value === 'Б') { 
+    if (value === 'П' || value === 'Б' || value === 'Д' || value === 'В') { 
         timesheet.value[employeeId][day]['status'] = value 
         return 
     } 
@@ -380,7 +384,7 @@ onMounted(getAgreementEmployeeHandler);
 }
 
 .day-cell {
-    border-left: 1px solid #dd4433;
+    border-left: 1px solid #e97c17;
     border-left: 1px solid #dee2e6;
     text-align: center;
     font-size: 10px;

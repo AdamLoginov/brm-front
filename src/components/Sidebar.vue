@@ -4,6 +4,7 @@
 
       <div v-if="!isColapsed" class="col-10">
         <router-link to="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none"> 
+          <!-- <link rel="icon" type="image/svg+xml" href="../../public/BRM-logo.svg" /> -->
           <i class="bi bi-cpu-fill me-2 fs-3"></i>
           <span  class="fs-5">ООО БРМ</span> 
         </router-link> 

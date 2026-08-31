@@ -14,7 +14,7 @@
                                         </a>
                                         <ul class="dropdown-menu">
                                             <li><router-link :to="{name: 'agreement-update', params:{id: agreement.ID}}" class="dropdown-item">Редактировать</router-link></li>
-                                            <li><a class="dropdown-item text-danger" type="button" @click="deleteEmployeeCardHandler(card.ID)">Удалить</a></li>
+                                            <li><a class="dropdown-item text-danger" type="button" @click="DeleteAgreementHandler(agreement.ID)">Удалить</a></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -22,8 +22,8 @@
                             <p>Коротное наименование договора: <span class="fw-semibold">{{ agreement.short_name }}</span></p>
                             <p>Заказчик: <span class="fw-semibold">{{ agreement.customer }}</span></p>
                             <p>Адрес: <span class="fw-semibold">{{ agreement.address }}</span></p>
-                            <p>Цена договора: <span class="fw-semibold">{{ agreement.price }}</span></p>
-                            <p class="m-0">Срок выполнения: <span class="fw-semibold">{{ formatDateStr(agreement.date_end) }}</span></p>
+                            <p>Срок выполнения: <span class="fw-semibold">{{ formatDateStr(agreement.date_end) }}</span></p>
+                            <p class="m-0">Статус: <span class="fw-semibold">{{ agreement.status }}</span></p>
                         </div>
                     </div>
                 </div>
@@ -125,11 +125,15 @@
 <script setup>
     import { onMounted, ref } from 'vue';
     import api from '../../../api';
-    import { useRoute } from 'vue-router';
-import { formatDate, formatDateStr } from '../../../utils/date';
+    import { useRoute, useRouter } from 'vue-router';
+    import { formatDate, formatDateStr } from '../../../utils/date';
+
+    const route = useRoute();
+    const router = useRouter();
 
     const agreement = ref(null);
-    const route = useRoute();
+
+
     const GetAgreementHandler = async()=>{
         try{
             const res = await api.get(`/agreements/${route.params.id}`)
@@ -143,6 +147,17 @@ import { formatDate, formatDateStr } from '../../../utils/date';
             console.log(err)
         }
     };
+
+    const DeleteAgreementHandler = async (id)=>{
+    try{  
+        const res = await api.delete(`/agreements/delete/${id}`)
+        router.push({name: 'agreements'})
+
+        console.log(`Успешно удален эелемент ${id}`)
+        }catch(err){
+        console.log(err)
+    }
+}
 
     const getOnlyDate = (time) =>{
         try{

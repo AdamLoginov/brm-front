@@ -35,15 +35,7 @@ import { formatDateStr } from '../../../utils/date';
 
 const agreements = ref([]);
 
-const DeleteAgreementHandler = async (id)=>{
-    try{  
-        const res = await api.delete(`/agreements/delete/${id}`)
-        agreements.value = agreements.value.filter(m => m.ID !== id)
-        console.log(`Успешно удален эелемент ${id}`)
-        }catch(err){
-        console.log(err)
-    }
-}
+
 
 const GetAllAgreementsHandler = async()=>{
     try{
