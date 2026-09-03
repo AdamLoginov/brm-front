@@ -20,6 +20,7 @@
                                 </div>
                             </div>
                             <p>Коротное наименование договора: <span class="fw-semibold">{{ agreement.short_name }}</span></p>
+                            <p>Номер: <span class="fw-semibold">{{ agreement.number }}</span></p>
                             <p>Заказчик: <span class="fw-semibold">{{ agreement.customer }}</span></p>
                             <p>Адрес: <span class="fw-semibold">{{ agreement.address }}</span></p>
                             <p>Срок выполнения: <span class="fw-semibold">{{ formatDateStr(agreement.date_end) }}</span></p>
@@ -91,19 +92,31 @@
                     </div>
                 </div>
     
-                <div class="col-md-12 pt-3 px-2 ">
+                <div class="col-md-12 pt-3 px-2" style="font-size: 14px;">
                     <div class="list-group rounded-4">
                         <div class="list-group-item d-flex justify-content-between">
                             Расходы
                             <router-link v-if="agreement" :to="{name:'expenses', params:{id:agreement.ID}}">подробнее</router-link>
                         </div>
                         <template v-if="agreement">
-                            <div v-for="expens in agreement.expenses" :key="expens.ID" class="list-group-item d-flex">
-                                <div class="col-1">{{ expens.ID }}</div>
-                                <div class="col-2">{{ getOnlyDate(expens.CreatedAt) }}</div>
-                                <div class="col-3 fw-semibold">{{ expens.employee_card.surname }} {{ expens.employee_card.name }}</div>
+                            <div v-for="(expens, index) in agreement.expenses" :key="expens.ID" class="list-group-item d-flex">
+                                <div class="col-2 d-flex">
+                                    <div class="col-2 d-flex justify-content-center">
+                                        {{ index + 1 }}
+                                    </div>
+                                    <div class="col-10 d-flex justify-content-center">
+                                        {{ getOnlyDate(expens.CreatedAt) }}
+                                    </div>
+                                </div>
+                                <div class="col-1 d-flex justify-content-center" style="font-size: 10px;">
+                                    <div class="border rounded-5 lh-1 align-content-center px-2" 
+                                    :class="{'company': 'border-success text-success', 'employee': 'border-primary text-primary', 'none': 'border-danger text-danger'}[expens.account]">
+                                        {{ expens.account === "company"? "Компании" : expens.account === "employee" ? "Личный" : "Не указан" }}
+                                    </div>
+                                </div>
+                                <div class="col-2 d-flex justify-content-center">{{ expens.price }}</div>
+                                <div class="col-2">{{ expens.employee_card.surname }} {{ expens.employee_card.name.at(0) }}.{{ expens.employee_card.middle_name.at(0) }}.</div>
                                 <div class="col-5">{{ expens.name }}</div>
-                                <div class="col-1 d-flex justify-content-center">{{ expens.price }}</div>
                             </div>
                         </template>
                     </div>

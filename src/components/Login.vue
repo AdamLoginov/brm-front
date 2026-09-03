@@ -43,7 +43,8 @@
 
             const res = await api.post('/login', fromData);
             localStorage.setItem('user-token', res.data.token);
-            localStorage.setItem('user-id', res.data.user_id)
+            localStorage.setItem('user-id', res.data.user_id);
+            getUserHandler(res.data.user_id)
             router.push('home')
             success.value = true;
         }catch(err){
@@ -51,6 +52,16 @@
         }finally{
             loading.value = false;
         }
+    }
+
+    const getUserHandler = async(id) =>{
+    try{
+        const res = await api.get(`/users/${id}`)
+        localStorage.setItem('employee-card-id', res.data.employee_card_id);
+        console.log("[User accept] ", res.data)
+    }catch(err){
+        console.log(err)
+    }
     }
 
 

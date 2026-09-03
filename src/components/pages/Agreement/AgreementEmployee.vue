@@ -15,7 +15,7 @@
                     <div class="ms-1"> <span class="bg-danger fw-semibold px-1 rounded-1">П</span> - Прогул;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #e97c17;">Б</span> - Болен;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #fff200;">В</span> - Выходной;</div>
-                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #8432dc;">Д</span> - В дороге;</div>
+                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #c07ff1;">Д</span> - В дороге;</div>
                 </div>
                 <div class="col-3"></div>
                 <div class="col-2">

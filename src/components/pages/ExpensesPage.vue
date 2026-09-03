@@ -9,28 +9,37 @@
 
         <div>
             <form @submit.prevent="postExpensesHandler">
-                <div class="row d-flex align-items-end">
+                <div class="row d-flex align-items-end" style="font-size: 14px;">
 
-                    <div class="col-md-6">
+                    <div class="col-md-5">
                         <label class="form-label">Наименование</label>
-                        <input v-model="formData.name" type="text" class="form-control" placeholder="Наименование">
+                        <input v-model="formData.name" type="text" class="form-control form-control-sm" placeholder="Наименование">
                     </div>
 
                     <div class="col-md-2">
                         <label class="form-label">Сотрудник</label>
-                        <select v-model="formData.employee_card_id" class="form-select">
+                        <select v-model="formData.employee_card_id" class="form-select form-select-sm">
                             <option selected :value=0>Выбрать сотрудника</option>
-                            <option v-for="managerCard in managerCards" :key="managerCard.ID" :value="managerCard.ID">{{ managerCard.name }} {{ managerCard.surname }}</option>
+                            <option v-for="managerCard in managerCards" :key="managerCard.ID" :value="managerCard.ID"> {{ managerCard.surname }} {{ managerCard.name.at(0) }}.{{ managerCard.middle_name.at(0) }}.</option>
                         </select>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <label class="form-label">Цена</label>
-                        <input v-model="formData.price" type="number" class="form-control" placeholder="Цена">
+                        <input v-model="formData.price" type="number" class="form-control form-control-sm" placeholder="Цена">
                     </div>
 
+                    <div class="col-md-2">
+                        <label class="form-label">Счет</label>
+                        <select v-model="formData.account" class="form-select form-select-sm">
+                            <option selected value="none">Не указан</option>
+                            <option  value="company">Компании</option>
+                            <option  value="employee">Личный</option>
+                        </select>
+                    </div>
+                    
                     <div class="col-md-1">
-                        <button class="btn btn-primary" type="submit" :disabled="isSubmit">Добавить</button>
+                        <button class="btn btn-primary btn-sm" type="submit" :disabled="isSubmit">Добавить</button>
                     </div>
 
                 </div>
@@ -38,22 +47,41 @@
         </div>
 
         <div class="pt-3">
-            <div class="list-group col-11">
+            <div class="list-group col-11" style="font-size: 14px;">
 
                 <div class="list-group-item d-flex fw-semibold">
-                    <div class="col-1">#</div>
-                    <div class="col-1">Дата</div>
+                    <div class="col-1 d-flex">
+                        <div class="col-2">
+                            №
+                        </div>
+                        <div class="col-10 d-flex justify-content-center">
+                            Дата
+                        </div>
+                    </div>
+                    <div class="col-1 d-flex justify-content-center">Счет</div> 
+                    <div class="col-1">Цена</div>
                     <div class="col-2">Сотрудник</div>
                     <div class="col-6">Наименование</div>
-                    <div class="col-1">Цена</div>
                 </div>
 
                 <div v-for="(item, index) in expenses" :key="item.ID" class="list-group-item d-flex">
-                    <div class="col-1">{{ index + 1  }}</div>
-                    <div class="col-1">{{ onlyDate(item.UpdatedAt) }}</div>
-                    <div class="col-2 fw-semibold">{{ item.employee_card.surname }} {{ item.employee_card.name }}</div>
-                    <div class="col-6">{{ item.name }}</div>
+                    <div class="col-1 d-flex">
+                        <div class="col-2">
+                            {{ index + 1  }}
+                        </div>
+                        <div class="col-10 d-flex justify-content-center">
+                            {{ onlyDate(item.UpdatedAt) }}
+                        </div>
+                    </div>
+                    <div class="col-1 d-flex justify-content-center" style="font-size: 10px;">
+                        <div class="border rounded-5 lh-1 align-content-center px-2" 
+                        :class="{'company': 'border-success text-success', 'employee': 'border-primary text-primary', 'none': 'border-danger text-danger'}[item.account]">
+                            {{ item.account === "company"? "Компании" : item.account === "employee" ? "Личный" : "Не указан" }}
+                        </div>
+                    </div>
                     <div class="col-1">{{ item.price }}</div>
+                    <div class="col-2">{{ item.employee_card.surname }} {{ item.employee_card.name.at(0) }}.{{ item.employee_card.middle_name.at(0) }}.</div>
+                    <div class="col-6">{{ item.name }}</div>
                     <div class="col-1 d-flex justify-content-end">
                         <div class="btn-group">
                             <button class="btn p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -89,7 +117,8 @@ const formData = reactive({
     agreement_id: Number(agreement_id),
     name: "",
     price: "",
-    employee_card_id: 0
+    account: "none",
+    employee_card_id: parseInt(localStorage.getItem('employee-card-id'))|| ''
 });
 
 const onlyDate = (date) =>{
@@ -99,8 +128,8 @@ const onlyDate = (date) =>{
 const postExpensesHandler = async()=>{
     try{
         isSubmit.value = true;
-        const res = await api.post(`/agreements/${agreement_id}/expenses/create`, formData);
         console.log(formData)
+        const res = await api.post(`/agreements/${agreement_id}/expenses/create`, formData);
         formData.name = "";
         formData.price = "";
         formData.manager_card_id = 0;
@@ -114,6 +143,7 @@ const postExpensesHandler = async()=>{
 
 const getExpensesHandler = async()=>{
     try{
+        // console.log("LocalStorage",localStorage.getItem('name') || '')
         const res = await api.get(`/agreements/${agreement_id}/expenses`);
         expenses.value = res.data.expenses.reverse()
         console.log(res.data);

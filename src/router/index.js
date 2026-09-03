@@ -53,6 +53,7 @@ import UsersPage from '../components/pages/Users/UsersPage.vue'
 import UserCreatePage from '../components/pages/Users/UserCreatePage.vue'
 import UserUploadPage from '../components/pages/Users/UserUploadPage.vue'
 import AgreementUpdatePage from '../components/pages/Agreement/AgreementUpdatePage.vue'
+import DocumentHeightCreate from '../components/pages/DocumentHeightCreate.vue'
 
 
 const routes = [
@@ -183,7 +184,9 @@ const routes = [
         { title: 'Создать документ', name: 'employee-card-document-create' },
       ]
     } 
-  }
+  },
+
+  { path: '/documentheightcreate', name: 'document-height-create', component: DocumentHeightCreate, meta:{requiresAuth: false} },
 ]
 
 
