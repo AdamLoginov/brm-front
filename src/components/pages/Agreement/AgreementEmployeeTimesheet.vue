@@ -2,7 +2,7 @@
     <div class="container-fluid pt-3">
         <div>
             <h4>Табель договора:</h4>
-            <!-- <router-link :to="{name: 'agreement-employee-append'}">Добавить сотрудников</router-link> -->
+            <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link>
             <hr>
         </div>
 
@@ -25,7 +25,7 @@
                         <option value="3">Март</option>
                         <option value="4">Апрель</option>
                         <option value="5">Май</option>
-                        <option value="6">Июнь</option>
+                        <option value="6">Июнь</option> 
                         <option value="7">Июль</option>
                         <option value="8">Август</option>
                         <option value="9">Сентябрь</option>

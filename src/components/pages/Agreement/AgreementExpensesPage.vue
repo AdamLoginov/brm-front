@@ -103,9 +103,9 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
-import api from '../../api';
+import api from '../../../api';
 import { useRoute } from 'vue-router';
-import { formatDate } from '../../utils/date';
+import { formatDate } from '../../../utils/date';
 
 const route = useRoute();
 const agreement_id = route.params.id

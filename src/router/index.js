@@ -4,14 +4,13 @@ import Login from '../components/Login.vue'
 import Employee from '../components/Employee.vue'
 import EmployeeCreate from '../components/EmployeeCreate.vue'
 
-import HomePage from '../components/HomePage.vue'
 import MaterialPage from '../components/pages/MaterialPage.vue'
 
 
 import AgreementDetailPage from '../components/pages/Agreement/AgreementDetailPage.vue'
 import AgreementsPage from '../components/pages/Agreement/AgreementsPage.vue'
 import AgreementCreatePage from '../components/pages/Agreement/AgreementCreatePage.vue'
-import AgreementEmployee from '../components/pages/Agreement/AgreementEmployee.vue'
+import AgreementEmployee from '../components/pages/Agreement/AgreementEmployeeTimesheet.vue'
 
 //Сметы
 import EstimatesCreatePage from '../components/pages/EstimatesCreatePage.vue'
@@ -35,7 +34,7 @@ import DialogDetailPage from '../components/pages/DialogDetailPage.vue'
 import EmailDetailPage from '../components/pages/EmailDetailPage.vue'
 
 //expenses
-import ExpensesPage from '../components/pages/ExpensesPage.vue'
+import ExpensesPage from '../components/pages/Agreement/AgreementExpensesPage.vue'
 import EmailsPage from '../components/pages/EmailsPage.vue'
 
 //tools
@@ -54,6 +53,8 @@ import UserCreatePage from '../components/pages/Users/UserCreatePage.vue'
 import UserUploadPage from '../components/pages/Users/UserUploadPage.vue'
 import AgreementUpdatePage from '../components/pages/Agreement/AgreementUpdatePage.vue'
 import DocumentHeightCreate from '../components/pages/DocumentHeightCreate.vue'
+import AgreementEmployeeAdvance from '../components/pages/Agreement/AgreementEmployeeAdvance.vue'
+import HomePage from '../components/pages/Home/HomePage.vue'
 
 
 const routes = [
@@ -108,6 +109,8 @@ const routes = [
 
   { path: '/agreements/:id/employee', name: 'agreement-employee', component: AgreementEmployee, meta:{requiresAuth: true} },
   { path: '/agreements/:id/employee/append', name: 'agreement-employee-append', component: AgreementAppendEmployee, meta:{requiresAuth: true} },
+
+  { path: '/agreements/:id/employee/advance', name: 'agreement-employee-advance', component: AgreementEmployeeAdvance, meta:{requiresAuth: true} },
   
   //Сметы
   { path: '/estimate/:id', name: 'estimate-detail', component: EstimateDetailPage, meta:{requiresAuth: true} },
