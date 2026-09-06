@@ -12,7 +12,7 @@
             </div>
             <div class="col-4 align-content-end">
                 <label>Выбрать сотрудника</label>
-                <select v-model="formData.to_employee_id" class="form-select form-select-sm">
+                <select v-model="formData.to_user_id" class="form-select form-select-sm">
                     <option :value="0">Сотрудник не выбран</option>
                     <option v-for="user in users" :key="user.ID" :value="user.ID">{{ user.employee_card.surname? `${user.employee_card.surname} ${user.employee_card.name.at(0)}.${user.employee_card.middle_name.at(0)}.` : user.login }} </option>
                 </select>
@@ -41,16 +41,15 @@
                         <i v-else class="bi bi-x-circle text-danger"></i>
                     </div>
                 </div>
-
             </div>
 
             <div class="col-2 fw-semibold" style=" font-size: 12px;">
 
                 <div>
-                    Кому: {{ task.to_employee_card.ID !== 0 ?  `${task.to_employee_card.surname} ${task.to_employee_card.name.at(0)}.${task.to_employee_card.middle_name.at(0)}` : 'Не указан'}}
+                    Кому: {{ task.to_user_card.ID !== 0 ?  `${task.to_user_card.employee_card.surname} ${task.to_user_card.employee_card.name.at(0)}.${task.to_user_card.employee_card.middle_name.at(0)}` : 'Не указан'}}
                 </div>
                 <div>
-                    Кто: {{ task.from_employee_card.ID !== 0 ?  `${task.from_employee_card.surname} ${task.from_employee_card.name.at(0)}.${task.from_employee_card.middle_name.at(0)}` : 'Не указан'}}
+                    Кто: {{ task.from_user_card.ID !== 0 ?  `${task.from_user_card.employee_card.surname} ${task.from_user_card.employee_card.name.at(0)}.${task.from_user_card.employee_card.middle_name.at(0)}` : 'Не указан'}}
                 </div>
             </div>
 
@@ -65,7 +64,7 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" type="button"  @click="updateSuccessTaskHanlder(task.ID)">Выполнено</a></li>
-                            <li><a class="dropdown-item" type="button" >Изменить</a></li>
+                            <!-- <li><a class="dropdown-item" type="button" >Изменить</a></li> -->
                             <li><a class="dropdown-item text-danger" type="button"  @click="deleteTaskHandler(task.ID)">Удалить</a></li>
                         </ul>
                     </div>
@@ -86,8 +85,8 @@ const tasks = ref(null)
 
 const formData = reactive({
     message: "", 
-    to_employee_id: 0,
-    from_employee_id: parseInt(userId, 10)
+    to_user_id: 0,
+    from_user_id: parseInt(userId, 10)
 });
 
 const getUsersHandler = async() => {
