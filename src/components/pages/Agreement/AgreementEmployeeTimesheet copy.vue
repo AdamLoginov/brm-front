@@ -1,37 +1,14 @@
 <template>
     <div class="container-fluid pt-3">
-        <div class="d-flex justify-content-between border-bottom">    
+        <div>
             <h4>Табель договора:</h4>
-            <!-- <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link> -->
-            <div class="d-flex gap-2">
-                <time-sheet-create-update-component/>
-                <TimeSheetUpdateComponent :month="timesheetMonth_select.month" :year="timesheetMonth_select.year" :employees_id="timesheetMonth_select.employees" :timesheetMonth_id="timesheetMonth_select.ID"/>
-            </div>
+            <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link>
+            <time-sheet-create-update-component/>
+            <hr>
         </div>
 
 
-        <div class="list-group pt-3 ">
-            <div class="list-group-item d-flex gap-1 justify-content-between">
-                <div class="">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="previousMonth()" :disabled="timesheetMonth.findIndex(item => item.ID === table_select) === timesheetMonth.length - 1">
-                        <i class="bi bi-caret-left-fill"></i>
-                        Предыдущий
-                    </button>
-                </div>
-                <div class="d-flex gap-2">
-                   
-                    <select v-model="table_select" class="form-select form-select-sm" aria-label=".form-select-sm example" style="width: 250px;">
-                        <option v-for="table in timesheetMonth" :key="table.ID" :value="table.ID">{{ `${monthValue[table.month]} ${table.year}` }}</option>
-                    </select>
-                    <button type="button" class="btn btn-primary btn-sm" @click="changeMonth()">Применить</button>
-                </div>
-                <div class="">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="nextMonth()" :disabled="timesheetMonth.findIndex(item => item.ID === table_select) === 0">
-                        Следующий
-                        <i class="bi bi-caret-right-fill"></i>
-                    </button>
-                </div>
-            </div>
+        <div class="list-group">
             <div class="list-group-item d-flex">
                 <div class="col-5 d-flex align-items-center" style="font-size: 12px;">
                     <div class="fw-semibold">Правила заполнения:</div>
@@ -42,9 +19,26 @@
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #c07ff1;">Д</span> - В дороге;</div>
                 </div>
                 <div class="col-3"></div>
-                <div class="col-2"></div>
-                <div class="col-1"></div>
-                <div class="col-1 ps-2 d-flex justify-content-end">
+                <div class="col-2">
+                    <select v-model="month_change" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                        <option value="1">Январь</option>
+                        <option value="2">Февраль</option>
+                        <option value="3">Март</option>
+                        <option value="4">Апрель</option>
+                        <option value="5">Май</option>
+                        <option value="6">Июнь</option> 
+                        <option value="7">Июль</option>
+                        <option value="8">Август</option>
+                        <option value="9">Сентябрь</option>
+                        <option value="10">Октябрь</option>
+                        <option value="11">Ноябрь</option>
+                        <option value="12">Декабрь</option>
+                    </select>
+                </div>
+                <div class="col-1 ps-2">
+                    <button type="button" class="btn btn-primary btn-sm" @click="changeMonth()">Применить</button>
+                </div>
+                <div class="col-1 ps-2">
                     <button type="button" class="btn  btn-sm" :class="isChange ? 'btn-success' : 'btn-primary'" @click="isChange ? postTimesheetHandler() : changeTimesheet()">{{ isChange ? 'Сохранить' : 'Изменить' }}</button>
                 </div>
             </div>
@@ -64,7 +58,7 @@
                     </div>
                 </div>
             </div>
-            <div v-for="(employee, index) in timesheetMonth_select.employees" :key="employee.ID" class="list-group-item d-flex p-0">
+            <div v-for="(employee, index) in employees" :key="employee.ID" class="list-group-item d-flex p-0">
                 <div class="col-3 px-2 d-flex" :class="employee.input_active? 'bg-primary-subtle' : ''" style="font-size: 14px;">
                     <div class="col-1 border-end d-flex justify-content-center me-1 fw-semibold">{{ index + 1 }}</div>
                     <div class="col-11">{{ employee.surname }} {{ employee.name }} {{ employee.middle_name }}</div>
@@ -73,7 +67,7 @@
                     <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center fw-semibold" style="font-size: 12px;" :style="`background-color: ${timesheet_color[timesheet[employee.ID][getDate(day, month, year)]['status']]};`">
                         <input v-if="isChange" class="text-center" v-model="timesheet[employee.ID][getDate(day, month, year)]['status']" type="text" maxlength="2" 
                         @input="validateTimesheetInput(employee.ID, getDate(day, month, year))" @focus="inputFocus(index)"  @blur="inputBlur(index)" 
-                        :id="`cell-${employee.ID}-${getDate(day, month, year)}`" @keydown="handleCellKeydown($event, employee.ID,day)">
+                        :id="`cell-${employee.ID}-${getDate(day, month, year)}`"     @keydown="handleCellKeydown($event, employee.ID,day)">
                         <div v-else class="text-center">{{ timesheet[employee.ID][getDate(day, month, year)]['status'] }}</div>
                     </div>
                 </div>
@@ -84,39 +78,23 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, onBeforeUnmount } from 'vue';
+import { computed, onMounted, ref, toRaw, onBeforeUnmount, reactive } from 'vue';
 import api from '../../../api';
 import { useRoute, onBeforeRouteLeave } from 'vue-router';
 import TimeSheetCreateUpdateComponent from './TimeSheetCreateUpdateComponent.vue';
-import TimeSheetUpdateComponent from './TimeSheetUpdateComponent.vue';
 
 const route = useRoute();
 
+const month = ref(new Date().getMonth() + 1);
+const month_change = ref(month.value);
+const year = ref(new Date().getFullYear());
 const isChange = ref(false);
-
-const month = ref(9);
-const year = ref(2026);
-const table_select = ref(null);
 
 const employees = ref(null);
 const timesheet = ref({});
-const timesheetMonth = ref([]);
-const timesheetMonth_select = ref({});
+const timesheet_server = ref({});
 
-const monthValue = {
-    "1": "Январь",
-    "2": "Февраль",
-    "3": "Март",
-    "4": "Апрель",
-    "5": "Май",
-    "6": "Июнь",
-    "7": "Июль",
-    "8": "Август",
-    "9": "Сентябрь",
-    "10": "Октябрь",
-    "11": "Ноябрь",
-    "12": "Декабрь",
-}
+
 
 const timesheet_color = {
     '':   '#fff',
@@ -151,88 +129,7 @@ const timesheet_color = {
     '24': '#006FC0',
 }
 
-const getTimeSheetMonthHandler = async() =>{
-    try{
-        const res = await api.get(`/agreements/${route.params.id}/timesheetmonth`)
-        timesheetMonth.value = res.data.sort((a, b) => b.month - a.month).sort((a, b) => b.year - a.year)
-        table_select.value = timesheetMonth.value.at(0).ID
-        month.value = timesheetMonth.value.at(0).month
-        year.value = timesheetMonth.value.at(0).year
-        console.log("[TimeSheet Month]", timesheetMonth.value)
-        console.log("[Month Year]",month.value, year.value)
-        getDetailTimeSheetMonthHandler();
-    }
-    catch(err){
-        console.log(err)
-    }
-}
 
-const getDetailTimeSheetMonthHandler = async() =>{
-    try{
-        const res  = await api.get(`/agreements/timesheetmonth/detail/${table_select.value}`)
-        timesheetMonth_select.value = res.data
-        timesheetMonth_select.value.employees.forEach((employee, index) => {timesheetMonth_select.value.employees[index]['input_active'] = false})
-        month.value = timesheetMonth_select.value.month
-        year.value = timesheetMonth_select.value.year   
-
-        timesheetMonth_select.value.employees.forEach(employee => {
-            timesheet.value[employee.ID]={}
-            for (let day = 1; day <= daysInMonth.value; day++){
-                timesheet.value[employee.ID][getDate(day, month.value, year.value)] = {}
-            }
-        })
-        timesheetMonth_select.value.time_sheets.forEach(item => {
-
-            if (!timesheet.value[item.employee_card_id]) {
-                timesheet.value[item.employee_card_id] = {}
-            }
-
-            if (!timesheet.value[item.employee_card_id][item.date]) {
-                timesheet.value[item.employee_card_id][item.date] = {}
-            }
-
-            timesheet.value[item.employee_card_id][item.date] = {
-                id: item.ID,
-                status: item.status,
-                state: 'Server',
-                time_sheet_month_id: timesheetMonth_select.value.ID
-            }
-        })
-
-        timesheetMonth_select.value.employees = timesheetMonth_select.value.employees.sort((a, b) =>(a.surname || '').localeCompare(b.surname || '', 'ru'))
-        console.log("[Detail TimeSheetMonth]", timesheetMonth_select.value)
-        console.log("[1 Time Sheet ]", timesheet.value)
-    }catch(err){
-        console.log(err)
-    }
-}
-
-const changeMonth = () =>{
-    const timesheet_month = timesheetMonth.value.find(item => item.ID === table_select.value)
-    employees.value = []
-    timesheet.value = {}
-    timesheetMonth_select.value = {}
-    month.value = timesheet_month.month
-    year.value = timesheet_month.year
-    console.log(month.value, year.value)
-    getDetailTimeSheetMonthHandler()
-}
-
-const previousMonth = () => {
-    const index = timesheetMonth.value.findIndex(item => item.ID === table_select.value)
-    if (index != -1) {
-        table_select.value = timesheetMonth.value[index + 1].ID
-        changeMonth()
-    }
-}
-
-const nextMonth = () => {
-    const index = timesheetMonth.value.findIndex(item => item.ID === table_select.value)
-    if (index != -1) {
-        table_select.value = timesheetMonth.value[index - 1].ID
-        changeMonth()
-    }
-}
 
 const handleCellKeydown = (event, employeeId, day) => {
     const key = event.key
@@ -243,7 +140,7 @@ const handleCellKeydown = (event, employeeId, day) => {
 
     event.preventDefault()
 
-    const employeeIndex = timesheetMonth_select.value.employees.findIndex(
+    const employeeIndex = employees.value.findIndex(
         employee => employee.ID === employeeId
     )
 
@@ -274,12 +171,12 @@ const handleCellKeydown = (event, employeeId, day) => {
     // Вверх/вниз вышли за границы сотрудников
     if (
         targetEmployeeIndex < 0 ||
-        targetEmployeeIndex >= timesheetMonth_select.value.employees.length
+        targetEmployeeIndex >= employees.value.length
     ) {
         return
     }
 
-    const targetEmployee = timesheetMonth_select.value.employees[targetEmployeeIndex]
+    const targetEmployee = employees.value[targetEmployeeIndex]
 
     const date = getDate(
         targetDay,
@@ -296,12 +193,12 @@ const handleCellKeydown = (event, employeeId, day) => {
 
 const inputFocus = (index) =>{
     console.log("[Открытие input]", index)
-    timesheetMonth_select.value.employees[index]['input_active'] = true
+    employees.value[index]['input_active'] = true
 }
 
 const inputBlur = (index) =>{
     console.log("[Закрытие input]", index)
-    timesheetMonth_select.value.employees[index]['input_active'] = false
+    employees.value[index]['input_active'] = false
 }
 
 const createTimesheetHandler = async(timesheet) => {
@@ -309,19 +206,16 @@ const createTimesheetHandler = async(timesheet) => {
         try{
             const res = await api.post('/agreements/timesheet/create', timesheet)
             console.log('[Server create Timesheet handler]: ', res.data)
-            changeMonth();
         }catch(err){
             console.log("[Error create Timesheet handler]: ", err)
         }
     }
 }
-
 const updateTimesheetHandler = async(timesheet) => {
     if (timesheet.length > 0){
         try{
             const res = await api.post('/agreements/timesheet/update', timesheet)
             console.log('[Server update Timesheet handler]: ', res.data)
-            changeMonth();
         }catch(err){
             console.log("[Error create Timesheet handler]: ", err)
         }
@@ -333,7 +227,6 @@ const deleteTimesheetHandler = async(timesheet) => {
         try{
             const res = await api.delete('/agreements/timesheet/delete', {data: timesheet})
             console.log('[Server delete Timesheet handler]: ', res.data)
-            changeMonth();
         }catch(err){
             console.log("[Error create Timesheet handler]: ", err)
         }
@@ -348,7 +241,6 @@ const postTimesheetHandler = async()=>{
     try{
         const timesheet_send = Object.entries(timesheet.value).flatMap(([employeeID, dates]) => Object.entries(dates).filter(([date, item]) => item?.state && item.state !== "Server").map(([date, item]) => {
             return{
-                time_sheet_month_id: timesheetMonth_select.value.ID,
                 employee_card_id: Number(employeeID),
                 agreement_id: Number(route.params.id),
                 date,
@@ -363,6 +255,7 @@ const postTimesheetHandler = async()=>{
         updateTimesheetHandler(timesheet_update);
         deleteTimesheetHandler(timesheet_delete);
         isChange.value = false;
+        window.location.reload();
     }catch(err){
         console.log(err);
     }
@@ -399,6 +292,58 @@ const validateTimesheetInput = (employeeId, day) => {
     timesheet.value[employeeId][day]['status'] = ''
 }
 
+const changeMonth = () =>{
+    employees.value = []
+    timesheet.value = {}
+    month.value = month_change.value
+    getAgreementEmployeeHandler()
+}
+
+const getAgreementEmployeeHandler = async() =>{
+    try{
+        const res = await api.get(`/agreements/${route.params.id}/employee`)
+        employees.value = res.data
+        employees.value.forEach((employee, index) => {employees.value[index]['input_active'] = false})
+        res.data.forEach(employee => {
+            timesheet.value[employee.ID]={}
+            for (let day = 1; day <= daysInMonth.value; day++){
+                timesheet.value[employee.ID][getDate(day, month.value, year.value)] = {}
+            }
+        })
+        employees.value = employees.value.sort((a, b) =>(a.surname || '').localeCompare(b.surname || '', 'ru'))
+        getTimesheetHandler();
+        console.log("[getagreementEmployeehandler]", employees.value)
+    }catch(err){
+        console.log(err)
+    }
+}
+
+const getTimesheetHandler = async() =>{
+    try{
+        let employee_r = employees.value.map(item => item.ID)
+        const res = await api.get(`/agreements/${route.params.id}/timesheet/month?month=${month.value}`)
+        res.data.forEach(item => {
+            if (!employee_r.includes(item.employee_card.ID)){
+                employees.value.push(item.employee_card)
+                employee_r.push(item.employee_card.ID)
+                timesheet.value[item.employee_card.ID] = {}
+                for (let day = 1; day <= daysInMonth.value; day++){
+                    timesheet.value[item.employee_card.ID][getDate(day, month.value, year.value)] = {}
+                }
+            }
+            timesheet.value[item.employee_card_id][item.date]['id'] = item.ID
+            timesheet.value[item.employee_card_id][item.date]['status'] = item.status
+            timesheet.value[item.employee_card_id][item.date]['state'] = "Server"
+        })
+        employees.value = employees.value.sort((a, b) =>(a.surname || '').localeCompare(b.surname || '', 'ru'))
+        console.log('[employe_r]', employee_r)
+        console.log('[employees]', employees.value)
+        console.log(res.data)
+    }catch(err){
+        console.log(err)
+    }
+}
+
 function getDate(day, month, year) {
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 } 
@@ -429,7 +374,7 @@ const getWeekDay = (day, month, year) => {
 
 const daysInMonth = computed(() => {
 return new Date(
-    year.value,
+    new Date().getFullYear(),
     month.value,
     0
 ).getDate()
@@ -451,6 +396,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 
+
 onBeforeRouteLeave(() => {
     if (isChange.value) {
         const answer = window.confirm(
@@ -466,8 +412,7 @@ onBeforeRouteLeave(() => {
 });
 
 
-onMounted(getTimeSheetMonthHandler);
-// onMounted(getAgreementEmployeeHandler);
+onMounted(getAgreementEmployeeHandler);
 </script>
 
 <style>

@@ -124,9 +124,9 @@
 
                 <div class="col-md-12 pt-3 px-2">
                     <div class="list-group rounded-4">
-                        <div class="list-group-item d-flex justify-content-between">
+                        <div class="list-group-item d-flex justify-content-between" style="font-size: 14px;">
                             Табель
-                            <router-link v-if="agreement" :to="{name:'agreement-employee', params:{id:agreement.ID}}">подробнее</router-link>
+                            <router-link v-if="agreement" :to="{name:'agreement-timesheet-detail', params:{id:agreement.ID}}">подробнее</router-link>
                         </div>
                     </div>
                 </div>

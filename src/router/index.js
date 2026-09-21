@@ -55,6 +55,7 @@ import AgreementUpdatePage from '../components/pages/Agreement/AgreementUpdatePa
 import DocumentHeightCreate from '../components/pages/DocumentHeightCreate.vue'
 import AgreementEmployeeAdvance from '../components/pages/Agreement/AgreementEmployeeAdvance.vue'
 import HomePage from '../components/pages/Home/HomePage.vue'
+import AgreementTimeSheetPage from '../components/pages/Agreement/AgreementTimeSheetPage.vue'
 
 
 const routes = [
@@ -107,7 +108,9 @@ const routes = [
   { path: '/agreements/:id/estimates', name: 'estimates', component: EstimatesPage, meta:{requiresAuth: true} },
   { path: '/agreements/create', name: 'agreement-create', component: AgreementCreatePage, meta:{requiresAuth: true} },
 
-  { path: '/agreements/:id/employee', name: 'agreement-employee', component: AgreementEmployee, meta:{requiresAuth: true} },
+
+  // { path: '/agreements/:id/timesheet', name: 'agreement-timesheet', component: AgreementTimeSheetPage, meta:{requiresAuth: true} },
+  { path: '/agreements/:id/timesheet', name: 'agreement-timesheet-detail', component: AgreementEmployee, meta:{requiresAuth: true} },
   { path: '/agreements/:id/employee/append', name: 'agreement-employee-append', component: AgreementAppendEmployee, meta:{requiresAuth: true} },
 
   { path: '/agreements/:id/employee/advance', name: 'agreement-employee-advance', component: AgreementEmployeeAdvance, meta:{requiresAuth: true} },

@@ -44,10 +44,6 @@
         
         <div class="pt-3">
           <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Дата начала работы:</div>
-            <div class="col-8 employeecard-text" >{{ formatDateStr(employeeCard.start_date) }}</div>
-          </div>
-          <div class="d-flex">
             <div class="col-4 pe-3 fw-semibold">Образование:</div>
             <div class="col-8 employeecard-text" >{{ employeeCard.education }}</div>
           </div>
@@ -83,6 +79,10 @@
           <div class="d-flex">
             <div class="col-4 pe-3 fw-semibold">Должность:</div>
             <div class="col-8">{{ employeeCard.profession }}</div>
+          </div>
+          <div class="d-flex">
+            <div class="col-4 pe-3 fw-semibold">Дата начала работы:</div>
+            <div class="col-8 employeecard-text" >{{ formatDateStr(employeeCard.start_date) }}</div>
           </div>
           <div class="d-flex">
             <div class="col-4 pe-3 fw-semibold">Договор:</div>
