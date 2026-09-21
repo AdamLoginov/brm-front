@@ -55,11 +55,11 @@
                         {{ getWeekDay(day, month, year) }}
                     </div>
                 </div>
-            </div>
+            </div>  
             <div class="list-group-item d-flex p-0">
                 <div class="col-3 px-2 fw-semibold" style="font-size: 14px;">Сотрудник:</div>
                 <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }" >
-                    <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center fw-semibold" style="font-size: 12px;">
+                    <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center fw-semibold" :class="activeDay === day? 'bg-primary-subtle': '' " style="font-size: 12px;">
                         {{ day }}
                     </div>
                 </div>
@@ -72,7 +72,7 @@
                 <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }">
                     <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center fw-semibold" style="font-size: 12px;" :style="`background-color: ${timesheet_color[timesheet[employee.ID][getDate(day, month, year)]['status']]};`">
                         <input v-if="isChange" class="text-center" v-model="timesheet[employee.ID][getDate(day, month, year)]['status']" type="text" maxlength="2" 
-                        @input="validateTimesheetInput(employee.ID, getDate(day, month, year))" @focus="inputFocus(index)"  @blur="inputBlur(index)" 
+                        @input="validateTimesheetInput(employee.ID, getDate(day, month, year))" @focus="inputFocus(index, day)"  @blur="inputBlur(index, day)" 
                         :id="`cell-${employee.ID}-${getDate(day, month, year)}`" @keydown="handleCellKeydown($event, employee.ID,day)">
                         <div v-else class="text-center">{{ timesheet[employee.ID][getDate(day, month, year)]['status'] }}</div>
                     </div>
@@ -94,6 +94,7 @@ const route = useRoute();
 
 const isChange = ref(false);
 
+const activeDay = ref(0);
 const month = ref(9);
 const year = ref(2026);
 const table_select = ref(null);
@@ -294,13 +295,15 @@ const handleCellKeydown = (event, employeeId, day) => {
     targetInput?.focus()
 }
 
-const inputFocus = (index) =>{
-    console.log("[Открытие input]", index)
+const inputFocus = (index, day) =>{
+    // console.log("[Открытие input]", index)
+    activeDay.value = day
     timesheetMonth_select.value.employees[index]['input_active'] = true
 }
 
-const inputBlur = (index) =>{
-    console.log("[Закрытие input]", index)
+const inputBlur = (index, day) =>{
+    // console.log("[Закрытие input]", index)
+    activeDay.value = 0
     timesheetMonth_select.value.employees[index]['input_active'] = false
 }
 
