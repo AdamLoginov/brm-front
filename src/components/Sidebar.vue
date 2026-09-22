@@ -1,6 +1,12 @@
 <template>
   <div class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary"> 
     <div class="d-flex">
+      <div class="d-flex align-items-center" :class="isColapsed ? ' col-12 justify-content-center' : 'col-2 justify-content-end'">
+        <button type="button" class="btn py-1 px-2" @click="closeSidebar">
+          <i v-if="!isColapsed" class="bi bi-caret-left-fill"></i>
+          <i v-if="isColapsed" class="bi bi-caret-right-fill"></i>
+        </button>
+      </div>
 
       <div v-if="!isColapsed" class="col-10">
         <router-link to="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none"> 
@@ -10,12 +16,6 @@
         </router-link> 
       </div>
 
-      <div class="d-flex align-items-center" :class="isColapsed ? ' col-12 justify-content-center' : 'col-2 justify-content-end'">
-        <button type="button" class="btn py-1 px-2" @click="closeSidebar">
-          <i v-if="!isColapsed" class="bi bi-caret-left-fill"></i>
-          <i v-if="isColapsed" class="bi bi-caret-right-fill"></i>
-        </button>
-      </div>
     </div>
     
     <hr> 

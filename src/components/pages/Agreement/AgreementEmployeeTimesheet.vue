@@ -3,9 +3,17 @@
         <div class="d-flex justify-content-between border-bottom">    
             <h4>Табель договора:</h4>
             <!-- <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link> -->
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center">
                 <time-sheet-create-update-component/>
                 <TimeSheetUpdateComponent :month="timesheetMonth_select.month" :year="timesheetMonth_select.year" :employees_id="timesheetMonth_select.employees" :timesheetMonth_id="timesheetMonth_select.ID"/>
+                <div class="dropdown">
+                    <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item text-danger" type="button" @click="deleteTimesheetMonthHandler()">Удалить</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
 
@@ -340,6 +348,16 @@ const deleteTimesheetHandler = async(timesheet) => {
         }catch(err){
             console.log("[Error create Timesheet handler]: ", err)
         }
+    }
+}
+
+const deleteTimesheetMonthHandler = async(id) => {
+    try{
+        const res = await api.delete(`/agreements/timesheetmonth/delete/${timesheetMonth_select.value.ID}` )
+        console.log("[Delete TimeSheet Month ID]",timesheetMonth_select.value.ID)
+        getTimeSheetMonthHandler()
+    }catch(err){
+        console.log("[Error delete TimesheetMonth handler]: ", err)
     }
 }
 
