@@ -56,6 +56,7 @@ import DocumentHeightCreate from '../components/pages/DocumentHeightCreate.vue'
 import AgreementEmployeeAdvance from '../components/pages/Agreement/AgreementEmployeeAdvance.vue'
 import HomePage from '../components/pages/Home/HomePage.vue'
 import AgreementTimeSheetPage from '../components/pages/Agreement/AgreementTimeSheetPage.vue'
+import AgreementPaymentPage from '../components/pages/Agreement/Payment/AgreementPaymentPage.vue'
 
 
 const routes = [
@@ -69,6 +70,8 @@ const routes = [
   { path: '/materials/create', name: 'materials-creaate-one', component: MaterialPage, meta:{requiresAuth: true} },
   { path: '/materials', name: 'materials', component: MaterialPage, meta:{requiresAuth: true} },
 
+  //agreement payment
+  { path: '/agreements/:id/payment', name: 'agreement-payment', component: AgreementPaymentPage, meta:{requiresAuth: true} },
   //expenses
   { path: '/agreements/:id/expenses', name: 'expenses', component: ExpensesPage, meta:{requiresAuth: true} },
 
