@@ -10,7 +10,7 @@
             <div class="smal"> <span class="fw-semibold">Кому: </span>{{ email.email_to }}</div>
             <div class="py-2">
                 <div>Файлы:</div>
-                <a v-for="att in email.attachments" :key="att.ID" :href="`${apiBaseurl}/attachment/${att.ID}`" target="_blank" class="mx-2">
+                <a v-for="att in email.attachments" :key="att.ID" href="#" @click.prevent="downloadAttachment(att)" class="mx-2">
                     {{ att.file_name }}
                 </a>
             </div>
@@ -25,7 +25,7 @@ import api from '../../api';
 import { useRoute } from 'vue-router';
 import { formatDate } from '../../utils/date';
 
-const apiBaseurl = api.defaults.baseURL
+import { downloadAttachment } from '../../utils/downloadAttachment';
 
 const route = useRoute();
 

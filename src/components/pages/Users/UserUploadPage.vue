@@ -13,7 +13,7 @@
                     </div>
                     <div class="col-6 px-1">
                         <label class="form-label">Новый пароль</label>
-                        <input v-model="formData.password" class="form-control form-control-sm" type="text">
+                        <input v-model="formData.password" class="form-control form-control-sm" type="password" placeholder="Оставьте пустым, чтобы сохранить пароль" autocomplete="new-password">
                     </div>
                 </div>
                 <div class="d-flex">
@@ -52,7 +52,6 @@ const employees = ref(null);
 
 const postUserHanlder = async() =>{
     try{
-        console.log(formData)
         const res = await api.post(`/users/update/${route.params.id}`, formData)
     }catch(err){
         console.log(err)

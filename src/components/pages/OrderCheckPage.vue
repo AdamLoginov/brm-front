@@ -14,7 +14,7 @@
                             <div class="row align-items-center">
                                 
                                 <div class="col-9">
-                                    <a :href="`${apiBaseurl}/attachment/${attachment.ID}`" target="_blank" class="d-block fw-semibold">
+                                    <a href="#" @click.prevent="downloadAttachment(attachment)" class="d-block fw-semibold">
                                         {{ attachment.file_name }}
                                     </a>
                                     <span class="text-muted small">{{ formatDate(attachment.CreatedAt) }}</span>
@@ -90,6 +90,7 @@ import { useRoute } from 'vue-router';
 import api from '../../api';
 import { onMounted, reactive, ref } from 'vue';
 import { formatDate } from '../../utils/date';
+import { downloadAttachment } from '../../utils/downloadAttachment';
 
 const route = useRoute();
 const apiBaseurl = api.defaults.baseURL
