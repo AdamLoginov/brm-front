@@ -128,6 +128,24 @@
                             Табель
                             <router-link v-if="agreement" :to="{name:'agreement-timesheet-detail', params:{id:agreement.ID}}">подробнее</router-link>
                         </div>
+                        <!-- --------- новый код chat: переход к начислениям договора -->
+                        <div class="list-group-item d-flex justify-content-between" style="font-size: 14px;">
+                            Начисления
+                            <router-link v-if="agreement" :to="{name:'agreement-salary-accruals', params:{id:agreement.ID}}">подробнее</router-link>
+                        </div>
+                        <!-- --------- новый код chat: переход к авансам -->
+                        <div class="list-group-item d-flex justify-content-between" style="font-size: 14px;">
+                            Авансы
+                            <router-link v-if="agreement" :to="{name:'agreement-salary-advances', params:{id:agreement.ID}}">подробнее</router-link>
+                        </div>
+                        <!-- --------- новый код chat: вкладка штрафов -->
+                        <div class="list-group-item d-flex justify-content-between" style="font-size: 14px;">
+                            Штрафы
+                            <router-link v-if="agreement" :to="{name:'agreement-salary-penalties', params:{id:agreement.ID}}">подробнее</router-link>
+                        </div>
+                        <!-- --------- конец нового кода chat -->
+                        <!-- --------- конец нового кода chat -->
+                        <!-- --------- конец нового кода chat -->
                     </div>
                 </div>
             </div>

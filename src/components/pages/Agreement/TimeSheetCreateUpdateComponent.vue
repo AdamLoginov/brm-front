@@ -41,11 +41,29 @@
                             </select>
                         </div>
                     </div>
+                    <!-- --------- новый код chat: настройки смены и автоматических штрафов -->
+                    <div v-if="settingsError" class="alert alert-danger" role="alert">{{ settingsError }}</div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" for="create-shift-hours">Часов в смене</label>
+                            <input id="create-shift-hours" v-model="formDataCreateTimeSheetMonth.shift_hours" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="12">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" for="create-absence-penalty">Штраф за прогул, ₽</label>
+                            <input id="create-absence-penalty" v-model="formDataCreateTimeSheetMonth.absence_penalty" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="0,00">
+                        </div>
+                    </div>
+                    <!-- новый код chat: суточные сохраняются в настройках табеля -->
+                    <div class="mb-3">
+                        <label class="form-label" for="create-daily-allowance">Суточные, ₽</label>
+                        <input id="create-daily-allowance" v-model="formDataCreateTimeSheetMonth.daily_allowance" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="0,00">
+                    </div>
+                    <!-- --------- конец нового кода chat -->
                     <MultiSelect v-model="formDataCreateTimeSheetMonth.employee_card_id" :options="employees" :label-key="employee =>`${employee.surname} ${employee.name.at(0)}.${employee.middle_name.at(0)}.`" placeholder="Выбрать сотрудников"/>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
-                    <button type="button" class="btn btn-primary btn-sm" @click="createTimeSheetMonthHandler()">Сохранить</button>
+                    <button type="button" class="btn btn-primary btn-sm"  :disabled="settingsSaving" @click="createTimeSheetMonthHandler()">Сохранить</button>
                 </div>
                 </div>
             </div>
@@ -63,12 +81,35 @@ const route = useRoute();
 const year = ref(new Date().getFullYear());
 
 const employees = ref([])
+// --------- новый код chat: проверка настроек перед отправкой
+const settingsError = ref('');
+const settingsSaving = ref(false);
+const validateSettings = () => {
+    settingsError.value = '';
+    const hours = String(formDataCreateTimeSheetMonth.shift_hours).trim().replace(',', '.');
+    const penalty = String(formDataCreateTimeSheetMonth.absence_penalty).trim().replace(',', '.');
+    const dailyAllowance = String(formDataCreateTimeSheetMonth.daily_allowance).trim().replace(',', '.'); // новый код chat
+    const decimal = /^\d+(?:\.\d{1,2})?$/;
+    if (!decimal.test(hours) || Number(hours) <= 0 || Number(hours) > 24 || !decimal.test(penalty) || !decimal.test(dailyAllowance)) {
+        settingsError.value = 'Часы: больше 0 и не больше 24. Штраф и суточные: не меньше 0. До двух знаков после запятой.';
+        return false;
+    }
+    formDataCreateTimeSheetMonth.shift_hours = hours;
+    formDataCreateTimeSheetMonth.absence_penalty = penalty;
+    formDataCreateTimeSheetMonth.daily_allowance = dailyAllowance; // новый код chat
+    return true;
+};
+// --------- конец нового кода chat
+
 
 const formDataCreateTimeSheetMonth = reactive({
     month: 1,
     year: year.value,
     agreement_id: parseInt(route.params.id, 10),
-    employee_card_id: []
+    employee_card_id: [],
+    shift_hours: '12', // новый код chat
+    absence_penalty: '0', // новый код chat
+    daily_allowance: '0', // новый код chat: суточные
 })
 
 const getEmployeeCardHandler = async() =>{
@@ -82,13 +123,16 @@ const getEmployeeCardHandler = async() =>{
 }
 
 const createTimeSheetMonthHandler = async() => {
+    if (settingsSaving.value || !validateSettings()) return; // новый код chat
+    settingsSaving.value = true; // новый код chat
     try{
         console.log("[Form Data ]", formDataCreateTimeSheetMonth)
         const res = await api.post('/agreements/timesheetmonth/create', formDataCreateTimeSheetMonth)
         window.location.reload()
     }catch(err){
         console.log(err)
-    }
+        settingsError.value = typeof err.response?.data === 'string' ? err.response.data : 'Не удалось сохранить табель.'; // новый код chat
+    } finally { settingsSaving.value = false; } // новый код chat
 }
 onMounted(getEmployeeCardHandler);
 </script>

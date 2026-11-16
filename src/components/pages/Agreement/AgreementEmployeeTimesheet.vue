@@ -1,11 +1,13 @@
 <template>
-    <div class="container-fluid pt-3">
-        <div class="d-flex justify-content-between border-bottom">    
-            <h4>Табель договора:</h4>
+    <!-- новый код chat: общий контейнер и заголовок находятся в AgreementSalaryPage -->
+    <div>
+        <!-- новый код chat: действия табеля выровнены справа -->
+        <div class="d-flex justify-content-end border-bottom">
             <!-- <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link> -->
             <div class="d-flex gap-2 align-items-center">
                 <time-sheet-create-update-component/>
-                <TimeSheetUpdateComponent :month="timesheetMonth_select.month" :year="timesheetMonth_select.year" :employees_id="timesheetMonth_select.employees" :timesheetMonth_id="timesheetMonth_select.ID"/>
+                <!-- новый код chat: передача настроек смены, штрафа и суточных -->
+                <TimeSheetUpdateComponent :daily_allowance_kopecks="timesheetMonth_select.daily_allowance_kopecks" :shift_hours="timesheetMonth_select.shift_hours" :absence_penalty_kopecks="timesheetMonth_select.absence_penalty_kopecks" :month="timesheetMonth_select.month" :year="timesheetMonth_select.year" :employees_id="timesheetMonth_select.employees" :timesheetMonth_id="timesheetMonth_select.ID"/>
                 <div class="dropdown">
                     <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-three-dots-vertical"></i>
@@ -18,6 +20,9 @@
         </div>
 
 
+        <!-- новый код chat: ошибка сохранения и запрет ввода во время запроса -->
+        <div v-if="saveTimesheetError" class="alert alert-danger" role="alert">{{ saveTimesheetError }}</div>
+        <fieldset :disabled="savingTimesheet" class="border-0 p-0 m-0">
         <div class="list-group pt-3 ">
             <div class="list-group-item d-flex gap-1 justify-content-between">
                 <div class="">
@@ -87,7 +92,7 @@
                 </div>
             </div>
         </div>
-    
+        </fieldset>
     </div>
 </template>
 
@@ -320,9 +325,10 @@ const createTimesheetHandler = async(timesheet) => {
         try{
             const res = await api.post('/agreements/timesheet/create', timesheet)
             console.log('[Server create Timesheet handler]: ', res.data)
-            changeMonth();
+            // новый код chat: обновляем табель один раз после всех запросов
         }catch(err){
             console.log("[Error create Timesheet handler]: ", err)
+            throw err; // новый код chat: сохранить режим редактирования при ошибке
         }
     }
 }
@@ -332,9 +338,10 @@ const updateTimesheetHandler = async(timesheet) => {
         try{
             const res = await api.post('/agreements/timesheet/update', timesheet)
             console.log('[Server update Timesheet handler]: ', res.data)
-            changeMonth();
+            // новый код chat: обновляем табель один раз после всех запросов
         }catch(err){
             console.log("[Error create Timesheet handler]: ", err)
+            throw err; // новый код chat: сохранить режим редактирования при ошибке
         }
     }
 }
@@ -344,9 +351,10 @@ const deleteTimesheetHandler = async(timesheet) => {
         try{
             const res = await api.delete('/agreements/timesheet/delete', {data: timesheet})
             console.log('[Server delete Timesheet handler]: ', res.data)
-            changeMonth();
+            // новый код chat: обновляем табель один раз после всех запросов
         }catch(err){
             console.log("[Error create Timesheet handler]: ", err)
+            throw err; // новый код chat: сохранить режим редактирования при ошибке
         }
     }
 }
@@ -365,7 +373,14 @@ const changeTimesheet = () =>{
     isChange.value = true;
 }
 
+// --------- новый код chat: ожидание запросов и сообщение об ошибке сохранения
+const savingTimesheet = ref(false);
+const saveTimesheetError = ref('');
+// --------- конец нового кода chat
 const postTimesheetHandler = async()=>{
+    if (savingTimesheet.value) return; // новый код chat
+    savingTimesheet.value = true;
+    saveTimesheetError.value = '';
     try{
         const timesheet_send = Object.entries(timesheet.value).flatMap(([employeeID, dates]) => Object.entries(dates).filter(([date, item]) => item?.state && item.state !== "Server").map(([date, item]) => {
             return{
@@ -380,13 +395,17 @@ const postTimesheetHandler = async()=>{
         const timesheet_update = timesheet_send.filter(item => item.state === "Update");
         const timesheet_delete = timesheet_send.filter(item => item.state === "Delete");
 
-        createTimesheetHandler(timesheet_create);
-        updateTimesheetHandler(timesheet_update);
-        deleteTimesheetHandler(timesheet_delete);
+        // --------- новый код chat: дождаться всех изменений до перечитывания табеля
+        await createTimesheetHandler(timesheet_create);
+        await updateTimesheetHandler(timesheet_update);
+        await deleteTimesheetHandler(timesheet_delete);
         isChange.value = false;
+        changeMonth();
+        // --------- конец нового кода chat
     }catch(err){
         console.log(err);
-    }
+        saveTimesheetError.value = 'Не удалось сохранить табель полностью. Повторите сохранение.'; // новый код chat
+    } finally { savingTimesheet.value = false; } // новый код chat
 }
 
 const validateTimesheetInput = (employeeId, day) => { 

@@ -57,6 +57,11 @@ import AgreementEmployeeAdvance from '../components/pages/Agreement/AgreementEmp
 import HomePage from '../components/pages/Home/HomePage.vue'
 import AgreementTimeSheetPage from '../components/pages/Agreement/AgreementTimeSheetPage.vue'
 import AgreementPaymentPage from '../components/pages/Agreement/Payment/AgreementPaymentPage.vue'
+import AgreementSalaryPage from '../components/pages/Agreement/AgreementSalaryPage.vue' // новый код chat: общая оболочка зарплаты
+import AgreementDailyAllowancePage from '../components/pages/Agreement/AgreementDailyAllowancePage.vue' // новый код chat: суточные
+import AgreementSalaryAccrualPage from '../components/pages/Agreement/AgreementSalaryAccrualPage.vue' // новый код chat: страница начислений
+import AgreementSalaryAdvancePage from '../components/pages/Agreement/AgreementSalaryAdvancePage.vue' // новый код chat: страница авансов
+import AgreementSalaryPenaltyPage from '../components/pages/Agreement/AgreementSalaryPenaltyPage.vue' // новый код chat: страница штрафов
 
 
 const routes = [
@@ -72,6 +77,21 @@ const routes = [
 
   //agreement payment
   { path: '/agreements/:id/payment', name: 'agreement-payment', component: AgreementPaymentPage, meta:{requiresAuth: true} },
+  // --------- новый код chat: вложенные вкладки с прежними адресами и именами
+  {
+    path: '/agreements/:id',
+    component: AgreementSalaryPage,
+    meta: {requiresAuth: true},
+    children: [
+      { path: '', redirect: to => ({name: 'agreement-salary-accruals', params: {id: to.params.id}}) },
+      { path: 'timesheet', name: 'agreement-timesheet-detail', component: AgreementEmployee }, // новый код chat: табель внутри общей оболочки
+      { path: 'accruals', name: 'agreement-salary-accruals', component: AgreementSalaryAccrualPage },
+      { path: 'advances', name: 'agreement-salary-advances', component: AgreementSalaryAdvancePage },
+      { path: 'penalties', name: 'agreement-salary-penalties', component: AgreementSalaryPenaltyPage },
+      { path: 'daily-allowance', name: 'agreement-daily-allowance', component: AgreementDailyAllowancePage }, // новый код chat
+    ],
+  },
+  // --------- конец нового кода chat
   //expenses
   { path: '/agreements/:id/expenses', name: 'expenses', component: ExpensesPage, meta:{requiresAuth: true} },
 
@@ -113,7 +133,6 @@ const routes = [
 
 
   // { path: '/agreements/:id/timesheet', name: 'agreement-timesheet', component: AgreementTimeSheetPage, meta:{requiresAuth: true} },
-  { path: '/agreements/:id/timesheet', name: 'agreement-timesheet-detail', component: AgreementEmployee, meta:{requiresAuth: true} },
   { path: '/agreements/:id/employee/append', name: 'agreement-employee-append', component: AgreementAppendEmployee, meta:{requiresAuth: true} },
 
   { path: '/agreements/:id/employee/advance', name: 'agreement-employee-advance', component: AgreementEmployeeAdvance, meta:{requiresAuth: true} },
