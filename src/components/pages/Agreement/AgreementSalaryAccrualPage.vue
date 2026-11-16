@@ -70,7 +70,7 @@
             </table>
         </div>
         <!-- новый код chat: отдельное окно календаря и удержаний сотрудника -->
-        <SalaryAccrualDetailComponent v-if="selectedAccrual && selectedMonth" :agreement-id="route.params.id" :month="selectedMonth" :accrual="selectedAccrual" @close="selectedAccrual = null" />
+        <SalaryAccrualDetailComponent v-if="selectedAccrual && selectedMonth" :agreement-id="route.params.id" :month="selectedMonth" :accrual="selectedAccrual" @close="selectedAccrual = null" @changed="refreshAfterPenalty" /> <!-- новый код chat: пересчёт после прощения штрафа -->
     </div>
 </template>
 <!-- --------- конец нового кода chat -->
@@ -145,6 +145,21 @@ const getAccrualsHandler = async() => {
         if (version === requestVersion) { loading.value = false; calculating.value = false; } // новый код chat: завершение автоматического расчёта
     }
 };
+
+// --------- новый код chat: обновляем суммы, сохраняя открытое окно сотрудника
+const refreshAfterPenalty = async() => {
+    const version = ++requestVersion;
+    errorMessage.value = '';
+    try {
+        const res = await api.post(`/agreements/${route.params.id}/timesheetmonth/${selectedMonthID.value}/accruals/calculate`);
+        if (version !== requestVersion) return;
+        applyResponse(res.data);
+        if (selectedAccrual.value) selectedAccrual.value = accruals.value.find(row => row.employee_card_id === selectedAccrual.value.employee_card_id) || null;
+    } catch (err) {
+        if (version === requestVersion) errorMessage.value = 'Статус штрафа сохранён, но обновить начисления не удалось. Обновите страницу. ' + requestError(err);
+    }
+};
+// --------- конец нового кода chat
 
 const getMonthsHandler = async() => {
     const version = ++requestVersion;

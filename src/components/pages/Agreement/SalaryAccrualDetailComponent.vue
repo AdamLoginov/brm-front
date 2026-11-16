@@ -26,12 +26,18 @@
                     </div>
                 </div>
                 <section v-for="group in groups" :key="group.title" class="mt-3">
-                    <h6>{{ group.title }} — {{ money(group.rows.reduce((sum, row) => sum + Number(row.amount_kopecks), 0)) }}</h6> <!-- новый код chat: итоговая сумма списка -->
+                    <h6>{{ group.title }} — {{ money(group.rows.reduce((sum, row) => sum + (group.isPenalty && row.status !== 'active' ? 0 : Number(row.amount_kopecks)), 0)) }}</h6> <!-- новый код chat: в сумму удержаний входят только актуальные штрафы -->
                     <p class="small text-secondary">{{ group.description }}</p>
                     <div v-if="group.rows.length" class="table-responsive detail-table">
                         <table class="table table-sm table-bordered align-middle mb-0">
-                            <thead class="table-light"><tr><th>{{ group.dateLabel }}</th><th class="text-end">Сумма</th><th>Комментарий</th></tr></thead>
-                            <tbody><tr v-for="row in group.rows" :key="row.ID"><td class="text-nowrap">{{ dateLabel(row.date) }}</td><td class="text-end text-nowrap">{{ money(row.amount_kopecks) }}</td><td class="detail-comment">{{ row.comment || '—' }}</td></tr></tbody>
+                            <!-- новый код chat: статус штрафа и прощение прогула -->
+                            <thead class="table-light"><tr><th>{{ group.dateLabel }}</th><th v-if="group.isPenalty">Статус</th><th class="text-end">Сумма</th><th>Комментарий</th><th v-if="group.isPenalty">Действия</th></tr></thead>
+                            <tbody><tr v-for="row in group.rows" :key="row.ID">
+                                <td class="text-nowrap">{{ dateLabel(row.date) }}</td>
+                                <td v-if="group.isPenalty"><span class="badge rounded-5 border bg-white fw-normal" :class="statusClass(row.status)">{{ statusLabel(row.status) }}</span></td>
+                                <td class="text-end text-nowrap">{{ money(row.amount_kopecks) }}</td><td class="detail-comment">{{ row.comment || '—' }}</td>
+                                <td v-if="group.isPenalty"><button v-if="canForgive(row)" class="btn btn-sm btn-outline-primary" :disabled="saving" @click="forgive(row)">Простить</button></td>
+                            </tr></tbody>
                         </table>
                     </div>
                     <p v-else class="text-secondary">{{ group.empty }}</p>
@@ -50,7 +56,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import api from '../../../api';
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle.min.js'; // новый код chat: тот же Bootstrap, что подключён в main.js
 const props = defineProps({agreementId: {type: [String, Number], required: true}, month: {type: Object, required: true}, accrual: {type: Object, required: true}});
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'changed']); // новый код chat: обновление начислений после прощения
+const saving = ref(false); // новый код chat: защита от повторной отправки
 const dialog = ref(null), loading = ref(true), error = ref('');
 const entries = ref([]), advances = ref([]), penalties = ref([]);
 let version = 0;
@@ -118,8 +125,25 @@ const calendar = computed(() => {
 });
 const groups = computed(() => [
     {title:'Авансы', description:'Актуальные авансы по договору, учитываемые в начислении.', dateLabel:'Дата выплаты', rows:advances.value, empty:'Актуальных авансов нет.'},
-    {title:'Штрафы', description:'Актуальные штрафы за месяц выбранного табеля.', dateLabel:'Дата назначения', rows:penalties.value, empty:'Актуальных штрафов за этот месяц нет.'},
+    {title:'Штрафы', isPenalty:true, description:'Штрафы за месяц выбранного табеля. В сумму удержаний входят только актуальные.', dateLabel:'Дата назначения', rows:penalties.value, empty:'Штрафов за этот месяц нет.'}, // новый код chat: сохраняем видимость прощённых штрафов
 ]);
+// --------- новый код chat: прощение штрафа за прогул через существующее API
+const statusLabel = status => ({active:'Актуален', closed:'Закрыт', forgiven:'Прощён'}[status] || status);
+const statusClass = status => ({active:'text-success border-success', closed:'text-secondary border-secondary', forgiven:'text-primary border-primary'}[status] || 'text-secondary border-secondary');
+const canForgive = row => row.status === 'active' && (row.source_time_sheet_id || (row.comment || '').trim().toLocaleLowerCase('ru-RU') === 'прогул');
+const forgive = async(row) => {
+    if (saving.value || !canForgive(row) || !window.confirm('Простить штраф за прогул? Он больше не будет вычитаться из начисления.')) return;
+    const current = version; saving.value = true;
+    try {
+        const res = await api.patch(`/agreements/${props.agreementId}/penalties/${row.ID}/status`, {status:'forgiven'});
+        emit('changed');
+        if (current !== version) return;
+        penalties.value = penalties.value.map(item => item.ID === row.ID ? res.data : item);
+    } catch (err) {
+        if (current === version) error.value = typeof err.response?.data === 'string' ? err.response.data.trim() : 'Не удалось простить штраф.';
+    } finally { if (current === version) saving.value = false; }
+};
+// --------- конец нового кода chat
 const load = async() => {
     const current = ++version; loading.value = true; error.value = '';
     try {
@@ -133,7 +157,7 @@ const load = async() => {
         const byDate = (a,b) => a.date.localeCompare(b.date) || a.ID - b.ID;
         entries.value = (sheet.data.time_sheets || []).filter(belongs);
         advances.value = (advanceRows.data || []).filter(row => belongs(row) && !row.is_settled).sort(byDate);
-        penalties.value = (penaltyRows.data || []).filter(row => belongs(row) && row.status === 'active' && row.date.startsWith(`${monthPrefix.value}-`)).sort(byDate);
+        penalties.value = (penaltyRows.data || []).filter(row => belongs(row) && row.date.startsWith(`${monthPrefix.value}-`)).sort(byDate); // новый код chat: все статусы штрафов выбранного месяца
     } catch (err) {
         if (current === version) error.value = typeof err.response?.data === 'string' ? err.response.data.trim() : 'Не удалось загрузить подробности начисления.';
     } finally { if (current === version) loading.value = false; }
