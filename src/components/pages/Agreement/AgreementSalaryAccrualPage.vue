@@ -47,7 +47,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="accrual in accruals" :key="accrual.ID">
+                    <!-- новый код chat: открытие подробностей мышью или клавиатурой -->
+                    <tr v-for="accrual in accruals" :key="accrual.ID" class="salary-accrual-row" tabindex="0" aria-haspopup="dialog" :aria-label="`Подробности начисления: ${accrual.employee_name}`" @click="selectedAccrual = accrual" @keydown.enter.prevent="selectedAccrual = accrual" @keydown.space.prevent="selectedAccrual = accrual">
                         <td :title="accrual.employee_name">{{ formatEmployeeName(accrual) }}</td> <!-- новый код chat: фамилия и инициалы, полное имя в подсказке -->
                         <td class="text-end">{{ formatShifts(accrual.total_hours, accrual.shift_hours) }}</td> <!-- новый код chat: норма смены из табеля -->
                         <td class="text-end text-nowrap">{{ formatMoney(accrual.salary_rate_kopecks) }}</td>
@@ -68,6 +69,8 @@
                 </tfoot>
             </table>
         </div>
+        <!-- новый код chat: отдельное окно календаря и удержаний сотрудника -->
+        <SalaryAccrualDetailComponent v-if="selectedAccrual && selectedMonth" :agreement-id="route.params.id" :month="selectedMonth" :accrual="selectedAccrual" @close="selectedAccrual = null" />
     </div>
 </template>
 <!-- --------- конец нового кода chat -->
@@ -77,11 +80,14 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../../../api';
+import SalaryAccrualDetailComponent from './SalaryAccrualDetailComponent.vue'; // новый код chat: подробности начисления
 
 const route = useRoute();
 const months = ref([]);
 const selectedMonthID = ref(null);
 const accruals = ref([]);
+const selectedAccrual = ref(null); // новый код chat: сотрудник открытого окна
+const selectedMonth = computed(() => months.value.find(month => Number(month.ID) === Number(selectedMonthID.value))); // новый код chat: месяц календаря
 const totalKopecks = ref(0);
 const totalPenaltiesKopecks = ref(0); // новый код chat: штрафы за месяц
 const totalAdvancesKopecks = ref(0); // новый код chat: сумма авансов
@@ -106,6 +112,7 @@ const monthLabel = (month) => new Date(month.year, month.month - 1, 1).toLocaleD
 const requestError = (err) => typeof err.response?.data === 'string' ? err.response.data.trim() : 'Не удалось выполнить запрос. Попробуйте ещё раз.';
 
 const clearAccruals = () => {
+    selectedAccrual.value = null; // новый код chat: закрытие карточки при смене табеля или договора
     accruals.value = [];
     totalKopecks.value = 0;
     totalPenaltiesKopecks.value = 0; // новый код chat
@@ -166,3 +173,10 @@ watch(() => route.params.id, getMonthsHandler, {immediate: true});
 onBeforeUnmount(() => { requestVersion++; });
 // --------- конец нового кода chat
 </script>
+
+<style scoped>
+/* --------- новый код chat: доступные для открытия строки начислений */
+.salary-accrual-row { cursor: pointer; }
+.salary-accrual-row:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
+/* --------- конец нового кода chat */
+</style>
