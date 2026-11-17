@@ -13,8 +13,29 @@
                 <span>Ставка за смену: <strong>{{ money(accrual.salary_rate_kopecks) }}</strong></span>
                 <span>Часов в смене: <strong>{{ accrual.shift_hours }}</strong></span>
                 <span>Всего смен: <strong>{{ totalShifts }}</strong></span> <!-- новый код chat: количество смен по часам табеля -->
+                <span>Всего часов: <strong>{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</strong></span> <!-- новый код chat: сумма отработанных часов без округления -->
                 <span>Начислено: <strong>{{ money(accrual.amount_kopecks) }}</strong></span>
             </div>
+            <!-- --------- новый код chat: официальное трудоустройство, месячная ставка и вычет -->
+            <div class="d-flex gap-3 flex-wrap mb-3">
+                <span>Устроен официально: <strong>{{ accrual.officially_employed ? 'Да' : 'Нет' }}</strong></span>
+                <span>Оф. ставка в месяц: <strong>{{ accrual.officially_employed ? money(accrual.monthly_salary_kopecks || 0) : '—' }}</strong></span>
+                <span>Вычет 13%: <strong>{{ money(accrual.deduction_kopecks || 0) }}</strong></span>
+            </div>
+            <!-- --------- конец нового кода chat -->
+            <!-- --------- новый код chat: согласованная сумма и разница расчёта -->
+            <div class="border rounded p-2 mb-3">
+                <div>{{ approved ? `Согласовано ${approvalDate}` : 'Предварительная выплата' }}</div>
+                <template v-if="paymentPreview">
+                    <strong>Выплата: {{ money(paymentPreview.amount) }}</strong>
+                    <div v-if="paymentPreview.bonus">Дополнительная премия: {{ money(paymentPreview.bonus) }}</div>
+                    <div v-if="paymentPreview.companyDebt">Новый долг компании: {{ money(paymentPreview.companyDebt) }}</div>
+                    <div v-if="paymentPreview.employeeDebt">Новый долг сотрудника: {{ money(paymentPreview.employeeDebt) }}</div>
+                </template>
+                <div v-else class="text-danger">Проверьте сумму в поле «Выплата».</div>
+                <div v-if="approved" class="small text-secondary">Ниже сохранён состав согласованного расчёта. Учтённые суммы закрыты при согласовании.</div>
+            </div>
+            <!-- --------- конец нового кода chat -->
             <div v-if="loading" class="text-secondary" role="status">Загружаем табель и удержания…</div>
             <div v-else-if="error" class="alert alert-danger" role="alert">{{ error }} <button class="btn btn-sm btn-outline-danger" @click="load">Повторить</button></div>
             <template v-else>
@@ -26,15 +47,16 @@
                     </div>
                 </div>
                 <section v-for="group in groups" :key="group.title" class="mt-3">
-                    <h6>{{ group.title }} — {{ money(group.rows.reduce((sum, row) => sum + (group.isPenalty && row.status !== 'active' ? 0 : Number(row.amount_kopecks)), 0)) }}</h6> <!-- новый код chat: в сумму удержаний входят только актуальные штрафы -->
+                    <h6>{{ group.title }} — {{ money(group.rows.reduce((sum, row) => sum + ((group.isPenalty && row.status !== 'active') || (group.isBonus && row.is_paid) ? 0 : Number(row.amount_kopecks)), 0)) }}</h6> <!-- новый код chat: в сумму удержаний входят только актуальные штрафы -->
                     <p class="small text-secondary">{{ group.description }}</p>
                     <div v-if="group.rows.length" class="table-responsive detail-table">
                         <table class="table table-sm table-bordered align-middle mb-0">
                             <!-- новый код chat: статус штрафа и прощение прогула -->
-                            <thead class="table-light"><tr><th>{{ group.dateLabel }}</th><th v-if="group.isPenalty">Статус</th><th class="text-end">Сумма</th><th>Комментарий</th><th v-if="group.isPenalty">Действия</th></tr></thead>
+                            <thead class="table-light"><tr><th>{{ group.dateLabel }}</th><th v-if="group.isPenalty || group.isBonus">Статус</th><th class="text-end">Сумма</th><th>Комментарий</th><th v-if="group.isPenalty">Действия</th></tr></thead>
                             <tbody><tr v-for="row in group.rows" :key="row.ID">
-                                <td class="text-nowrap">{{ dateLabel(row.date) }}</td>
-                                <td v-if="group.isPenalty"><span class="badge rounded-5 border bg-white fw-normal" :class="statusClass(row.status)">{{ statusLabel(row.status) }}</span></td>
+                                <td class="text-nowrap">{{ group.isBonus ? monthLabel : dateLabel(row.date) }}</td>
+                                <td v-if="group.isBonus"><span class="badge rounded-5 border bg-white fw-normal" :class="approved || row.is_paid ? 'text-secondary border-secondary' : 'text-success border-success'">{{ approved || row.is_paid ? 'Выплачена' : 'Не выплачена' }}</span></td> <!-- новый код chat: учтённые премии закрыты при согласовании -->
+                                <td v-if="group.isPenalty"><span class="badge rounded-5 border bg-white fw-normal" :class="statusClass(approved && row.status === 'active' ? 'closed' : row.status)">{{ statusLabel(approved && row.status === 'active' ? 'closed' : row.status) }}</span></td> <!-- новый код chat: статус в момент согласования -->
                                 <td class="text-end text-nowrap">{{ money(row.amount_kopecks) }}</td><td class="detail-comment">{{ row.comment || '—' }}</td>
                                 <td v-if="group.isPenalty"><button v-if="canForgive(row)" class="btn btn-sm btn-outline-primary" :disabled="saving" @click="forgive(row)">Простить</button></td>
                             </tr></tbody>
@@ -52,14 +74,27 @@
 
 <script setup>
 // --------- новый код chat: данные выбранного сотрудника и календарь табеля
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import api from '../../../api';
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle.min.js'; // новый код chat: тот же Bootstrap, что подключён в main.js
-const props = defineProps({agreementId: {type: [String, Number], required: true}, month: {type: Object, required: true}, accrual: {type: Object, required: true}});
+const props = defineProps({agreementId: {type: [String, Number], required: true}, month: {type: Object, required: true}, accrual: {type: Object, required: true}, approved:Boolean, approvalDate:String, paymentAmount:String}); // новый код chat: согласованная выплата
+// --------- новый код chat: параметры согласованной выплаты
+const paymentPreview = computed(() => {
+    const text = String(props.paymentAmount ?? '').replace(',', '.').trim();
+    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
+    const value = Math.round(Number(text) * 100);
+    if (!Number.isSafeInteger(value)) return null;
+    const base = Math.max(0, Number(props.accrual.payable_kopecks));
+    return {amount:value,bonus:Math.max(0,value-base),companyDebt:Math.max(0,base-value),employeeDebt:Math.max(0,-Number(props.accrual.payable_kopecks))};
+});
+// --------- конец нового кода chat
 const emit = defineEmits(['close', 'changed']); // новый код chat: обновление начислений после прощения
 const saving = ref(false); // новый код chat: защита от повторной отправки
 const dialog = ref(null), loading = ref(true), error = ref('');
 const entries = ref([]), advances = ref([]), penalties = ref([]);
+const expenses = ref([]); // новый код chat: невозмещённые личные расходы
+const debts = ref([]); // новый код chat: активные долги расчёта
+const bonuses = ref([]); // новый код chat: премии выбранного месяца всех статусов
 let version = 0;
 // --------- новый код chat: палитра отметок из табеля
 const timesheetColors = {
@@ -124,13 +159,17 @@ const calendar = computed(() => {
     return days;
 });
 const groups = computed(() => [
+    {title:'Долг компании',description:'Прибавляется к выплате. Активные долги за все месяцы договора.',dateLabel:'Дата начисления',rows:debts.value.filter(row => row.side === 'company'),empty:'Долгов компании нет.'}, // новый код chat
+    {title:'Долг сотрудника',description:'Вычитается из выплаты. Активные долги за все месяцы договора.',dateLabel:'Дата начисления',rows:debts.value.filter(row => row.side === 'employee'),empty:'Долгов сотрудника нет.'}, // новый код chat
+    {title:'Премии', isBonus:true, description:'Премии за выбранный месяц. К выплате прибавляются только невыплаченные.', dateLabel:'Месяц премии', rows:bonuses.value, empty:'Премий за этот месяц нет.'}, // новый код chat
+    {title:'Возмещение расходов', description:'Невозмещённые личные расходы по договору за все месяцы. Прибавляются к выплате.', dateLabel:'Дата расхода', rows:expenses.value, empty:'Невозмещённых личных расходов нет.'}, // новый код chat
     {title:'Авансы', description:'Актуальные авансы по договору, учитываемые в начислении.', dateLabel:'Дата выплаты', rows:advances.value, empty:'Актуальных авансов нет.'},
     {title:'Штрафы', isPenalty:true, description:'Штрафы за месяц выбранного табеля. В сумму удержаний входят только актуальные.', dateLabel:'Дата назначения', rows:penalties.value, empty:'Штрафов за этот месяц нет.'}, // новый код chat: сохраняем видимость прощённых штрафов
 ]);
 // --------- новый код chat: прощение штрафа за прогул через существующее API
 const statusLabel = status => ({active:'Актуален', closed:'Закрыт', forgiven:'Прощён'}[status] || status);
 const statusClass = status => ({active:'text-success border-success', closed:'text-secondary border-secondary', forgiven:'text-primary border-primary'}[status] || 'text-secondary border-secondary');
-const canForgive = row => row.status === 'active' && (row.source_time_sheet_id || (row.comment || '').trim().toLocaleLowerCase('ru-RU') === 'прогул');
+const canForgive = row => !props.approved && row.status === 'active' && (row.source_time_sheet_id || (row.comment || '').trim().toLocaleLowerCase('ru-RU') === 'прогул');
 const forgive = async(row) => {
     if (saving.value || !canForgive(row) || !window.confirm('Простить штраф за прогул? Он больше не будет вычитаться из начисления.')) return;
     const current = version; saving.value = true;
@@ -146,15 +185,34 @@ const forgive = async(row) => {
 // --------- конец нового кода chat
 const load = async() => {
     const current = ++version; loading.value = true; error.value = '';
+    // --------- новый код chat: календарь и списки из единого расчёта или сохранённого снимка
+    if (props.accrual.detail) {
+        const detail = props.accrual.detail;
+        entries.value = detail.time_sheets || [];
+        advances.value = detail.advances || [];
+        penalties.value = detail.penalties || [];
+        bonuses.value = detail.bonuses || [];
+        debts.value = detail.debts || [];
+        expenses.value = (detail.expenses || []).map(row => ({ID:row.ID,date:row.CreatedAt.slice(0,10),amount_kopecks:Math.round(Number(row.price)*100),comment:row.name}));
+        loading.value = false;
+        return;
+    }
+    // --------- конец нового кода chat
     try {
-        const [sheet, advanceRows, penaltyRows] = await Promise.all([
+        const [sheet, advanceRows, penaltyRows, expenseRows, bonusRows] = await Promise.all([ // новый код chat: загрузка премий
             api.get(`/agreements/timesheetmonth/detail/${props.month.ID}`),
             api.get(`/agreements/${props.agreementId}/advances`),
             api.get(`/agreements/${props.agreementId}/penalties`),
+            api.get(`/agreements/${props.agreementId}/expenses`), // новый код chat
+            api.get(`/agreements/${props.agreementId}/bonuses`), // новый код chat
         ]);
         if (current !== version) return;
         const belongs = row => Number(row.employee_card_id) === Number(props.accrual.employee_card_id);
         const byDate = (a,b) => a.date.localeCompare(b.date) || a.ID - b.ID;
+        bonuses.value = (bonusRows.data || []).filter(row => belongs(row) && Number(row.month) === Number(props.month.month) && Number(row.year) === Number(props.month.year)); // новый код chat: премии строго за месяц табеля
+        // --------- новый код chat: приводим личные расходы к общему виду списков
+        expenses.value = (expenseRows.data.expenses || []).filter(row => belongs(row) && row.account === 'employee' && !row.is_reimbursed).map(row => ({ID:row.ID, date:row.CreatedAt.slice(0,10), amount_kopecks:Math.round(Number(row.price) * 100), comment:row.name})).sort(byDate);
+        // --------- конец нового кода chat
         entries.value = (sheet.data.time_sheets || []).filter(belongs);
         advances.value = (advanceRows.data || []).filter(row => belongs(row) && !row.is_settled).sort(byDate);
         penalties.value = (penaltyRows.data || []).filter(row => belongs(row) && row.date.startsWith(`${monthPrefix.value}-`)).sort(byDate); // новый код chat: все статусы штрафов выбранного месяца
@@ -163,6 +221,7 @@ const load = async() => {
     } finally { if (current === version) loading.value = false; }
 };
 // --------- новый код chat: открытие и очистка Bootstrap Modal без анимации
+watch(() => props.accrual, load); // новый код chat: обновление состава после пересчёта
 onMounted(() => {
     previousFocus = document.activeElement;
     dialog.value.addEventListener('hidden.bs.modal', afterHidden);

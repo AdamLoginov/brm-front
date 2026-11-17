@@ -1,3 +1,5 @@
+import AgreementSalaryDebtPage from '../components/pages/Agreement/AgreementSalaryDebtPage.vue'; // новый код chat
+import AgreementSalaryBonusPage from '../components/pages/Agreement/AgreementSalaryBonusPage.vue'; // новый код chat: вкладка премий
 import { createRouter, createWebHistory } from 'vue-router'
 
 import Login from '../components/Login.vue'
@@ -87,13 +89,15 @@ const routes = [
       { path: 'timesheet', name: 'agreement-timesheet-detail', component: AgreementEmployee }, // новый код chat: табель внутри общей оболочки
       { path: 'accruals', name: 'agreement-salary-accruals', component: AgreementSalaryAccrualPage },
       { path: 'advances', name: 'agreement-salary-advances', component: AgreementSalaryAdvancePage },
+      { path: 'debts', name: 'agreement-salary-debts', component: AgreementSalaryDebtPage }, // новый код chat
+      { path: 'bonuses', name: 'agreement-salary-bonuses', component: AgreementSalaryBonusPage }, // новый код chat
       { path: 'penalties', name: 'agreement-salary-penalties', component: AgreementSalaryPenaltyPage },
+      { path: 'expenses', name: 'expenses', component: ExpensesPage }, // новый код chat: расходы внутри общей панели
       { path: 'daily-allowance', name: 'agreement-daily-allowance', component: AgreementDailyAllowancePage }, // новый код chat
     ],
   },
   // --------- конец нового кода chat
   //expenses
-  { path: '/agreements/:id/expenses', name: 'expenses', component: ExpensesPage, meta:{requiresAuth: true} },
 
   //order
   { path: '/agreements/orders/:id/check', name: 'order-check', component: OrderCheckPage, meta:{requiresAuth: true} },
