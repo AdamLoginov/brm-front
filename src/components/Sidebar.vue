@@ -85,9 +85,11 @@
     
     <hr>
     
+    <!-- --------- новый код chat: колокольчик рядом с логином внизу sidebar -->
+    <div class="d-flex align-items-center justify-content-between gap-2" :class="{'flex-column':isColapsed}">
     <div class="dropdown"> 
       <a href="#" class="d-flex align-items-center link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"> 
-        <strong v-if="user">{{ user.login }}</strong> 
+        <strong v-if="user && !isColapsed">{{ user.login }}</strong><i v-else class="bi bi-person-circle" :title="user?.login || 'Пользователь'"></i> <!-- новый код chat: свёрнутая панель --> 
       </a> 
       <ul class="dropdown-menu text-small shadow"> 
         <li><router-link :to="{name: 'users-all'}" class="dropdown-item"> Пользователи</router-link></li> 
@@ -99,14 +101,21 @@
           </a>
         </li> 
       </ul> 
-    </div> 
+    </div>
+    <router-link :to="{name:'notifications'}" class="btn btn-outline-secondary btn-sm position-relative flex-shrink-0" :title="notificationsState.error || 'Уведомления'" :aria-label="`Уведомления, непрочитанных: ${notificationsState.unread}`">
+        <i class="bi bi-bell"></i>
+        <span v-if="notificationsState.unread" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">{{ notificationsState.unread > 99 ? '99+' : notificationsState.unread }}</span>
+    </router-link>
+    </div>
+    <!-- --------- конец нового кода chat -->
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue'; // новый код chat: жизненный цикл проверки уведомлений
+import { useRouter, useRoute } from 'vue-router';
 import api from '../api';
+import { notificationsState, startNotifications, stopNotifications, refreshNotifications } from '../utils/notifications'; // новый код chat
 import { clearFileAccess } from '../utils/fileAccess'; // новый код chat: удаление файловой cookie
 
 const router = useRouter();
@@ -114,13 +123,14 @@ const router = useRouter();
 const emit = defineEmits(['isColapsed'])
 const isColapsed = ref(false);
 
-const userId = localStorage.getItem('user-id')
+const route = useRoute(); // новый код chat: смена пользователя без перезагрузки
+let currentUserToken = '';
 const user = ref(null);
 
 const getUserHandler = async() =>{
   try{
     const res = await api.get(`/users/${userId}`)
-    user.value = res.data
+    if (requestToken === localStorage.getItem('user-token')) user.value = res.data; // новый код chat: не показываем ответ прошлого пользователя
     console.log("[User] ", res.data)
   }catch(err){
     console.log(err)
@@ -144,11 +154,19 @@ const handleLogout = async () => {
   localStorage.removeItem('user-token');
   localStorage.removeItem('user-id');
   localStorage.removeItem('employee-card-id');
+  refreshNotifications(); // новый код chat: сразу очищаем счётчик после выхода
   router.push('/login');
   // --------- конец нового кода chat
 };
 
-onMounted(getUserHandler);
+// --------- новый код chat: sidebar остаётся смонтированным даже на странице входа
+watch(() => route.fullPath, () => {
+  const token = localStorage.getItem('user-token') || '';
+  if (token !== currentUserToken) { currentUserToken=token; user.value=null; getUserHandler(); refreshNotifications(1,true); }
+}, {immediate:true});
+// --------- конец нового кода chat
+onMounted(startNotifications); // новый код chat
+onBeforeUnmount(stopNotifications); // новый код chat
 </script>
 
 <style scoped>

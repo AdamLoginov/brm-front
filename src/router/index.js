@@ -1,3 +1,4 @@
+import NotificationsPage from '../components/pages/NotificationsPage.vue'; // новый код chat: личные уведомления
 import AgreementSalaryDebtPage from '../components/pages/Agreement/AgreementSalaryDebtPage.vue'; // новый код chat
 import AgreementSalaryBonusPage from '../components/pages/Agreement/AgreementSalaryBonusPage.vue'; // новый код chat: вкладка премий
 import { createRouter, createWebHistory } from 'vue-router'
@@ -67,6 +68,7 @@ import AgreementSalaryPenaltyPage from '../components/pages/Agreement/AgreementS
 
 
 const routes = [
+  { path:'/notifications', name:'notifications', component:NotificationsPage, meta:{requiresAuth:true} }, // новый код chat
   { path: '/', name: 'home', component: HomePage, meta:{requiresAuth: true} },
   { path: '/login', name: 'login', component: Login, meta:{requiresAuth: false} },
   
