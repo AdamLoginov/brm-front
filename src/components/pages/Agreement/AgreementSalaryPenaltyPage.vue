@@ -21,7 +21,7 @@
             </div>
             <div class="col-md-2">
                 <label for="penalty-amount" class="form-label">Сумма, ₽</label>
-                <input id="penalty-amount" v-model="form.amount" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="0,00" required :disabled="busy">
+                <MoneyInputComponent id="penalty-amount" v-model="form.amount" class="form-control form-control-sm" placeholder="0,00" required :disabled="busy" /> <!-- новый код chat: денежное поле с разделением разрядов -->
             </div>
             <div class="col-md-3">
                 <label for="penalty-comment" class="form-label">Комментарий</label>
@@ -80,6 +80,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../../../api';
+import MoneyInputComponent from '../../MoneyInputComponent.vue'; // новый код chat: общее денежное поле
 
 const route = useRoute();
 const penalties = ref([]);

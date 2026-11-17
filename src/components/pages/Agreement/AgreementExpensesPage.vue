@@ -21,7 +21,7 @@
 
                     <div class="col-md-1">
                         <label class="form-label">Цена</label>
-                        <input v-model="formData.price" type="number" min="0" step="0.01" required class="form-control form-control-sm" placeholder="Цена"> <!-- новый код chat: суммы с копейками -->
+                        <MoneyInputComponent v-model="formData.price" required class="form-control form-control-sm" placeholder="Цена" /> <!-- новый код chat: денежное поле с разделением разрядов -->
                     </div>
 
                     <div class="col-md-2">
@@ -103,6 +103,7 @@
 <script setup>
 import { onMounted, reactive, ref, computed, watch } from 'vue'; // новый код chat: обновление при смене договора
 import api from '../../../api';
+import MoneyInputComponent from '../../MoneyInputComponent.vue'; // новый код chat: общее денежное поле
 import { useRoute } from 'vue-router';
 import { formatDate } from '../../../utils/date';
 
@@ -126,12 +127,19 @@ const onlyDate = (date) =>{
 }
 
 const postExpensesHandler = async()=>{
+    // --------- новый код chat: сохраняем проверки прежнего number-поля и числовой формат API
+    const price = String(formData.price).trim();
+    if (!/^\d+(?:\.\d{1,2})?$/.test(price) || !Number.isFinite(Number(price))) {
+        errorMessage.value = 'Введите неотрицательную сумму расхода с точностью до копеек.';
+        return;
+    }
+    // --------- конец нового кода chat
     try{
         isSubmit.value = true;
         errorMessage.value = ''; // новый код chat
         formData.agreement_id = Number(agreement_id.value); // новый код chat
         console.log(formData)
-        const res = await api.post(`/agreements/${agreement_id.value}/expenses/create`, formData);
+        const res = await api.post(`/agreements/${agreement_id.value}/expenses/create`, {...formData, price:Number(price)}) // новый код chat: backend ожидает число;
         formData.name = "";
         formData.price = "";
         formData.manager_card_id = 0;

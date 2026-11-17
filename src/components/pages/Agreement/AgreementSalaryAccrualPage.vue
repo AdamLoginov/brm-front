@@ -37,7 +37,8 @@
             <table class="table table-sm table-bordered table-hover align-middle salary-table">
                 <thead class="table-light">
                     <tr>
-                        <th scope="col">Сотрудник</th>
+                        <!-- новый код chat: порядковый номер и согласование -->
+<th v-if="selectionMode">Согл.</th><th class="salary-number">№</th><th scope="col">Сотрудник</th> <!-- новый код chat: компактная колонка номера -->
                         <th scope="col" class="text-end">Часы</th> <!-- новый код chat: сумма отработанных часов -->
                         <th scope="col" class="text-end">Смены</th> <!-- новый код chat: часы отображаются в сменах -->
                         <th scope="col" class="text-end">Ставка</th> <!-- новый код chat: сокращённый заголовок, официальная ставка убрана из таблицы -->
@@ -54,8 +55,10 @@
                 </thead>
                 <tbody>
                     <!-- новый код chat: открытие подробностей мышью или клавиатурой -->
-                    <tr v-for="accrual in accruals" :key="accrual.ID" class="salary-accrual-row" tabindex="0" aria-haspopup="dialog" :aria-label="`Подробности начисления: ${accrual.employee_name}`" @click="selectedAccrual = accrual" @keydown.enter.prevent="selectedAccrual = accrual" @keydown.space.prevent="selectedAccrual = accrual">
-                        <td :title="accrual.employee_name">{{ formatEmployeeName(accrual) }}</td> <!-- новый код chat: фамилия и инициалы, полное имя в подсказке -->
+                    <tr v-for="(accrual, index) in sortedAccruals" :key="accrual.employee_card_id" class="salary-accrual-row" :class="{'salary-approved-row': accrual.approved}" tabindex="0" aria-haspopup="dialog" :aria-label="`Подробности начисления: ${accrual.employee_name}`" @click="selectedAccrual = accrual" @keydown.enter.prevent="selectedAccrual = accrual" @keydown.space.prevent="selectedAccrual = accrual">
+                        <!-- новый код chat: выбор без открытия окна -->
+<td v-if="selectionMode" @click.stop @keydown.stop><input v-model="approvalSelection[accrual.employee_card_id]" type="checkbox" class="form-check-input" :aria-label="`Согласовать: ${accrual.employee_name}`" :disabled="busy"></td><td class="salary-number">{{ index + 1 }}</td> <!-- новый код chat: номер по центру -->
+<td :title="accrual.employee_name">{{ formatEmployeeName(accrual) }}</td> <!-- новый код chat: фамилия и инициалы, полное имя в подсказке -->
                         <td class="text-end">{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</td> <!-- новый код chat: часы сотрудника из начисления без округления -->
                         <td class="text-end">{{ formatShifts(accrual.total_hours, accrual.shift_hours) }}</td> <!-- новый код chat: норма смены из табеля -->
                         <td class="text-end text-nowrap">{{ formatMoney(accrual.salary_rate_kopecks) }}</td>
@@ -69,12 +72,12 @@
                         <td class="text-end"><span v-payment-tooltip="paymentPreview(accrual).debtTooltip" :class="{'text-danger':paymentPreview(accrual).shortfall > 0}" :tabindex="paymentPreview(accrual).shortfall > 0 ? 0 : undefined">{{ formatMoney(paymentPreview(accrual).debt) }}</span></td><td class="text-end">{{ formatMoney(accrual.employee_debt_kopecks || 0) }}</td>
                         <!-- --------- конец нового кода chat -->
                         <td class="text-end text-nowrap fw-semibold" :class="{'text-danger': accrual.payable_kopecks < 0}">{{ formatMoney(accrual.payable_kopecks) }}</td>
-                        <td @click.stop @keydown.stop><input v-model="paymentAmounts[accrual.employee_card_id]" class="form-control form-control-sm salary-payment" inputmode="decimal" :disabled="approved || busy" :aria-label="`Выплата: ${accrual.employee_name}`"></td> <!-- новый код chat -->
+                        <td class="text-end text-nowrap salary-payment-cell">{{ formatMoney(paymentCents(paymentAmounts[accrual.employee_card_id]) ?? 0) }}<span v-if="accrual.has_draft && !accrual.approved" class="salary-draft-dot" role="img" aria-label="Сохранён черновик выплаты" title="Сохранён черновик выплаты"></span></td> <!-- новый код chat: зелёная отметка сохранённого черновика -->
                     </tr>
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
-                        <th scope="row" colspan="4">Итого по выбранному табелю</th> <!-- новый код chat: учтено удаление колонки официальной ставки -->
+                        <th scope="row" :colspan="selectionMode ? 6 : 5">Итого по выбранному табелю</th> <!-- новый код chat: учтено удаление колонки официальной ставки -->
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalKopecks) }}</td>
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalExpensesKopecks) }}</td> <!-- новый код chat -->
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalAdvancesKopecks) }}</td>
@@ -87,16 +90,21 @@
                 </tfoot>
             </table>
         </div>
-        <!-- --------- новый код chat: согласование всех строк табеля -->
+        <!-- --------- новый код chat: массовое изменение индивидуальных согласований -->
         <div v-if="accruals.length" class="d-flex gap-2 align-items-end flex-wrap mt-3">
-            <div><label for="salary-approval-date" class="form-label">Дата согласования</label><input id="salary-approval-date" v-model="approvalDate" type="date" class="form-control form-control-sm" :disabled="approved || busy"></div>
-            <button v-if="!approved" class="btn btn-primary btn-sm" :disabled="busy || !paymentTotal.valid || !approvalDate" @click="approveHandler">Согласовано</button>
-            <template v-else><span class="text-success">Начисления согласованы</span><button class="btn btn-outline-secondary btn-sm" :disabled="busy" @click="cancelApprovalHandler">Отменить согласование</button></template>
+            <div><label for="salary-approval-date" class="form-label">Дата согласования</label><input id="salary-approval-date" v-model="approvalDate" type="date" class="form-control form-control-sm" :disabled="busy"></div>
+            <button v-if="!selectionMode" class="btn btn-primary btn-sm" :disabled="busy" @click="startApprovalSelection">Изменить согласования</button>
+            <template v-else>
+                <button class="btn btn-outline-secondary btn-sm" :disabled="busy" @click="selectAllApprovals(true)">Выделить всех</button>
+                <button class="btn btn-outline-secondary btn-sm" :disabled="busy" @click="selectAllApprovals(false)">Снять выделение</button>
+                <button class="btn btn-primary btn-sm" :disabled="busy || !selectionChanged || !approvalDate" @click="applySelectedApprovals">Применить</button>
+                <button class="btn btn-secondary btn-sm" :disabled="busy" @click="selectionMode = false">Отмена</button>
+            </template>
         </div>
         <p v-if="accruals.length" class="small text-secondary mt-2">Согласование сохраняет расчёт для ведомости и закрывает учтённые суммы. Это не отметка о физической выдаче денег.</p>
         <!-- --------- конец нового кода chat -->
         <!-- новый код chat: отдельное окно календаря и удержаний сотрудника -->
-        <SalaryAccrualDetailComponent v-if="selectedAccrual && selectedMonth" :agreement-id="route.params.id" :month="calculationMonth || selectedMonth" :accrual="selectedAccrual" :approved="approved" :approval-date="approvalDate" :payment-amount="paymentAmounts[selectedAccrual.employee_card_id]" @close="selectedAccrual = null" @changed="refreshAfterPenalty" /> <!-- новый код chat: пересчёт после прощения штрафа -->
+        <SalaryAccrualDetailComponent v-if="selectedAccrual && selectedMonth" :agreement-id="route.params.id" :month="calculationMonth || selectedMonth" :accrual="selectedAccrual" :approved="!!selectedAccrual.approved" :approval-date="selectedAccrual.approval_date || approvalDate" :payment-amount="paymentAmounts[selectedAccrual.employee_card_id]" :busy="busy" :action-error="errorMessage" @close="selectedAccrual = null" @changed="refreshAfterPenalty" @save-payment="savePayment" @approve="approveEmployee" @cancel-approval="cancelEmployee" /> <!-- новый код chat: действия сотрудника -->
     </div>
 </template>
 <!-- --------- конец нового кода chat -->
@@ -132,7 +140,13 @@ const selectedMonth = computed(() => months.value.find(month => Number(month.ID)
 const approved = ref(false), approvalID = ref(null), approvalDate = ref(new Date().toLocaleDateString('sv-SE', {timeZone:'Europe/Moscow'}));
 const revision = ref(''), paymentAmounts = ref({});
 const totalCompanyDebtKopecks = ref(0), totalEmployeeDebtKopecks = ref(0);
-let pendingApproval = null;
+// --------- новый код chat: выбор и порядок сотрудников
+const selectionMode = ref(false), approvalSelection = ref({});
+const sortedAccruals = computed(() => [...accruals.value].sort((a,b) => Number(!!a.approved)-Number(!!b.approved) || a.employee_name.localeCompare(b.employee_name,'ru') || a.employee_card_id-b.employee_card_id));
+const selectionChanged = computed(() => accruals.value.some(row => !!approvalSelection.value[row.employee_card_id] !== !!row.approved));
+const startApprovalSelection = () => { approvalSelection.value = Object.fromEntries(accruals.value.map(row => [row.employee_card_id,!!row.approved])); selectionMode.value = true; };
+const selectAllApprovals = value => { approvalSelection.value = Object.fromEntries(accruals.value.map(row => [row.employee_card_id,value])); };
+// --------- конец нового кода chat
 const centsText = cents => { const value = BigInt(cents); return `${value / 100n}.${String(value % 100n).padStart(2,'0')}`; };
 const paymentCents = value => {
     const text = String(value ?? '').trim().replace(',', '.');
@@ -192,7 +206,7 @@ const clearAccruals = () => {
     selectedAccrual.value = null; // новый код chat: закрытие карточки при смене табеля или договора
     accruals.value = [];
     calculationMonth.value = null; // новый код chat
-    approved.value = false; approvalID.value = null; revision.value = ''; paymentAmounts.value = {}; pendingApproval = null; // новый код chat
+    approved.value = false; approvalID.value = null; revision.value = ''; paymentAmounts.value = {}; selectionMode.value = false; // новый код chat
     totalCompanyDebtKopecks.value = 0; totalEmployeeDebtKopecks.value = 0; // новый код chat
     totalKopecks.value = 0;
     totalBonusesKopecks.value = 0; // новый код chat
@@ -212,7 +226,11 @@ const applyResponse = (data) => {
     totalCompanyDebtKopecks.value = data.total_company_debt_kopecks || 0;
     totalEmployeeDebtKopecks.value = data.total_employee_debt_kopecks || 0;
     paymentAmounts.value = Object.fromEntries(accruals.value.map(row => [row.employee_card_id,centsText(row.payment_kopecks ?? Math.max(0,row.payable_kopecks))]));
-    pendingApproval = null;
+    // новый код chat: обновляем открытое окно и сообщаем о сбросе черновика
+    if (selectedAccrual.value) selectedAccrual.value = accruals.value.find(row => row.employee_card_id === selectedAccrual.value.employee_card_id) || null;
+    selectionMode.value = false;
+    pendingSelectionRequest = null; // новый код chat: завершённый запрос больше не повторяем
+    if (accruals.value.some(row => row.draft_reset)) successMessage.value = 'Исходные данные изменились: черновики затронутых сотрудников сброшены к расчётным суммам.';
     // --------- конец нового кода chat
     totalKopecks.value = data.total_kopecks || 0;
     totalBonusesKopecks.value = data.total_bonuses_kopecks || 0; // новый код chat
@@ -252,7 +270,7 @@ const refreshAfterPenalty = async() => {
         applyResponse(res.data);
         if (selectedAccrual.value) selectedAccrual.value = accruals.value.find(row => row.employee_card_id === selectedAccrual.value.employee_card_id) || null;
     } catch (err) {
-        if (version === requestVersion) errorMessage.value = 'Статус штрафа сохранён, но обновить начисления не удалось. Обновите страницу. ' + requestError(err);
+        if (version === requestVersion) errorMessage.value = 'Не удалось обновить начисления. ' + requestError(err); // новый код chat: обновление также используется после конфликта черновика
     }
 };
 // --------- конец нового кода chat
@@ -280,30 +298,34 @@ const getMonthsHandler = async() => {
     }
 };
 
-// --------- новый код chat: единое согласование и отмена
-const approveHandler = async() => {
-    if (busy.value || approved.value || !paymentTotal.value.valid) return;
-    if (!window.confirm('Согласовать суммы всех сотрудников и закрыть учтённые авансы, штрафы, премии, расходы и долги?')) return;
-    const body = {date:approvalDate.value,revision:revision.value,payments:accruals.value.map(row => ({employee_card_id:row.employee_card_id,amount:centsText(paymentCents(paymentAmounts.value[row.employee_card_id]))}))};
-    const signature = JSON.stringify(body);
-    if (!pendingApproval || pendingApproval.signature !== signature) pendingApproval = {signature,key:crypto.randomUUID()};
-    const version = ++requestVersion; loading.value = true; errorMessage.value = '';
+// --------- новый код chat: сохранение черновика и атомарное изменение согласований
+const runSalaryAction = async(path,body,message) => {
+    if (busy.value) return;
+    const version = ++requestVersion;
+    loading.value = true; errorMessage.value = ''; successMessage.value = '';
     try {
-        const res = await api.post(`/agreements/${route.params.id}/timesheetmonth/${selectedMonthID.value}/approval`, {...body,request_key:pendingApproval.key});
-        if (version === requestVersion) { applyResponse(res.data); successMessage.value = 'Начисления согласованы.'; }
+        const res = await api.post(`/agreements/${route.params.id}/timesheetmonth/${selectedMonthID.value}/${path}`,body);
+        if (version === requestVersion) { applyResponse(res.data); if (!successMessage.value) successMessage.value = message; }
     } catch (err) { if (version === requestVersion) errorMessage.value = requestError(err); }
     finally { if (version === requestVersion) loading.value = false; }
 };
-const cancelApprovalHandler = async() => {
-    if (busy.value || !approved.value || !window.confirm('Отменить согласование и восстановить учтённые статусы? Созданные открытые долги и дополнительная премия будут удалены; закрытые долги сохранятся.')) return;
-    const version = ++requestVersion; loading.value = true; errorMessage.value = '';
-    try {
-        await api.delete(`/agreements/${route.params.id}/timesheetmonth/${selectedMonthID.value}/approval`, {data:{approval_id:approvalID.value}});
-        if (version !== requestVersion) return;
-        await getAccrualsHandler();
-    } catch (err) { if (version === requestVersion) errorMessage.value = requestError(err); }
-    finally { if (version === requestVersion) loading.value = false; }
+const savePayment = ({amount,reset}) => {
+    const row = selectedAccrual.value;
+    if (!row) return;
+    return runSalaryAction('payment-draft',{employee_card_id:row.employee_card_id,revision:row.revision,amount,reset},reset ? 'Выплата возвращена к расчётной сумме.' : 'Выплата сохранена.');
 };
+const selectionEntry = (row,approved,amount) => ({employee_card_id:row.employee_card_id,approved,approval_id:row.approval_id || 0,revision:row.revision || '',amount:amount ?? paymentAmounts.value[row.employee_card_id]});
+// новый код chat: одинаковый повтор после сетевой ошибки использует прежний ключ
+let pendingSelectionRequest = null;
+const submitApprovals = employees => {
+    const body = {date:approvalDate.value,employees};
+    const signature = JSON.stringify({agreement:route.params.id,month:selectedMonthID.value,...body});
+    if (!pendingSelectionRequest || pendingSelectionRequest.signature !== signature) pendingSelectionRequest = {signature,key:crypto.randomUUID()};
+    return runSalaryAction('employee-approvals',{...body,request_key:pendingSelectionRequest.key},'Согласования обновлены.');
+};
+const approveEmployee = amount => selectedAccrual.value && submitApprovals([selectionEntry(selectedAccrual.value,true,amount)]);
+const cancelEmployee = () => selectedAccrual.value && submitApprovals([selectionEntry(selectedAccrual.value,false)]);
+const applySelectedApprovals = () => submitApprovals(accruals.value.map(row => selectionEntry(row,!!approvalSelection.value[row.employee_card_id])));
 // --------- конец нового кода chat
 watch(() => route.params.id, getMonthsHandler, {immediate: true});
 onBeforeUnmount(() => { requestVersion++; });
@@ -313,12 +335,19 @@ onBeforeUnmount(() => { requestVersion++; });
 <style scoped>
 /* --------- новый код chat: доступные для открытия строки начислений */
 .salary-accrual-row { cursor: pointer; }
+.salary-approved-row { --bs-table-bg: #e7f4e8; --bs-table-hover-bg: #dceedd; } /* новый код chat: согласованные строки */
 .salary-accrual-row:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
 /* --------- конец нового кода chat */
 /* --------- новый код chat: компактная таблица с округлённой рамкой */
 .salary-table-wrap { border: 1px solid var(--bs-border-color); border-radius: 6px; overflow: auto; }
 .salary-table { font-size: 13px; margin-bottom: 0; } /* новый код chat: увеличенный шрифт таблицы */
 .salary-table th { white-space: normal; min-width: 65px; }
+/* --------- новый код chat: узкий номер и отметка черновика в углу выплаты */
+.salary-table .salary-number { width: 32px; min-width: 32px; text-align: center; white-space: nowrap; }
+.salary-payment-cell { position: relative; }
+.salary-table td.salary-payment-cell { padding-right: 12px; }
+.salary-draft-dot { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background-color: var(--bs-success); }
+/* --------- конец нового кода chat */
 .salary-table th, .salary-table td { padding: 3px 4px; }
 .salary-table > thead > tr:first-child { border-top: 0; }
 .salary-table > tfoot > tr:last-child { border-bottom: 0; }

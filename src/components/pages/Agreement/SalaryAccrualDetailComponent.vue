@@ -9,31 +9,40 @@
                 <div><h5 id="salary-detail-title" class="mb-1">{{ accrual.employee_name }}</h5><div class="text-secondary">{{ monthLabel }}</div></div>
                 <button class="btn-close" aria-label="Закрыть" @click="close"></button>
             </div>
-            <div class="d-flex gap-3 flex-wrap mb-3">
-                <span>Ставка за смену: <strong>{{ money(accrual.salary_rate_kopecks) }}</strong></span>
-                <span>Часов в смене: <strong>{{ accrual.shift_hours }}</strong></span>
-                <span>Всего смен: <strong>{{ totalShifts }}</strong></span> <!-- новый код chat: количество смен по часам табеля -->
-                <span>Всего часов: <strong>{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</strong></span> <!-- новый код chat: сумма отработанных часов без округления -->
-                <span>Начислено: <strong>{{ money(accrual.amount_kopecks) }}</strong></span>
+            <!-- --------- новый код chat: финансовые данные слева, справочные справа -->
+            <div class="row g-3 mb-3 salary-summary">
+                <div class="col-md-6">
+                    <div v-for="item in financialRows" :key="item.label" class="d-flex justify-content-between gap-2 mb-1"><span>{{ item.label }}</span><strong>{{ money(item.value) }}</strong></div>
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Премии</span><strong>{{ money(accrual.bonuses_kopecks || 0) }} <span v-if="paymentPreview?.bonus" class="text-success">+ {{ money(paymentPreview.bonus) }}</span></strong></div>
+                    <div v-if="paymentPreview?.companyDebt" class="d-flex justify-content-between gap-2 text-danger"><span>Новый долг К.</span><strong>+ {{ money(paymentPreview.companyDebt) }}</strong></div>
+                    <div v-if="paymentPreview?.employeeDebt" class="d-flex justify-content-between gap-2 text-danger"><span>Новый долг С.</span><strong>+ {{ money(paymentPreview.employeeDebt) }}</strong></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Ставка за смену</span><strong>{{ money(accrual.salary_rate_kopecks) }}</strong></div>
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Устроен официально</span><strong>{{ accrual.officially_employed ? 'Да' : 'Нет' }}</strong></div>
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Оф. зарплата в месяц</span><strong>{{ accrual.officially_employed ? money(accrual.monthly_salary_kopecks || 0) : '—' }}</strong></div>
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Отработано часов</span><strong>{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</strong></div>
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Часов в смене</span><strong>{{ accrual.shift_hours }}</strong></div>
+                    <div class="d-flex justify-content-between gap-2"><span>Отработано смен</span><strong>{{ totalShifts }}</strong></div>
+                </div>
             </div>
-            <!-- --------- новый код chat: официальное трудоустройство, месячная ставка и вычет -->
-            <div class="d-flex gap-3 flex-wrap mb-3">
-                <span>Устроен официально: <strong>{{ accrual.officially_employed ? 'Да' : 'Нет' }}</strong></span>
-                <span>Оф. ставка в месяц: <strong>{{ accrual.officially_employed ? money(accrual.monthly_salary_kopecks || 0) : '—' }}</strong></span>
-                <span>Вычет 13%: <strong>{{ money(accrual.deduction_kopecks || 0) }}</strong></span>
-            </div>
-            <!-- --------- конец нового кода chat -->
-            <!-- --------- новый код chat: согласованная сумма и разница расчёта -->
-            <div class="border rounded p-2 mb-3">
-                <div>{{ approved ? `Согласовано ${approvalDate}` : 'Предварительная выплата' }}</div>
-                <template v-if="paymentPreview">
-                    <strong>Выплата: {{ money(paymentPreview.amount) }}</strong>
-                    <div v-if="paymentPreview.bonus">Дополнительная премия: {{ money(paymentPreview.bonus) }}</div>
-                    <div v-if="paymentPreview.companyDebt">Новый долг компании: {{ money(paymentPreview.companyDebt) }}</div>
-                    <div v-if="paymentPreview.employeeDebt">Новый долг сотрудника: {{ money(paymentPreview.employeeDebt) }}</div>
-                </template>
-                <div v-else class="text-danger">Проверьте сумму в поле «Выплата».</div>
-                <div v-if="approved" class="small text-secondary">Ниже сохранён состав согласованного расчёта. Учтённые суммы закрыты при согласовании.</div>
+            <div class="border rounded p-3 mb-3">
+                <div class="mb-2"><strong class="d-block">К выдаче</strong><strong class="d-block" style="font-size: 16px;">{{ money(Math.max(0, accrual.payable_kopecks)) }}</strong></div> <!-- новый код chat: сумма под надписью, 16 px -->
+                <div v-if="accrual.payable_kopecks < 0" class="text-secondary small mb-2">Расчётный остаток: {{ money(accrual.payable_kopecks) }}</div>
+                <label for="salary-detail-payment" class="form-label">Выплата, ₽</label>
+                <MoneyInputComponent id="salary-detail-payment" v-model="editedPayment" class="form-control form-control-sm" :disabled="approved || busy" :class="{'is-invalid': !paymentPreview}" style="max-width: 220px;" /> <!-- новый код chat: денежное поле с разделением разрядов -->
+                <div v-if="!paymentPreview" class="text-danger small mt-1">Введите неотрицательную сумму до копеек.</div>
+                <div v-if="accrual.draft_reset" class="text-warning-emphasis small mt-2">Исходные данные изменились, сохранённая выплата сброшена.</div>
+                <div v-if="actionError" class="alert alert-danger mt-2 mb-0" role="alert">{{ actionError }} <button class="btn btn-sm btn-outline-danger" :disabled="busy || saving" @click="emit('changed')">Обновить расчёт</button></div> <!-- новый код chat: восстановление после конфликта версии -->
+                <div class="d-flex gap-2 flex-wrap align-items-center mt-3">
+                    <template v-if="!approved">
+                        <button v-if="differsFromCalculation" class="btn btn-primary btn-sm" :disabled="busy || saving || !paymentPreview || savedPayment" @click="emit('save-payment',{amount:editedPayment,reset:false})">{{ savedPayment ? 'Сохранено' : 'Сохранить' }}</button>
+                        <button v-if="accrual.has_draft" class="btn btn-outline-secondary btn-sm" :disabled="busy || saving" @click="emit('save-payment',{amount:'',reset:true})">Сбросить к расчётной</button>
+                        <button class="btn btn-primary btn-sm" :disabled="busy || saving || !paymentPreview || !approvalDate" @click="emit('approve',editedPayment)">Согласовать</button> <!-- новый код chat: синяя кнопка -->
+                        <span class="text-secondary small">Дата согласования: {{ dateLabel(approvalDate) }}</span>
+                    </template>
+                    <template v-else><span class="text-success">Согласовано {{ dateLabel(approvalDate) }}</span><button class="btn btn-outline-secondary btn-sm" :disabled="busy || saving" @click="emit('cancel-approval')">Отменить согласование</button></template>
+                </div>
             </div>
             <!-- --------- конец нового кода chat -->
             <div v-if="loading" class="text-secondary" role="status">Загружаем табель и удержания…</div>
@@ -58,7 +67,7 @@
                                 <td v-if="group.isBonus"><span class="badge rounded-5 border bg-white fw-normal" :class="approved || row.is_paid ? 'text-secondary border-secondary' : 'text-success border-success'">{{ approved || row.is_paid ? 'Выплачена' : 'Не выплачена' }}</span></td> <!-- новый код chat: учтённые премии закрыты при согласовании -->
                                 <td v-if="group.isPenalty"><span class="badge rounded-5 border bg-white fw-normal" :class="statusClass(approved && row.status === 'active' ? 'closed' : row.status)">{{ statusLabel(approved && row.status === 'active' ? 'closed' : row.status) }}</span></td> <!-- новый код chat: статус в момент согласования -->
                                 <td class="text-end text-nowrap">{{ money(row.amount_kopecks) }}</td><td class="detail-comment">{{ row.comment || '—' }}</td>
-                                <td v-if="group.isPenalty"><button v-if="canForgive(row)" class="btn btn-sm btn-outline-primary" :disabled="saving" @click="forgive(row)">Простить</button></td>
+                                <td v-if="group.isPenalty"><button v-if="canForgive(row)" class="btn btn-sm btn-outline-primary" :disabled="saving || busy" @click="forgive(row)">Простить</button></td>
                             </tr></tbody>
                         </table>
                     </div>
@@ -76,19 +85,38 @@
 // --------- новый код chat: данные выбранного сотрудника и календарь табеля
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import api from '../../../api';
+import MoneyInputComponent from '../../MoneyInputComponent.vue'; // новый код chat: общее поле денежных сумм
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle.min.js'; // новый код chat: тот же Bootstrap, что подключён в main.js
-const props = defineProps({agreementId: {type: [String, Number], required: true}, month: {type: Object, required: true}, accrual: {type: Object, required: true}, approved:Boolean, approvalDate:String, paymentAmount:String}); // новый код chat: согласованная выплата
+const props = defineProps({agreementId: {type: [String, Number], required: true}, month: {type: Object, required: true}, accrual: {type: Object, required: true}, approved:Boolean, approvalDate:String, paymentAmount:String, busy:Boolean, actionError:String}); // новый код chat: согласованная выплата
 // --------- новый код chat: параметры согласованной выплаты
+// новый код chat: локальный ввод меняет только предварительное отображение до сохранения
+const editedPayment = ref(props.paymentAmount ?? '0');
+watch(() => [props.accrual,props.paymentAmount], () => { editedPayment.value = props.paymentAmount ?? '0'; });
 const paymentPreview = computed(() => {
-    const text = String(props.paymentAmount ?? '').replace(',', '.').trim();
+    const text = String(editedPayment.value ?? '').replace(',', '.').trim();
     if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
-    const value = Math.round(Number(text) * 100);
-    if (!Number.isSafeInteger(value)) return null;
+    const [whole,fraction = ''] = text.split('.');
+    const cents = BigInt(whole)*100n + BigInt(fraction.padEnd(2,'0'));
+    if (cents > 9007199254740991n) return null;
+    const value = Number(cents);
     const base = Math.max(0, Number(props.accrual.payable_kopecks));
     return {amount:value,bonus:Math.max(0,value-base),companyDebt:Math.max(0,base-value),employeeDebt:Math.max(0,-Number(props.accrual.payable_kopecks))};
 });
 // --------- конец нового кода chat
-const emit = defineEmits(['close', 'changed']); // новый код chat: обновление начислений после прощения
+const emit = defineEmits(['close', 'changed', 'save-payment', 'approve', 'cancel-approval']); // новый код chat: обновление начислений после прощения
+// --------- новый код chat: сохранение отличающейся суммы и финансовая сводка
+const differsFromCalculation = computed(() => !!paymentPreview.value && paymentPreview.value.amount !== Math.max(0,Number(props.accrual.payable_kopecks)));
+const savedPayment = computed(() => props.accrual.has_draft && paymentPreview.value?.amount === Math.round(Number(props.paymentAmount)*100));
+const financialRows = computed(() => [
+    {label:'Начислено',value:props.accrual.amount_kopecks},
+    {label:'Расходы',value:props.accrual.expenses_kopecks || 0},
+    {label:'Авансы',value:props.accrual.advances_kopecks || 0},
+    {label:'Штрафы',value:props.accrual.penalties_kopecks || 0},
+    {label:'Вычет 13%',value:props.accrual.deduction_kopecks || 0},
+    {label:'Долг К.',value:props.accrual.company_debt_kopecks || 0},
+    {label:'Долг С.',value:props.accrual.employee_debt_kopecks || 0},
+]);
+// --------- конец нового кода chat
 const saving = ref(false); // новый код chat: защита от повторной отправки
 const dialog = ref(null), loading = ref(true), error = ref('');
 const entries = ref([]), advances = ref([]), penalties = ref([]);

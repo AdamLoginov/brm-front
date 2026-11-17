@@ -20,7 +20,7 @@
             </div>
             <div class="col-md-2">
                 <label for="debt-amount" class="form-label">Сумма, ₽</label>
-                <input id="debt-amount" v-model="form.amount" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="0,00" required :disabled="busy">
+                <MoneyInputComponent id="debt-amount" v-model="form.amount" class="form-control form-control-sm" placeholder="0,00" required :disabled="busy" /> <!-- новый код chat: денежное поле с разделением разрядов -->
             </div>
             <!-- новый код chat: сторона долга -->
             <div class="col-md-2"><label for="debt-side" class="form-label">У кого долг</label><select id="debt-side" v-model="form.side" class="form-select form-select-sm" :disabled="busy"><option value="company">Компания</option><option value="employee">Сотрудник</option></select></div>
@@ -75,6 +75,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../../../api';
+import MoneyInputComponent from '../../MoneyInputComponent.vue'; // новый код chat: общее денежное поле
 
 const route = useRoute();
 const debts = ref([]);
