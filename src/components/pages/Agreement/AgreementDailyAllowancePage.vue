@@ -25,11 +25,11 @@
         <div v-if="busy" class="text-secondary py-2" role="status">Обрабатываем суточные…</div>
         <div v-if="!months.length && !busy" class="alert alert-info">Сначала создайте месячный табель.</div>
         <div v-if="monthID" class="table-responsive daily-scroll">
-            <table class="table table-sm table-bordered align-middle daily-table">
-                <thead class="table-light">
+            <table ref="dailyTableElement" class="table table-sm table-bordered align-middle daily-table">
+                <thead ref="dailyHeaderElement" class="daily-sticky-header" :style="{transform: `translateY(${dailyHeaderOffset}px)`}"> <!-- новый код chat: закреплённый белый заголовок -->
                     <!-- новый код chat: выбранная дата подсвечивает число и день недели голубым, остальные выходные сохраняют свой фон -->
-                    <tr><th rowspan="2" class="daily-number">№</th><th rowspan="2" class="daily-name">Сотрудник</th><th v-for="day in days" :key="day.date" class="daily-day" :class="{'bg-warning-subtle text-dark':day.weekend && day.date !== through, 'daily-selected-date':day.date === through}">{{ day.weekday }}</th><th rowspan="2" class="daily-balance">Баланс, ₽</th><th rowspan="2" class="daily-issue">К выдаче, ₽</th></tr>
-                    <tr><th v-for="day in days" :key="day.date" class="daily-day" :class="{'bg-warning-subtle text-dark':day.weekend && day.date !== through, 'daily-selected-date':day.date === through}">{{ day.number }}</th></tr>
+                    <tr><th rowspan="2" class="daily-number">№</th><th rowspan="2" class="daily-name">Сотрудник</th><th v-for="day in days" :key="day.date" class="daily-day" :class="{'daily-weekend':day.weekend && day.date !== through, 'daily-selected-date':day.date === through}">{{ day.weekday }}</th><th rowspan="2" class="daily-balance">Баланс, ₽</th><th rowspan="2" class="daily-issue">К выдаче, ₽</th></tr> <!-- новый код chat: светло-жёлтый фон только названий выходных -->
+                    <tr><th v-for="day in days" :key="day.date" class="daily-day" :class="{'daily-selected-date':day.date === through}">{{ day.number }}</th></tr>
                 </thead>
                 <tbody>
                     <tr v-for="(employee, index) in table.employees" :key="employee.employee_card_id">
@@ -59,12 +59,40 @@
 
 <script setup>
 // --------- новый код chat: календарь, прогноз и атомарная массовая выдача
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../../../api';
 import { rememberSalaryMonth, restoreSalaryMonth } from '../../../utils/salaryMonthStorage'; // новый код chat: отдельный выбранный месяц суточных
 import DailyAllowanceHistoryComponent from './DailyAllowanceHistoryComponent.vue';
 const route = useRoute();
+// --------- новый код chat: закрепление двух строк шапки в пределах таблицы суточных
+const dailyTableElement = ref(null), dailyHeaderElement = ref(null), dailyHeaderOffset = ref(0);
+let dailyHeaderFrame = 0, dailyHeaderObserver = null;
+const updateDailyHeader = () => {
+    dailyHeaderFrame = 0;
+    if (!dailyTableElement.value || !dailyHeaderElement.value) return;
+    const table = dailyTableElement.value.getBoundingClientRect();
+    dailyHeaderOffset.value = Math.max(0, Math.min(-table.top, table.height - dailyHeaderElement.value.offsetHeight));
+};
+const scheduleDailyHeader = () => { if (!dailyHeaderFrame) dailyHeaderFrame = requestAnimationFrame(updateDailyHeader); };
+watch([dailyTableElement, dailyHeaderElement], () => {
+    dailyHeaderObserver?.disconnect();
+    dailyHeaderObserver = new ResizeObserver(scheduleDailyHeader);
+    if (dailyTableElement.value) dailyHeaderObserver.observe(dailyTableElement.value);
+    if (dailyHeaderElement.value) dailyHeaderObserver.observe(dailyHeaderElement.value);
+    scheduleDailyHeader();
+}, {flush:'post'});
+onMounted(() => {
+    window.addEventListener('scroll', scheduleDailyHeader, {capture:true,passive:true});
+    window.addEventListener('resize', scheduleDailyHeader);
+});
+onBeforeUnmount(() => {
+    window.removeEventListener('scroll', scheduleDailyHeader, true);
+    window.removeEventListener('resize', scheduleDailyHeader);
+    dailyHeaderObserver?.disconnect();
+    if (dailyHeaderFrame) cancelAnimationFrame(dailyHeaderFrame);
+});
+// --------- конец нового кода chat
 const months = ref([]), monthID = ref(null), through = ref(''), paymentDate = ref(''), table = ref({employees:[]});
 const amounts = ref({}), busy = ref(false), errorMessage = ref(''), successMessage = ref(''), historyOpen = ref(false);
 let version = 0;
@@ -161,6 +189,11 @@ onBeforeUnmount(() => { version++; });
 </script>
 
 <style scoped>
+/* --------- новый код chat: белая закреплённая шапка без жёлтого фона выходных */
+.daily-sticky-header { position: relative; z-index: 6; }
+.daily-table thead th { background: #fff !important; color: #000; box-shadow: none; }
+.daily-table thead th.daily-weekend { background: var(--bs-warning-bg-subtle, #fff3cd) !important; } /* новый код chat: суббота и воскресенье, без окрашивания чисел месяца */
+/* --------- конец нового кода chat */
 /* --------- новый код chat: календарь как в табеле, цвета оплаты и отдельная колонка ввода */
 /* --------- новый код chat: скругление внешней рамки как у list-group в табеле */
 .daily-scroll { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); overflow: auto; }
