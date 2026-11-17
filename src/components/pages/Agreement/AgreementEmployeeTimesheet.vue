@@ -1,8 +1,8 @@
 <template>
     <!-- новый код chat: общий контейнер и заголовок находятся в AgreementSalaryPage -->
-    <div>
+    <div class="pb-3"> <!-- новый код chat: нижний отступ вкладки -->
         <!-- новый код chat: действия табеля выровнены справа -->
-        <div class="d-flex justify-content-end border-bottom">
+        <div class="d-flex justify-content-end border-bottom pb-2"> <!-- новый код chat: отступ под кнопками -->
             <!-- <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link> -->
             <div class="d-flex gap-2 align-items-center">
                 <time-sheet-create-update-component/>
@@ -34,11 +34,11 @@
         <!-- --------- конец нового кода chat -->
         <fieldset :disabled="savingTimesheet" class="border-0 p-0 m-0">
         <div class="list-group pt-3 ">
-            <div class="list-group-item d-flex gap-1 justify-content-between">
+            <div class="list-group-item d-grid timesheet-month-navigation"> <!-- новый код chat: Bootstrap d-grid сохраняет расположение в одну строку -->
                 <div class="">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="previousMonth()" :disabled="timesheetMonth.findIndex(item => item.ID === table_select) === timesheetMonth.length - 1">
+                    <button v-if="previousTable" type="button" class="btn btn-outline-secondary btn-sm" @click="previousMonth()"> <!-- новый код chat: только существующий соседний табель -->
                         <i class="bi bi-caret-left-fill"></i>
-                        Предыдущий
+                        {{ monthValue[previousTable.month] }} {{ previousTable.year }}
                     </button>
                 </div>
                 <div class="d-flex gap-2">
@@ -49,8 +49,8 @@
                     <button type="button" class="btn btn-primary btn-sm" @click="changeMonth()">Применить</button>
                 </div>
                 <div class="">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="nextMonth()" :disabled="timesheetMonth.findIndex(item => item.ID === table_select) === 0">
-                        Следующий
+                    <button v-if="nextTable" type="button" class="btn btn-outline-secondary btn-sm" @click="nextMonth()"> <!-- новый код chat: месяц и год соседнего табеля -->
+                        {{ monthValue[nextTable.month] }} {{ nextTable.year }}
                         <i class="bi bi-caret-right-fill"></i>
                     </button>
                 </div>
@@ -139,6 +139,11 @@ const table_select = ref(null);
 const employees = ref(null);
 const timesheet = ref({});
 const timesheetMonth = ref([]);
+// --------- новый код chat: соседние табели из доступного списка
+const selectedTableIndex = computed(() => timesheetMonth.value.findIndex(item => item.ID === table_select.value));
+const previousTable = computed(() => selectedTableIndex.value < 0 ? null : timesheetMonth.value[selectedTableIndex.value + 1] || null);
+const nextTable = computed(() => selectedTableIndex.value < 0 ? null : timesheetMonth.value[selectedTableIndex.value - 1] || null);
+// --------- конец нового кода chat
 const timesheetMonth_select = ref({});
 
 // --------- новый код chat: закрепление шапки при прокрутке окна и вложенных контейнеров
@@ -295,17 +300,15 @@ const changeMonth = () =>{
 }
 
 const previousMonth = () => {
-    const index = timesheetMonth.value.findIndex(item => item.ID === table_select.value)
-    if (index != -1) {
-        table_select.value = timesheetMonth.value[index + 1].ID
+    if (previousTable.value) { // новый код chat: защита от отсутствующего табеля
+        table_select.value = previousTable.value.ID
         changeMonth()
     }
 }
 
 const nextMonth = () => {
-    const index = timesheetMonth.value.findIndex(item => item.ID === table_select.value)
-    if (index != -1) {
-        table_select.value = timesheetMonth.value[index - 1].ID
+    if (nextTable.value) { // новый код chat: защита от отсутствующего табеля
+        table_select.value = nextTable.value.ID
         changeMonth()
     }
 }
@@ -652,6 +655,10 @@ onMounted(getTimeSheetMonthHandler);
 </script>
 
 <style>
+/* --------- новый код chat: центр не зависит от длины и наличия соседних кнопок */
+.list-group-item.timesheet-month-navigation { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; } /* новый код chat: повышен приоритет относительно стилей Bootstrap */
+.timesheet-month-navigation > :last-child { text-align: right; }
+/* --------- конец нового кода chat */
 /* новый код chat: непрозрачная шапка над выделением ячеек */
 .timesheet-sticky-header { position: relative; z-index: 5; background: #fff; } /* новый код chat: убрана тень, утолщавшая границу */
 .timesheet-sticky-header > .list-group-item { border-radius: 0; } /* новый код chat: единая рамка без скруглений между строками */

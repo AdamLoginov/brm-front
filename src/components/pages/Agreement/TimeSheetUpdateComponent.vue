@@ -1,6 +1,6 @@
 <template>
     <div>
-        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#change">изменить</button>
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#change">Изменить</button> <!-- новый код chat: заглавная буква -->
 
 
         <div class="modal fade" id="change" tabindex="-1" aria-hidden="true">

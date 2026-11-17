@@ -1,6 +1,6 @@
 <template>
     <div>
-        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#create">создать</button>
+        <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#create">Создать</button> <!-- новый код chat: заглавная буква -->
 
 
         <div class="modal fade" id="create" tabindex="-1" aria-hidden="true">
