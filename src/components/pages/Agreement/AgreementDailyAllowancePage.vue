@@ -62,6 +62,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../../../api';
+import { rememberSalaryMonth, restoreSalaryMonth } from '../../../utils/salaryMonthStorage'; // новый код chat: отдельный выбранный месяц суточных
 import DailyAllowanceHistoryComponent from './DailyAllowanceHistoryComponent.vue';
 const route = useRoute();
 const months = ref([]), monthID = ref(null), through = ref(''), paymentDate = ref(''), table = ref({employees:[]});
@@ -114,6 +115,7 @@ const cellTitle = cell => {
     return `${cell.date}: ${cell.state === 'reserved' ? 'Обеспечено вперёд' : 'Покрытие'} ${money(cell.covered_kopecks)} из ${money(cell.amount_kopecks)} ₽`;
 };
 const loadTable = async() => {
+    rememberSalaryMonth(route.params.id, 'daily-allowance', monthID.value); // новый код chat: сохраняем выбранный табель
     const current = ++version; busy.value = true; errorMessage.value = ''; amounts.value = {}; pendingRequest = null;
     if (!monthID.value) { table.value = {employees:[]}; busy.value = false; return; }
     try {
@@ -132,7 +134,7 @@ const loadMonths = async() => {
         const res = await api.get(`/agreements/${route.params.id}/timesheetmonth`);
         if (current !== version) return;
         months.value = (res.data || []).sort((a,b) => b.year-a.year || b.month-a.month || b.ID-a.ID);
-        monthID.value = months.value[0]?.ID || null;
+        monthID.value = restoreSalaryMonth(route.params.id, 'daily-allowance', months.value); // новый код chat: восстановление месяца суточных
         await loadTable();
     } catch (err) { if (current === version) errorMessage.value = errorText(err); }
     finally { if (current === version) busy.value = false; }

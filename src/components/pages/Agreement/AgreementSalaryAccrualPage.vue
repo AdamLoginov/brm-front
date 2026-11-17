@@ -80,6 +80,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../../../api';
+import { rememberSalaryMonth, restoreSalaryMonth } from '../../../utils/salaryMonthStorage'; // новый код chat: отдельный выбранный месяц начислений
 import SalaryAccrualDetailComponent from './SalaryAccrualDetailComponent.vue'; // новый код chat: подробности начисления
 
 const route = useRoute();
@@ -129,6 +130,7 @@ const applyResponse = (data) => {
 };
 
 const getAccrualsHandler = async() => {
+    rememberSalaryMonth(route.params.id, 'accruals', selectedMonthID.value); // новый код chat: сохраняем выбор месяца
     const version = ++requestVersion;
     clearAccruals();
     errorMessage.value = '';
@@ -174,7 +176,7 @@ const getMonthsHandler = async() => {
         const res = await api.get(`/agreements/${route.params.id}/timesheetmonth`);
         if (version !== requestVersion) return;
         months.value = (res.data || []).sort((a, b) => b.year - a.year || b.month - a.month || b.ID - a.ID);
-        selectedMonthID.value = months.value[0]?.ID || null;
+        selectedMonthID.value = restoreSalaryMonth(route.params.id, 'accruals', months.value); // новый код chat: восстановление месяца начислений
         loading.value = false;
         if (selectedMonthID.value) await getAccrualsHandler();
     } catch (err) {

@@ -99,6 +99,7 @@
 <script setup>
 import { computed, onMounted, ref, onBeforeUnmount } from 'vue';
 import api from '../../../api';
+import { rememberSalaryMonth, restoreSalaryMonth } from '../../../utils/salaryMonthStorage'; // новый код chat: память выбранного табеля
 import { useRoute, onBeforeRouteLeave } from 'vue-router';
 import TimeSheetCreateUpdateComponent from './TimeSheetCreateUpdateComponent.vue';
 import TimeSheetUpdateComponent from './TimeSheetUpdateComponent.vue';
@@ -169,9 +170,13 @@ const getTimeSheetMonthHandler = async() =>{
     try{
         const res = await api.get(`/agreements/${route.params.id}/timesheetmonth`)
         timesheetMonth.value = res.data.sort((a, b) => b.month - a.month).sort((a, b) => b.year - a.year)
-        table_select.value = timesheetMonth.value.at(0).ID
-        month.value = timesheetMonth.value.at(0).month
-        year.value = timesheetMonth.value.at(0).year
+        // --------- новый код chat: восстанавливаем табель этого договора
+        table_select.value = restoreSalaryMonth(route.params.id, 'timesheet', timesheetMonth.value)
+        if (!table_select.value) return
+        const selected = timesheetMonth.value.find(item => item.ID === table_select.value)
+        month.value = selected.month
+        year.value = selected.year
+        // --------- конец нового кода chat
         console.log("[TimeSheet Month]", timesheetMonth.value)
         console.log("[Month Year]",month.value, year.value)
         getDetailTimeSheetMonthHandler();
@@ -182,6 +187,7 @@ const getTimeSheetMonthHandler = async() =>{
 }
 
 const getDetailTimeSheetMonthHandler = async() =>{
+    rememberSalaryMonth(route.params.id, 'timesheet', table_select.value) // новый код chat: сохраняем выбор из списка и стрелок
     try{
         const res  = await api.get(`/agreements/timesheetmonth/detail/${table_select.value}`)
         timesheetMonth_select.value = res.data
