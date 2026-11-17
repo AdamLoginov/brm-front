@@ -236,6 +236,7 @@
     };
 
     const DeleteMaterialOrder = (id) =>{
+        if (!window.confirm('Убрать материал из создаваемого заказа?')) return; // новый код chat: подтверждение удаления
         selectMaterialsId.value = selectMaterialsId.value.filter(item => item !== id)
     }
 

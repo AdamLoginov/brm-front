@@ -73,6 +73,7 @@ const postCategoryEmployeeCardDocument = async() =>{
 }
 
 const deleteCategoryEmployeecardDocument = async(id) => {
+    if (!window.confirm('Удалить категорию документов сотрудников?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/employeescard/document/category/${id}/delete`);
         categorys.value = categorys.value.filter(item => item.ID != id);

@@ -58,6 +58,7 @@ import api from '../../../api';
 const cards = ref(null);
 
 const deleteEmployeeCardHandler = async(id) =>{
+    if (!window.confirm('Удалить карточку сотрудника?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/employeescard/delete/${id}`);
         cards.value = cards.value.filter(item => item.ID !=id);

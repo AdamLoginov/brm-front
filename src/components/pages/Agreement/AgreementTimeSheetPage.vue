@@ -58,6 +58,7 @@ const monthValue = {
 }
 
 const deleteTimeSheetMonthHanlder = async(id) => {
+    if (!window.confirm('Удалить месячный табель?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/agreements/timesheetmonth/delete/${id}`)
         timesheetMonth.value = timesheetMonth.value.filter(item => item.ID !== id)

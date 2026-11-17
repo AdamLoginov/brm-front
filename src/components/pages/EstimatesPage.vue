@@ -56,6 +56,7 @@ const GetEstimates = async()=>{
 };
 
 const deleteEstimateHandler = (idFromChild) => {
+    if (!window.confirm('Убрать смету из списка на экране? Запись на сервере сохранится.')) return; // новый код chat: подтверждение удаления
     estimates.value = estimates.value.filter(m => m.ID !== idFromChild);
     console.log(`Материал с id ${idFromChild} удален из списка на экране`);
 };

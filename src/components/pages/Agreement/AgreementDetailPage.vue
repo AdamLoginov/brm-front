@@ -180,6 +180,7 @@
     };
 
     const DeleteAgreementHandler = async (id)=>{
+        if (!window.confirm('Удалить договор?')) return; // новый код chat: подтверждение удаления
     try{  
         const res = await api.delete(`/agreements/delete/${id}`)
         router.push({name: 'agreements'})

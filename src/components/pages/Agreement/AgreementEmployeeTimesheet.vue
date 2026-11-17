@@ -514,6 +514,7 @@ const deleteTimesheetHandler = async(timesheet) => {
 }
 
 const deleteTimesheetMonthHandler = async(id) => {
+    if (!window.confirm('Удалить выбранный месячный табель?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/agreements/timesheetmonth/delete/${timesheetMonth_select.value.ID}` )
         console.log("[Delete TimeSheet Month ID]",timesheetMonth_select.value.ID)

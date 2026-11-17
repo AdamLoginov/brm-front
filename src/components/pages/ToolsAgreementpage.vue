@@ -127,6 +127,7 @@ const postCreateToolsHandler = async() =>{
 }
 
 const deleteToolHandler = async(id) =>{
+    if (!window.confirm('Удалить инструмент?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/tools/delete/${id}`)
         tools.value = tools.value.filter(item => item.ID != id);

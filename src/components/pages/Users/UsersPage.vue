@@ -52,6 +52,7 @@ const users = ref(null);
 
 
 const deleteUserHandler = async(id) => {
+    if (!window.confirm('Удалить пользователя?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/users/delete/${id}`)
 

@@ -145,6 +145,7 @@
     };
 
     const deleteCategorySupplierHandler = async(id) =>{
+        if (!window.confirm('Удалить категорию поставщиков?')) return; // новый код chat: подтверждение удаления
         try{
             const res = await api.delete(`/suppliers/categoryes/${id}`);
             categoryes.value = categoryes.value.filter(item => item.ID !== id)

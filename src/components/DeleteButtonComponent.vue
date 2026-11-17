@@ -19,6 +19,7 @@
 
 
     const deleteMaterials = async(url,id) =>{
+        if (!window.confirm('Удалить выбранную запись?')) return; // новый код chat: подтверждение удаления
         try{
             const res = await api.delete(`${url}/${id}`);
             emit('delete-me', props.id);

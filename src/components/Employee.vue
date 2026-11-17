@@ -46,6 +46,7 @@
     };
 
     const deleteEmployee = async(id) =>{
+        if (!window.confirm('Удалить сотрудника?')) return; // новый код chat: подтверждение удаления
         const token = localStorage.getItem("user-token");
         try {
             const res = await fetch(`http://127.0.0.1:8080/employees/delete/${id}`, {

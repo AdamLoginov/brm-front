@@ -230,6 +230,7 @@ const updateTaskHandler = async() =>{
 }
 
 const deleteTaskHandler = async(id) => {
+    if (!window.confirm('Удалить задачу?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/task/delete/${id}`)
         tasks.value = tasks.value.filter(item => item.ID !== id)

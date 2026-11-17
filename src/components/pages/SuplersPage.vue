@@ -64,6 +64,7 @@
     }
 
     const deleteSupplierHandler = async(id) =>{
+        if (!window.confirm('Удалить поставщика?')) return; // новый код chat: подтверждение удаления
         try{
             const res = await api.delete(`/supplier/delete/${id}`);
             suppliers.value = suppliers.value.filter(item => item.ID !== id)

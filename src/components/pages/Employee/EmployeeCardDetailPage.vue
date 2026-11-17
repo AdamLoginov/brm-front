@@ -176,6 +176,7 @@ const getEmployeeCardDetailHandler = async() =>{
 }
 
 const deleteEmployeeCardDocumentHandler = async(id) =>{
+    if (!window.confirm('Удалить документ сотрудника?')) return; // новый код chat: подтверждение удаления
   try{
     const res = await api.delete(`/employeescard/document/${id}/delete`)
     employeeCard.value.employee_documents = employeeCard.value.employee_documents.filter(item => item.ID != id)

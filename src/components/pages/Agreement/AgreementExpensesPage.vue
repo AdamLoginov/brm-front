@@ -177,6 +177,7 @@ const getAllManagerCardHandler = async() =>{
 };
 
 const deleteExpensesHandler = async(id)=>{
+    if (!window.confirm('Удалить расход?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/expenses/delete/${id}`)
         expenses.value = expenses.value.filter(item => item.ID !== id)

@@ -57,6 +57,7 @@
     };
 
     const deleteManagerCard = async(idManager) =>{
+        if (!window.confirm('Удалить контактное лицо поставщика?')) return; // новый код chat: подтверждение удаления
         try{
             const res = await api.delete(`/supplier/manager/delete/${idManager}`);
             managers.value = managers.value.filter(m => m.ID !== idManager);
