@@ -24,9 +24,11 @@
         <div v-if="saveTimesheetError" class="alert alert-danger" role="alert">{{ saveTimesheetError }}</div>
         <div v-if="clipboardError" class="alert alert-warning" role="alert">{{ clipboardError }}</div> <!-- новый код chat: ошибка вставки диапазона -->
         <!-- --------- новый код chat: правила работы над табелем -->
-        <div class="small text-secondary mt-3">
-            <div><strong>Работа с ячейками:</strong> выделяйте область мышью с зажатой левой кнопкой, Shift + щелчок или Shift + стрелки. Стрелки и Enter перемещают выбор.</div>
+        <div class="text-secondary mt-3"> <!-- новый код chat: шрифт пояснения как во вкладке штрафов -->
+            <div>Работа с ячейками: выделяйте область мышью с зажатой левой кнопкой, Shift + щелчок или Shift + стрелки. Стрелки и Enter перемещают выбор.</div>
             <div>Ctrl+C — копировать, Ctrl+V — вставить, Delete — очистить выделение. Одно скопированное значение заполняет всю выбранную область. Можно копировать данные из Excel и обратно.</div>
+            <div>В режиме «Изменить» тяните квадрат в правом нижнем углу выделения: значение или шаблон повторится в соседних ячейках. Отпустите мышь для заполнения; Escape отменяет протягивание.</div> <!-- новый код chat: правило протягивания -->
+            <div>Ctrl+Z или Ctrl+Я — отменить последнее изменение. Вставка, очистка и протягивание области отменяются целиком. История действует до сохранения или смены табеля.</div> <!-- новый код chat: отмена операций -->
             <div>Для вставки и очистки нажмите «Изменить», затем «Сохранить». Допустимы 0–24, П, Б, Д, В и пустые ячейки. Блок с ошибками или за границами табеля не вставляется.</div>
         </div>
         <!-- --------- конец нового кода chat -->
@@ -83,7 +85,7 @@
             <div class="list-group-item d-flex p-0">
                 <div class="col-3 px-2 fw-semibold" style="font-size: 14px;">Сотрудник:</div>
                 <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }" >
-                    <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center fw-semibold" :class="{'bg-primary-subtle': selectedRange && day - 1 >= selectedRange.left && day - 1 <= selectedRange.right}" style="font-size: 12px;"> <!-- новый код chat: все даты выбранного диапазона -->
+                    <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center fw-semibold" :class="{'bg-primary-subtle': displayRange && day - 1 >= displayRange.left && day - 1 <= displayRange.right}" style="font-size: 12px;"> <!-- новый код chat: все даты выбранного диапазона -->
                         {{ day }}
                     </div>
                 </div>
@@ -92,16 +94,18 @@
             </div>
             <div @copy="copySelectedCells" @paste="pasteSelectedCells">
             <div v-for="(employee, index) in timesheetMonth_select.employees" :key="employee.ID" class="list-group-item d-flex p-0">
-                <div class="col-3 px-2 d-flex" :class="{'bg-primary-subtle': selectedRange && index >= selectedRange.top && index <= selectedRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: все сотрудники выбранного диапазона -->
+                <div class="col-3 px-2 d-flex" :class="{'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: все сотрудники выбранного диапазона -->
                     <div class="col-1 border-end d-flex justify-content-center me-1 fw-semibold">{{ index + 1 }}</div>
                     <div class="col-11">{{ employee.surname }} {{ employee.name }} {{ employee.middle_name }}</div>
                 </div>
                 <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }">
-                    <div v-for="day in daysInMonth" :key="day" class="day-cell timesheet-value-cell d-flex justify-content-center align-items-center fw-semibold" :class="selectionClasses(index, day - 1)" :tabindex="isChange ? -1 : 0" :id="`view-cell-${employee.ID}-${getDate(day, month, year)}`" :aria-label="`${employee.surname || employee.name}, ${day}: ${timesheet[employee.ID][getDate(day, month, year)].status || 'пусто'}`" @mousedown="startCellSelection($event, index, day - 1)" @mouseenter="extendCellSelection($event, index, day - 1)" @focus.self="inputFocus(index, day)" @blur.self="inputBlur(index, day)" @keydown="handleCellKeydown($event, employee.ID, day)" style="font-size: 12px;" :style="`background-color: ${timesheet_color[timesheet[employee.ID][getDate(day, month, year)]['status']]};`">
+                    <!-- ????? ??? chat: ?????? ?????? ????? ?????? ???? ?????????? ????? ??? -->
+                    <div v-for="day in daysInMonth" :key="day" class="day-cell timesheet-value-cell d-flex justify-content-center align-items-center fw-semibold" :class="selectionClasses(index, day - 1)" :tabindex="isChange ? -1 : 0" :id="`view-cell-${employee.ID}-${getDate(day, month, year)}`" :aria-label="`${employee.surname || employee.name}, ${day}: ${timesheet[employee.ID][getDate(day, month, year)].status || 'пусто'}`" @mousedown="startCellSelection($event, index, day - 1)" @mouseenter="extendCellSelection($event, index, day - 1)" @focus.self="inputFocus(index, day)" @blur.self="inputBlur(index, day)" @keydown="handleCellKeydown($event, employee.ID, day)" style="font-size: 12px;" :style="{ backgroundColor: timesheet_color[timesheet[employee.ID][getDate(day, month, year)].status ?? ''] ?? '#fff' }">
                         <input v-if="isChange" class="text-center" :value="timesheet[employee.ID][getDate(day, month, year)]['status']" type="text" maxlength="2"
                         @input="validateTimesheetInput(employee.ID, getDate(day, month, year), $event)" @focus="inputFocus(index, day)" @blur="inputBlur(index, day)"
                         :aria-label="`${employee.surname || employee.name}, ${day}`" :id="`cell-${employee.ID}-${getDate(day, month, year)}`">
                         <div v-else class="text-center">{{ timesheet[employee.ID][getDate(day, month, year)]['status'] }}</div>
+                        <span v-if="isChange && !savingTimesheet && selectedRange && index === selectedRange.bottom && day - 1 === selectedRange.right" class="timesheet-fill-handle" title="Потяните для повторения выделенного шаблона" aria-label="Протянуть шаблон" @mousedown.stop.prevent="startPatternFill($event)"></span> <!-- новый код chat: маркер протягивания -->
                     </div>
                 </div>
             </div>
@@ -116,7 +120,7 @@
 
 <script setup>
 import { computed, onMounted, ref, onBeforeUnmount, nextTick } from 'vue'; // новый код chat: фокус после включения редактирования
-import { normalizeTimesheetValue, timesheetRange, planTimesheetPaste, copyTimesheetRange, updateTimesheetCell } from '../../../utils/timesheetClipboard'; // новый код chat
+import { normalizeTimesheetValue, timesheetRange, planTimesheetPaste, copyTimesheetRange, planTimesheetEdit, timesheetFillRange, planTimesheetFill } from '../../../utils/timesheetClipboard'; // новый код chat: операции с историей отмены
 import api from '../../../api';
 import { rememberSalaryMonth, restoreSalaryMonth } from '../../../utils/salaryMonthStorage'; // новый код chat: память выбранного табеля
 import { useRoute, onBeforeRouteLeave } from 'vue-router';
@@ -238,6 +242,7 @@ const getDetailTimeSheetMonthHandler = async() =>{
     rememberSalaryMonth(route.params.id, 'timesheet', table_select.value) // новый код chat: сохраняем выбор из списка и стрелок
     try{
         const res  = await api.get(`/agreements/timesheetmonth/detail/${table_select.value}`)
+        undoHistory.length = 0; // новый код chat: история относится к загруженной версии табеля
         clearCellSelection(); // новый код chat: новый состав сотрудников сбрасывает диапазон
         timesheetMonth_select.value = res.data
         timesheetMonth_select.value.employees.forEach((employee, index) => {timesheetMonth_select.value.employees[index]['input_active'] = false})
@@ -277,6 +282,7 @@ const getDetailTimeSheetMonthHandler = async() =>{
 }
 
 const changeMonth = () =>{
+    undoHistory.length = 0; // новый код chat: не переносим отмену между табелями
     clearCellSelection(); // новый код chat: выделение не переходит в другой табель
     const timesheet_month = timesheetMonth.value.find(item => item.ID === table_select.value)
     employees.value = []
@@ -307,10 +313,23 @@ const nextMonth = () => {
 // --------- новый код chat: прямоугольное выделение и операции с ячейками
 const selectionAnchor = ref(null), selectionEnd = ref(null), clipboardError = ref('');
 const selectedRange = computed(() => timesheetRange(selectionAnchor.value, selectionEnd.value));
+const undoHistory = []; // новый код chat: до 100 последних операций текущего редактирования
+// --------- новый код chat: предварительная область протягивания без изменения данных
+const fillSource = ref(null), fillTarget = ref(null);
+const displayRange = computed(() => fillSource.value && fillTarget.value ? timesheetFillRange(fillSource.value,fillTarget.value) : selectedRange.value);
+const cancelPatternFill = () => { fillSource.value = null; fillTarget.value = null; };
+const startPatternFill = event => {
+    if (event.button !== 0 || !isChange.value || savingTimesheet.value || !selectedRange.value) return;
+    fillSource.value = {...selectedRange.value};
+    fillTarget.value = {row:fillSource.value.bottom,col:fillSource.value.right};
+    draggingCells = false;
+    clipboardError.value = '';
+};
+// --------- конец нового кода chat
 let draggingCells = false, movingCellFocus = false;
-const clearCellSelection = () => { selectionAnchor.value = null; selectionEnd.value = null; draggingCells = false; clipboardError.value = ''; };
+const clearCellSelection = () => { cancelPatternFill(); selectionAnchor.value = null; selectionEnd.value = null; draggingCells = false; clipboardError.value = ''; }; // новый код chat: сброс протягивания
 const selectionClasses = (row, col) => {
-    const area = selectedRange.value;
+    const area = displayRange.value; // новый код chat: рамка показывает область будущего заполнения
     if (!area || row < area.top || row > area.bottom || col < area.left || col > area.right) return {};
     return {'sheet-selected':true, 'sheet-top':row === area.top, 'sheet-bottom':row === area.bottom, 'sheet-left':col === area.left, 'sheet-right':col === area.right};
 };
@@ -334,19 +353,58 @@ const startCellSelection = (event, row, col) => {
     focusSheetCell(row,col);
 };
 const extendCellSelection = (event,row,col) => {
+    if (fillSource.value && (event.buttons & 1) && !savingTimesheet.value) { fillTarget.value = {row,col}; return; } // новый код chat: предварительное протягивание
     if (!draggingCells || !(event.buttons & 1) || savingTimesheet.value) return;
     selectionEnd.value = {row,col};
 };
-const stopCellSelection = () => { draggingCells = false; };
+// --------- новый код chat: шаблон записывается только после отпускания мыши
+const stopCellSelection = event => {
+    draggingCells = false;
+    if (!fillSource.value) return;
+    if (event?.type !== 'mouseup' || event.button !== 0 || !isChange.value || savingTimesheet.value) { cancelPatternFill(); return; }
+    try {
+        const plan = planTimesheetFill(fillSource.value,fillTarget.value,timesheetMonth_select.value.employees.length,daysInMonth.value,(row,col) => cellAt(row,col).item?.status);
+        applyCellChanges(plan.changes); // новый код chat: одно протягивание — одна отмена
+        selectionAnchor.value = {row:plan.range.top,col:plan.range.left};
+        selectionEnd.value = {row:plan.range.bottom,col:plan.range.right};
+        nextTick(() => focusSheetCell(plan.range.top,plan.range.left));
+    } catch (err) { clipboardError.value = err.message; }
+    finally { cancelPatternFill(); }
+};
+// --------- конец нового кода chat
 const cellAt = (row,col) => {
     const employee = timesheetMonth_select.value.employees[row];
     const date = getDate(col + 1, month.value, year.value);
     return {employeeID:employee.ID,date,item:timesheet.value[employee.ID][date]};
 };
-const setCellValue = (row,col,value) => {
-    const cell = cellAt(row,col);
-    timesheet.value[cell.employeeID][cell.date] = updateTimesheetCell(cell.item,value);
+// --------- новый код chat: применение и отмена операций с сохранением состояний БД
+const applyCellChanges = changes => {
+    const operation = planTimesheetEdit(changes,(row,col) => cellAt(row,col).item);
+    if (!operation.length) return;
+    undoHistory.push({cells:operation,anchor:selectionAnchor.value ? {...selectionAnchor.value} : null,end:selectionEnd.value ? {...selectionEnd.value} : null});
+    if (undoHistory.length > 100) undoHistory.shift();
+    for (const change of operation) {
+        const cell = cellAt(change.row,change.col);
+        timesheet.value[cell.employeeID][cell.date] = change.after;
+    }
 };
+const undoCellChanges = () => {
+    if (!isChange.value || savingTimesheet.value) return;
+    if (fillSource.value) { cancelPatternFill(); return; }
+    const operation = undoHistory.pop();
+    if (!operation) return;
+    draggingCells = false;
+    for (const change of operation.cells) {
+        const cell = cellAt(change.row,change.col);
+        timesheet.value[cell.employeeID][cell.date] = {...change.before};
+    }
+    selectionAnchor.value = operation.anchor || {row:operation.cells[0].row,col:operation.cells[0].col};
+    selectionEnd.value = operation.end || {...selectionAnchor.value};
+    clipboardError.value = '';
+    const {row,col} = selectionAnchor.value;
+    nextTick(() => focusSheetCell(row,col));
+};
+// --------- конец нового кода chat
 const copySelectedCells = event => {
     if (!selectedRange.value || !event.target.closest('.timesheet-value-cell')) return;
     event.preventDefault();
@@ -361,7 +419,7 @@ const pasteSelectedCells = event => {
     if (!event.clipboardData) { clipboardError.value = 'Браузер не предоставил доступ к буферу обмена.'; return; }
     try {
         const plan = planTimesheetPaste(event.clipboardData.getData('text/plain'),selectedRange.value,timesheetMonth_select.value.employees.length,daysInMonth.value);
-        for (const change of plan.changes) setCellValue(change.row,change.col,change.value);
+        applyCellChanges(plan.changes); // новый код chat: вставка отменяется целым блоком
         selectionAnchor.value = {row:plan.range.top,col:plan.range.left};
         selectionEnd.value = {row:plan.range.bottom,col:plan.range.right};
         clipboardError.value = '';
@@ -371,13 +429,18 @@ const pasteSelectedCells = event => {
 const clearSelectedCells = () => {
     const area = selectedRange.value;
     if (!area || !isChange.value || savingTimesheet.value) return;
+    const changes = []; // новый код chat: единая операция очистки
     for (let row = area.top; row <= area.bottom; row++) {
-        for (let col = area.left; col <= area.right; col++) setCellValue(row,col,'');
+        for (let col = area.left; col <= area.right; col++) changes.push({row,col,value:''});
     }
+    applyCellChanges(changes); // новый код chat
     clipboardError.value = '';
 };
 const handleCellKeydown = (event, employeeId, day) => {
+    // новый код chat: физическая клавиша Z и обе раскладки, без нативной отмены input
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.code === 'KeyZ' || ['z','я'].includes(event.key.toLowerCase()))) { event.preventDefault(); if (!event.isComposing) undoCellChanges(); return; }
     if (event.isComposing || savingTimesheet.value) return;
+    if (fillSource.value) { event.preventDefault(); if (event.key === 'Escape') cancelPatternFill(); return; } // новый код chat: Escape отменяет только протягивание
     const employeeIndex = timesheetMonth_select.value.employees.findIndex(employee => employee.ID === employeeId);
     if (employeeIndex < 0) return;
     if (event.key === 'Escape') { clearCellSelection(); return; }
@@ -471,6 +534,7 @@ const saveTimesheetError = ref('');
 // --------- конец нового кода chat
 const postTimesheetHandler = async()=>{
     if (savingTimesheet.value) return; // новый код chat
+    undoHistory.length = 0; // новый код chat: после начала записи нельзя восстановить устаревшие ID и состояния
     savingTimesheet.value = true;
     saveTimesheetError.value = '';
     try{
@@ -504,10 +568,10 @@ const postTimesheetHandler = async()=>{
 const validateTimesheetInput = (employeeId, date, event) => {
     if (!isChange.value || savingTimesheet.value) return;
     const value = normalizeTimesheetValue(event.target.value) ?? '';
-    timesheet.value[employeeId][date] = updateTimesheetCell(timesheet.value[employeeId][date], value);
     event.target.value = value;
     const row = timesheetMonth_select.value.employees.findIndex(employee => employee.ID === employeeId);
     const col = Number(date.slice(-2)) - 1;
+    applyCellChanges([{row,col,value}]); // новый код chat: ручной ввод тоже попадает в историю
     selectionAnchor.value = {row,col}; selectionEnd.value = {row,col};
 };
 // --------- конец нового кода chat
@@ -624,5 +688,6 @@ onMounted(getTimeSheetMonthHandler);
 .timesheet-value-cell.sheet-bottom::after { border-bottom-width: 2px; }
 .timesheet-value-cell.sheet-left::after { border-left-width: 2px; }
 .timesheet-value-cell.sheet-right::after { border-right-width: 2px; }
+.timesheet-fill-handle { position: absolute; width: 8px; height: 8px; right: 0; bottom: 0; background: #0d6efd; border: 1px solid #fff; cursor: crosshair; z-index: 3; } /* новый код chat: маркер заполнения шаблоном */
 /* --------- конец нового кода chat */
 </style>

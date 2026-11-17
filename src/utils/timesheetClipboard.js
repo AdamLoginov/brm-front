@@ -53,4 +53,48 @@ export const updateTimesheetCell = (item = {}, value) => {
     const persisted = !!item.id;
     return {...item, status:value, state:persisted ? (value === '' ? 'Delete' : 'Update') : (value === '' ? '' : 'Create')};
 };
+
+// --------- новый код chat: снимок одной операции для отмены всего диапазона
+export const planTimesheetEdit = (changes, getItem) => changes.flatMap(change => {
+    const before = getItem(change.row,change.col) || {};
+    const after = updateTimesheetCell(before,change.value);
+    return before === after ? [] : [{row:change.row,col:change.col,before:{...before},after}];
+});
+// --------- конец нового кода chat
+// --------- новый код chat: протягивание прямоугольного шаблона по одной оси
+export const timesheetFillRange = (source, target) => {
+    // новый код chat: одиночную ячейку можно размножить прямоугольником по диагонали
+    if (source.top === source.bottom && source.left === source.right) return {
+        top:Math.min(source.top,target.row), bottom:Math.max(source.bottom,target.row),
+        left:Math.min(source.left,target.col), right:Math.max(source.right,target.col),
+    };
+    const vertical = target.row < source.top ? target.row - source.top : Math.max(0, target.row - source.bottom);
+    const horizontal = target.col < source.left ? target.col - source.left : Math.max(0, target.col - source.right);
+    if (Math.abs(vertical) >= Math.abs(horizontal)) return {...source, top:Math.min(source.top,target.row), bottom:Math.max(source.bottom,target.row)};
+    return {...source, left:Math.min(source.left,target.col), right:Math.max(source.right,target.col)};
+};
+
+export const planTimesheetFill = (source, target, rowCount, colCount, getValue) => {
+    const range = timesheetFillRange(source,target);
+    if (range.top < 0 || range.left < 0 || range.bottom >= rowCount || range.right >= colCount) throw new Error('Протягивание выходит за границы табеля.');
+    const height = source.bottom - source.top + 1, width = source.right - source.left + 1;
+    const pattern = [];
+    for (let row = source.top; row <= source.bottom; row++) {
+        const values = [];
+        for (let col = source.left; col <= source.right; col++) {
+            const value = normalizeTimesheetValue(getValue(row,col));
+            if (value === null) throw new Error('В выделенном шаблоне есть недопустимое значение. Исправьте его перед протягиванием.');
+            values.push(value);
+        }
+        pattern.push(values);
+    }
+    const changes = [], mod = (value,size) => ((value % size) + size) % size;
+    for (let row = range.top; row <= range.bottom; row++) {
+        for (let col = range.left; col <= range.right; col++) {
+            if (row >= source.top && row <= source.bottom && col >= source.left && col <= source.right) continue;
+            changes.push({row,col,value:pattern[mod(row-source.top,height)][mod(col-source.left,width)]});
+        }
+    }
+    return {range,changes};
+};
 // --------- конец нового кода chat
