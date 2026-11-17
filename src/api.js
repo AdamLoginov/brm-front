@@ -4,7 +4,7 @@ import router from './router/index';
 const api = axios.create({
 
     // baseURL: '/api/'
-    baseURL: import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:8080/api/' : '/api/')
+    baseURL: import.meta.env.VITE_API_BASE_URL || '/api/' // новый код chat: единый origin через Vite/Nginx, Bearer сохраняется
     // baseURL: 'http://192.168.0.180:8080'
 });
 

@@ -6,7 +6,9 @@
           <div class="col-4 pe-4">
             <a
               v-if="avatar && avatar.length !== 0"
-              :href="`${apiBaseurl}/employeescard/document/${avatar.at(-1).ID}/detail`"
+              :href="documentFileUrl(avatar.at(-1).ID)"
+              @click.prevent="openDocument(avatar.at(-1))"
+              rel="noopener"
               target="_blank"
               class="d-block w-100 ratio-3x4" 
             >
@@ -129,7 +131,7 @@
         {{ document.category_document_card.category_name }}
       </div>
       <div class="col-5">
-        <a :href="`${apiBaseurl}/employeescard/document/${document.ID}/detail`" target="_blank" class="mx-2 d-block text-truncate" @click.prevent="openDocument(document)">
+        <a :href="documentFileUrl(document.ID)" rel="noopener" target="_blank" class="mx-2 d-block text-truncate" @click.prevent="openDocument(document)">
           <span class="">{{ document.file_name }}</span>
         </a>
       </div>
@@ -152,11 +154,11 @@
 <script setup>
 import { useRoute } from 'vue-router';
 import api from '../../../api';
+import { documentFileUrl, ensureFileAccess, openDocumentFile } from '../../../utils/fileAccess'; // новый код chat: прямые защищённые ссылки
 import { onMounted, ref } from 'vue';
 import { formatDateStr } from '../../../utils/date';
 
 const route = useRoute();
-const apiBaseurl = api.defaults.baseURL
 
 const employeeCard = ref(null);
 const avatar = ref(null);
@@ -192,24 +194,15 @@ const getAvatarHandler = async () => {
             return
         }
         const document = avatar.value.at(-1)
-        const res = await api.get(`/employeescard/document/${document.ID}/detail`,{responseType: 'blob'})
-        avatarUrl.value = URL.createObjectURL(res.data)
+        await ensureFileAccess(); // новый код chat: cookie для обычного src изображения
+        avatarUrl.value = documentFileUrl(document.ID)
 
     } catch (err) {
         console.error(err)
     }
 }
 
-const openDocument = async (document) => {
-    try {
-        const res = await api.get(`/employeescard/document/${document.ID}/detail`,{responseType: 'blob'})
-        const url = URL.createObjectURL(res.data)
-        window.open(url, '_blank')
-        setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (err) {
-        console.error(err)
-    }
-}
+const openDocument = document => openDocumentFile(document.ID); // новый код chat: без загрузки всего файла в Blob
 
 onMounted(getEmployeeCardDetailHandler);
 </script>

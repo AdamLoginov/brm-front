@@ -1,17 +1,14 @@
-import api from '../api';
-
+// --------- новый код chat: браузер скачивает вложение напрямую с авторизацией cookie
+import { ensureFileAccess, attachmentFileUrl } from './fileAccess';
 export async function downloadAttachment(attachment) {
     try {
-        const response = await api.get(`/attachment/${attachment.ID}`, { responseType: 'blob' });
-        const url = URL.createObjectURL(response.data);
+        await ensureFileAccess();
         const link = document.createElement('a');
-        link.href = url;
+        link.href = attachmentFileUrl(attachment.ID);
         link.download = attachment.file_name || 'attachment';
         document.body.appendChild(link);
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch {
-        window.alert('Не удалось скачать файл. Проверьте вход в систему и наличие файла.');
-    }
+    } catch (error) { window.alert(error.message || 'Не удалось скачать файл.'); }
 }
+// --------- конец нового кода chat

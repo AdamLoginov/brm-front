@@ -107,6 +107,7 @@
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../api';
+import { clearFileAccess } from '../utils/fileAccess'; // новый код chat: удаление файловой cookie
 
 const router = useRouter();
 
@@ -136,9 +137,15 @@ const closeSidebar = () =>{
   }
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  // --------- новый код chat: сначала завершаем доступ к файлам на сервере
+  try { await clearFileAccess(); }
+  catch (error) { window.alert(error.message || 'Не удалось выйти. Повторите попытку.'); return; }
   localStorage.removeItem('user-token');
-  router.push('/login'); 
+  localStorage.removeItem('user-id');
+  localStorage.removeItem('employee-card-id');
+  router.push('/login');
+  // --------- конец нового кода chat
 };
 
 onMounted(getUserHandler);
