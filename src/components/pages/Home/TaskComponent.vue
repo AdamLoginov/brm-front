@@ -37,7 +37,11 @@
                     <div class="task-meta">
                         <span title="Исполнитель"><i class="bi bi-person me-1" aria-hidden="true"></i>{{ taskUserName(task.to_user_card) }}</span>
                         <span class="task-author">От: {{ taskUserName(task.from_user_card) }}</span>
-                        <time :datetime="task.CreatedAt">{{ getCreateDate(task.CreatedAt) }} · {{ getCreateTime(task.CreatedAt) }}</time>
+                        <time :datetime="task.CreatedAt">Создана: {{ getCreateDate(task.CreatedAt) }} · {{ getCreateTime(task.CreatedAt) }}</time> <!-- новый код chat: различаем даты создания и выполнения -->
+                        <template v-if="task.status"> <!-- новый код chat: фактическое время выполнения -->
+                            <time v-if="task.completed_at" :datetime="task.completed_at" class="text-success">Выполнена: {{ getCreateDate(task.completed_at) }} · {{ getCreateTime(task.completed_at) }}</time>
+                            <span v-else>Дата выполнения не указана</span>
+                        </template>
                     </div>
                 </div>
                 <div class="task-card-controls">
