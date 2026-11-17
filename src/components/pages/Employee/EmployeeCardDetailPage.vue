@@ -100,6 +100,16 @@
             <div class="col-8 employeecard-text" >{{ employeeCard.salary_rate }}</div>
           </div>
           <div class="d-flex">
+            <!-- новый код chat: отображение официального трудоустройства -->
+            <div class="col-4 pe-3 fw-semibold">Устроен официально:</div>
+            <div class="col-8 employeecard-text">{{ employeeCard.officially_employed ? 'Да' : 'Нет' }}</div>
+          </div>
+          <div v-if="employeeCard.officially_employed" class="d-flex">
+            <div class="col-4 pe-3 fw-semibold">ЗП в месяц:</div>
+            <div class="col-8 employeecard-text">{{ ((employeeCard.monthly_salary_kopecks || 0) / 100).toLocaleString('ru-RU', {style:'currency', currency:'RUB'}) }}</div>
+          </div>
+          <!-- конец нового кода chat -->
+          <div class="d-flex">
             <div class="col-4 pe-3 fw-semibold">Статус сотрудника:</div>
             <div class="col-8 employeecard-text" >{{ !employeeCard.status ? 'Активный': 'Уволен' }}</div>
           </div>

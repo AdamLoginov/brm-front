@@ -54,6 +54,8 @@
                     <input v-model="formData.profession" type="text" class="form-control form-control-sm" placeholder="Инженер ПТО">
                 </div>
 
+                <!-- новый код chat: официальное трудоустройство и месячная зарплата -->
+                <EmployeeEmploymentFields v-model:officially-employed="formData.officially_employed" v-model:monthly-salary-kopecks="formData.monthly_salary_kopecks" />
                 <div class="col-4 pt-3">
                     <label class="form-label">Серия паспорта</label>
                     <input v-model="formData.pasport_serial" type="text" class="form-control form-control-sm" placeholder="2515">
@@ -101,6 +103,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import api from '../../../api';
+import EmployeeEmploymentFields from './EmployeeEmploymentFields.vue'; // новый код chat: новые поля карточки
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -115,6 +118,8 @@ const formData = reactive({
     place_of_residence: "",
     start_date: "",
     salary_rate: "",
+    officially_employed: false, // новый код chat: по умолчанию не устроен официально
+    monthly_salary_kopecks: 0, // новый код chat: месячная зарплата в копейках
     education: "",
     experience: "",
     pasport_serial: "",
@@ -150,6 +155,8 @@ const getEmployeeCardDetailHandler = async() =>{
     formData.marital_status = res.data.marital_status;
     formData.start_date = res.data.start_date;
     formData.salary_rate = res.data.salary_rate;
+    formData.officially_employed = res.data.officially_employed ?? false; // новый код chat
+    formData.monthly_salary_kopecks = res.data.monthly_salary_kopecks ?? 0; // новый код chat
     formData.education = res.data.education;
     formData.experience = res.data.experience;
     formData.pasport_serial = res.data.pasport_serial;
