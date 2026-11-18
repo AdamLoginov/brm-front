@@ -3,7 +3,11 @@
   <div class="container-fluid employee-list-page py-3">
     <header class="list-header">
       <div><div class="list-eyebrow">Персонал</div><h1>Сотрудники <span>{{ cards.length }}</span></h1><p>Карточки, специализации и места работы сотрудников.</p></div>
-      <router-link :to="{ name: 'employee-card-create' }" class="btn btn-outline-primary btn-sm create-card-button"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Создать карточку</router-link>
+      <!-- новый код chat: переход к сводной проверке данных сотрудников -->
+      <div class="d-flex flex-wrap gap-2">
+        <router-link :to="{ name: 'employee-completeness' }" class="btn btn-outline-secondary btn-sm create-card-button"><i class="bi bi-list-check me-1" aria-hidden="true"></i>Заполненность данных</router-link>
+        <router-link :to="{ name: 'employee-card-create' }" class="btn btn-outline-primary btn-sm create-card-button"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Создать карточку</router-link>
+      </div>
     </header>
 
     <section class="filter-panel" aria-label="Фильтры сотрудников">
