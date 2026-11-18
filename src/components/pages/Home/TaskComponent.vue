@@ -13,11 +13,9 @@
                 <textarea id="task-new-message" v-model="formData.message" class="form-control form-control-sm" rows="1" placeholder="Что нужно сделать?"></textarea>
             </div>
             <div>
-                <label for="task-new-user">Исполнитель</label>
-                <select id="task-new-user" v-model="formData.to_user_id" class="form-select form-select-sm">
-                    <option :value="0">Не назначен</option>
-                    <option v-for="user in users" :key="user.ID" :value="user.ID">{{ taskUserName(user) }}</option>
-                </select>
+                <!-- новый код chat: множественный выбор исполнителей -->
+                <label for="task-new-user">Исполнители</label>
+                <TaskAssigneeSelect id="task-new-user" v-model="formData.assignee_ids" :users="users" :user-name="taskUserName" :disabled="taskBusy" />
             </div>
             <div>
                 <label for="task-new-priority">Приоритет</label>
@@ -35,10 +33,11 @@
                 <div class="task-card-content">
                     <div class="task-message">{{ task.message || 'Без описания' }}</div>
                     <div class="task-meta">
-                        <span title="Исполнитель"><i class="bi bi-person me-1" aria-hidden="true"></i>{{ taskUserName(task.to_user_card) }}</span>
+                        <span title="Исполнители"><i class="bi bi-people me-1" aria-hidden="true"></i>{{ taskAssignees(task).map(taskUserName).join(', ') || 'Не назначены' }}</span>
                         <span class="task-author">От: {{ taskUserName(task.from_user_card) }}</span>
                         <time :datetime="task.CreatedAt">Создана: {{ getCreateDate(task.CreatedAt) }} · {{ getCreateTime(task.CreatedAt) }}</time> <!-- новый код chat: различаем даты создания и выполнения -->
-                        <template v-if="task.status"> <!-- новый код chat: фактическое время выполнения -->
+                        <template v-if="task.status">
+                            <span class="text-success">Выполнил: {{ task.completed_by_id ? taskUserName(task.completed_by) : 'Не указан' }}</span> <!-- новый код chat --> <!-- новый код chat: фактическое время выполнения -->
                             <time v-if="task.completed_at" :datetime="task.completed_at" class="text-success">Выполнена: {{ getCreateDate(task.completed_at) }} · {{ getCreateTime(task.completed_at) }}</time>
                             <span v-else>Дата выполнения не указана</span>
                         </template>
@@ -48,7 +47,7 @@
                     <span class="task-status" :class="task.status ? 'task-status-done' : 'task-status-open'"><i :class="task.status ? 'bi bi-check2' : 'bi bi-clock'" aria-hidden="true"></i>{{ task.status ? 'Выполнено' : 'В работе' }}</span>
                     <span class="task-priority" :title="`Приоритет: ${task.priority}`">П{{ task.priority }}</span>
                     <div class="task-actions">
-                        <button v-if="!task.status" type="button" class="task-action task-action-complete" title="Отметить выполненной" aria-label="Отметить задачу выполненной" :disabled="taskBusy" @click="updateSuccessTaskHanlder(task.ID)"><i class="bi bi-check2" aria-hidden="true"></i></button>
+                        <button v-if="!task.status && canComplete(task)" type="button" class="task-action task-action-complete" title="Отметить выполненной" aria-label="Отметить задачу выполненной" :disabled="taskBusy" @click="updateSuccessTaskHanlder(task.ID)"><i class="bi bi-check2" aria-hidden="true"></i></button>
                         <button type="button" class="task-action" title="Изменить" aria-label="Изменить задачу" :disabled="taskBusy" data-bs-toggle="modal" data-bs-target="#change" @click="fillFormDataChange(task.ID)"><i class="bi bi-pencil" aria-hidden="true"></i></button>
                         <button type="button" class="task-action task-action-delete" title="Удалить" aria-label="Удалить задачу" :disabled="taskBusy" @click="deleteTaskHandler(task.ID)"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                     </div>
@@ -68,11 +67,9 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-5">
-                            <label>Выбрать позьзователя</label>
-                            <select v-model="formDataChange.to_user_id" class="form-select form-select-sm">
-                                <option :value="0">Пользователь не выбран</option>
-                                <option v-for="user in users" :key="user.ID" :value="user.ID">{{ taskUserName(user) }} </option>
-                            </select>
+                            <!-- новый код chat: изменение состава участников -->
+                            <label for="task-edit-users">Исполнители</label>
+                            <TaskAssigneeSelect id="task-edit-users" v-model="formDataChange.assignee_ids" :users="users" :user-name="taskUserName" :disabled="taskBusy" />
                         </div>
                         <div class="col-3">
                             <label>Приоритет</label>
@@ -91,7 +88,7 @@
                         </div>
                         <div class="col-4">
                             <label>Статус</label>
-                            <select v-model="formDataChange.status" class="form-select form-select-sm">
+                            <select v-model="formDataChange.status" :disabled="!canChangeStatus" class="form-select form-select-sm">
                                 <option :value="true">Выполнено</option>
                                 <option :value="false">Не выполнено</option>
                             </select>
@@ -117,6 +114,7 @@ import { onMounted, reactive, ref, computed, watch, nextTick } from 'vue'; // н
 import { useRoute } from 'vue-router';
 import { refreshNotifications } from '../../../utils/notifications'; // новый код chat
 import api from '../../../api';
+import TaskAssigneeSelect from './TaskAssigneeSelect.vue'; // новый код chat
 
 // --------- новый код chat: автор определяется сервером, query задаёт выделенную задачу
 const route = useRoute();
@@ -137,13 +135,24 @@ const focusTask = async() => {
 watch(focusedTaskID,focusTask);
 const taskErrorText = err => typeof err.response?.data === 'string' ? err.response.data.trim() : 'Не удалось сохранить задачу.';
 // --------- конец нового кода chat
+// --------- новый код chat: совместимость старых задач и доступ к завершению
+const taskAssignees = task => task.assignees?.length ? task.assignees : (task.to_user_card?.ID ? [task.to_user_card] : []);
+const canComplete = task => {
+    const userID = Number(localStorage.getItem('user-id'));
+    return userID > 0 && (task.from_user_id === userID || taskAssignees(task).some(user => user.ID === userID));
+};
+const canChangeStatus = computed(() => {
+    const task = tasks.value?.find(item => item.ID === formDataChange.ID);
+    return task ? canComplete(task) : false;
+});
+// --------- конец нового кода chat
 const users = ref(null)
 
 const tasks = ref(null)
 
 const formData = reactive({
     message: "", 
-    to_user_id: 0,
+    assignee_ids: [], // новый код chat: список исполнителей
     // новый код chat: from_user_id берётся backend из авторизации
     priority:10
 });
@@ -151,7 +160,7 @@ const formData = reactive({
 const formDataChange = reactive({
     ID: 0,
     message: "",
-    to_user_id: 0,
+    assignee_ids: [], // новый код chat: список исполнителей
     priority:0,
     status:false
 })
@@ -188,7 +197,7 @@ const runTaskAction = async action => {
 };
 const createTaskHandler = () => runTaskAction(async() => {
     await api.post('/task/create',formData);
-    formData.message=''; formData.to_user_id=0;
+    formData.message=''; formData.assignee_ids=[];
 });
 const updateSuccessTaskHanlder = id => runTaskAction(() => api.post(`/task/success/${id}`));
 const updateTaskHandler = () => runTaskAction(() => api.post('/task/update',{...formDataChange}));
@@ -202,7 +211,7 @@ const fillFormDataChange = (id) =>{
     const task = tasks.value.find(item => item.ID === id)
     formDataChange.ID = task.ID
     formDataChange.message = task.message
-    formDataChange.to_user_id = task.to_user_id
+    formDataChange.assignee_ids = taskAssignees(task).map(user => user.ID) // новый код chat
     formDataChange.priority = task.priority
     formDataChange.status = task.status
 }

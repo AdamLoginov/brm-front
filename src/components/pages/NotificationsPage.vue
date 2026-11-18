@@ -45,7 +45,7 @@ import { onMounted, onBeforeUnmount, computed, ref, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router';
 import { notificationsState as state, startNotifications, stopNotifications, refreshNotifications, readNotifications, locateNotification } from '../../utils/notifications';
 const icons = {assigned:'bi-person-plus', reopened:'bi-arrow-counterclockwise', completed:'bi-check2'}; // новый код chat: иконки событий
-const titles = {assigned:'Вам назначена задача',reopened:'Задача возвращена в работу',completed:'Ваша задача выполнена'};
+const titles = {assigned:'Вам назначена задача',reopened:'Задача возвращена в работу',completed:'Задача выполнена'};
 const actorLabels = {assigned:'Назначил',reopened:'Вернул в работу',completed:'Отметил выполнение'};
 const dateLabel = value => new Date(value).toLocaleString('ru-RU');
 // --------- новый код chat: поиск и подсветка уведомления без прочтения
