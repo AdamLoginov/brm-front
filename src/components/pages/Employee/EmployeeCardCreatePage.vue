@@ -11,12 +11,74 @@
             <fieldset :disabled="isSubmit" class="border-0 p-0 m-0">
                 <div class="row g-3">
                     <div class="col-12 col-xl-8 employee-sections">
-<section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-person" aria-hidden="true"></i></span><h2>Личные данные</h2></div><div class="row g-3"><div class="col-12 col-md-4"><label for="create-employee-surname" class="form-label">Фамилия</label><input id="create-employee-surname" v-model="formData.surname" type="text" class="form-control form-control-sm" placeholder="Иванов"></div><div class="col-12 col-md-4"><label for="create-employee-name" class="form-label">Имя</label><input id="create-employee-name" v-model="formData.name" type="text" class="form-control form-control-sm" placeholder="Иван"></div><div class="col-12 col-md-4"><label for="create-employee-middle_name" class="form-label">Отчество</label><input id="create-employee-middle_name" v-model="formData.middle_name" type="text" class="form-control form-control-sm" placeholder="Иванович"></div><div class="col-12 col-md-4"><label for="create-employee-date_of_birth" class="form-label">Дата рождения</label><input id="create-employee-date_of_birth" v-model="formData.date_of_birth" type="date" class="form-control form-control-sm" placeholder=""></div><div class="col-12 col-md-4"><label for="create-employee-place_of_residence" class="form-label">Город проживания</label><input id="create-employee-place_of_residence" v-model="formData.place_of_residence" type="text" class="form-control form-control-sm" placeholder="Иркутск"></div><div class="col-12 col-md-4"><label for="create-employee-marital_status" class="form-label">Семейное положение</label><input id="create-employee-marital_status" v-model="formData.marital_status" type="text" class="form-control form-control-sm" placeholder="Например, женат"></div></div></section><section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-telephone" aria-hidden="true"></i></span><h2>Контакты</h2></div><div class="row g-3"><div class="col-12 col-sm-6"><label for="create-employee-phone" class="form-label">Телефон</label><input id="create-employee-phone" v-model="formData.phone" type="tel" class="form-control form-control-sm" placeholder="+7 900 000-00-00"></div><div class="col-12 col-sm-6"><label for="create-employee-email" class="form-label">Электронная почта</label><input id="create-employee-email" v-model="formData.email" type="text" class="form-control form-control-sm" placeholder="name@example.ru"></div></div></section><section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span><h2>Документы</h2></div><div class="row g-3"><div class="col-12 col-md-4"><label for="create-employee-pasport_serial" class="form-label">Серия паспорта</label><input id="create-employee-pasport_serial" v-model="formData.pasport_serial" type="text" class="form-control form-control-sm" placeholder="2515"></div><div class="col-12 col-md-4"><label for="create-employee-pasport_number" class="form-label">Номер паспорта</label><input id="create-employee-pasport_number" v-model="formData.pasport_number" type="text" class="form-control form-control-sm" placeholder="123456"></div><div class="col-12 col-md-4"><label for="create-employee-snils" class="form-label">СНИЛС</label><input id="create-employee-snils" v-model="formData.snils" type="text" class="form-control form-control-sm" placeholder="000-000-000 00"></div></div></section><section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span><h2>Образование и опыт</h2></div><div class="row g-3"><div class="col-12 col-sm-6"><label for="create-employee-education" class="form-label">Образование</label><input id="create-employee-education" v-model="formData.education" type="text" class="form-control form-control-sm" placeholder="Среднее профессиональное"></div><div class="col-12 col-sm-6"><label for="create-employee-experience" class="form-label">Опыт работы</label><input id="create-employee-experience" v-model="formData.experience" type="text" class="form-control form-control-sm" placeholder="Например, 3 года"></div></div></section>
+<section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-person" aria-hidden="true"></i></span><h2>Личные данные</h2></div><div class="row g-3"><div class="col-12 col-md-4"><label for="create-employee-surname" class="form-label">Фамилия</label><input id="create-employee-surname" v-model="formData.surname" type="text" class="form-control form-control-sm" placeholder="Иванов"></div><div class="col-12 col-md-4"><label for="create-employee-name" class="form-label">Имя</label><input id="create-employee-name" v-model="formData.name" type="text" class="form-control form-control-sm" placeholder="Иван"></div><div class="col-12 col-md-4"><label for="create-employee-middle_name" class="form-label">Отчество</label><input id="create-employee-middle_name" v-model="formData.middle_name" type="text" class="form-control form-control-sm" placeholder="Иванович"></div><div class="col-12 col-md-4"><label for="create-employee-date_of_birth" class="form-label">Дата рождения</label><input id="create-employee-date_of_birth" v-model="formData.date_of_birth" type="date" class="form-control form-control-sm" placeholder=""></div><div class="col-12 col-md-4"><label for="create-employee-place_of_residence" class="form-label">Город проживания</label><input id="create-employee-place_of_residence" v-model="formData.place_of_residence" type="text" class="form-control form-control-sm" placeholder="Иркутск"></div><div class="col-12 col-md-4"><label for="create-employee-marital_status" class="form-label">Семейное положение</label><input id="create-employee-marital_status" v-model="formData.marital_status" type="text" class="form-control form-control-sm" placeholder="Например, женат"></div></div></section><section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-telephone" aria-hidden="true"></i></span><h2>Контакты</h2></div><div class="row g-3"><div class="col-12 col-sm-6"><!-- новый код chat: список телефонов --><EmployeePhoneFields v-model="formData.phones" /></div><div class="col-12 col-sm-6"><label for="create-employee-email" class="form-label">Электронная почта</label><input id="create-employee-email" v-model="formData.email" type="text" class="form-control form-control-sm" placeholder="name@example.ru"></div></div></section><section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span><h2>Документы</h2></div><div class="row g-3"><div class="col-12 col-md-4"><label for="create-employee-pasport_serial" class="form-label">Серия паспорта</label><input id="create-employee-pasport_serial" v-model="formData.pasport_serial" type="text" class="form-control form-control-sm" placeholder="2515"></div><div class="col-12 col-md-4"><label for="create-employee-pasport_number" class="form-label">Номер паспорта</label><input id="create-employee-pasport_number" v-model="formData.pasport_number" type="text" class="form-control form-control-sm" placeholder="123456"></div><div class="col-12 col-md-4"><label for="create-employee-snils" class="form-label">СНИЛС</label><input id="create-employee-snils" v-model="formData.snils" type="text" class="form-control form-control-sm" placeholder="000-000-000 00"></div></div></section><section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span><h2>Образование и опыт</h2></div><div class="row g-3"><div class="col-12 col-sm-6"><label for="create-employee-education" class="form-label">Образование</label><input id="create-employee-education" v-model="formData.education" type="text" class="form-control form-control-sm" placeholder="Среднее профессиональное"></div><div class="col-12 col-sm-6"><label for="create-employee-experience" class="form-label">Опыт работы</label><input id="create-employee-experience" v-model="formData.experience" type="text" class="form-control form-control-sm" placeholder="Например, 3 года"></div></div></section>
+                    <!-- новый код chat: блок размеров и ИТР -->
+                    <EmployeeSizeFields v-model:clothing-size="formData.clothing_size" v-model:shoe-size="formData.shoe_size" v-model:height-c-m="formData.height_cm" />
                     </div>
                     <div class="col-12 col-xl-4">
-<section class="employee-form-section"><div class="employee-section-heading"><span class="employee-section-icon"><i class="bi bi-briefcase" aria-hidden="true"></i></span><h2>Работа и оплата</h2></div><div class="row g-3"><div class="col-12 "><label for="create-employee-profession" class="form-label">Должность</label><input id="create-employee-profession" v-model="formData.profession" type="text" class="form-control form-control-sm" placeholder="Инженер ПТО"></div><div class="col-12 col-sm-6"><label for="create-employee-start_date" class="form-label">Начало работы</label><input id="create-employee-start_date" v-model="formData.start_date" type="date" class="form-control form-control-sm" placeholder=""></div><div class="col-12 col-sm-6"><label for="create-employee-salary_rate" class="form-label">Ставка за смену, ₽</label><input id="create-employee-salary_rate" v-model="formData.salary_rate" type="text" class="form-control form-control-sm" placeholder="3 000"></div><div class="col-12"><label for="create-employee-agreement" class="form-label">Договор</label><select id="create-employee-agreement" v-model="formData.agreement_id" class="form-select form-select-sm"><option :value="0">Не закреплён за договором</option><option v-for="agreement in agreements" :key="agreement.ID" :value="agreement.ID">{{ agreement.name }}</option></select></div>
-<div class="col-12"><div class="employee-employment-fields"><EmployeeEmploymentFields v-model:officially-employed="formData.officially_employed" v-model:monthly-salary-kopecks="formData.monthly_salary_kopecks" /></div></div>
-<div class="col-12"><div class="employee-status-setting"><div><label for="create-employee-dismissed" class="mb-0">Сотрудник уволен</label><div class="employee-field-hint">Статус в карточке сотрудника</div></div><div class="form-check form-switch mb-0"><input id="create-employee-dismissed" v-model="formData.status" class="form-check-input" type="checkbox" role="switch"></div></div></div></div></section>
+                        <!-- --------- новый код chat: последовательные группы работы, назначения и оплаты -->
+                        <section class="employee-form-section employee-work-section">
+                            <div class="employee-section-heading">
+                                <span class="employee-section-icon"><i class="bi bi-briefcase" aria-hidden="true"></i></span>
+                                <h2>Работа и оплата</h2>
+                            </div>
+
+                            <div class="employee-work-group">
+                                <div>
+                                    <label for="create-employee-profession" class="form-label">Должность</label>
+                                    <input id="create-employee-profession" v-model="formData.profession" type="text" class="form-control form-control-sm" placeholder="Инженер ПТО">
+                                </div>
+                                <EmployeeSpecializationFields v-model="formData.specialization_ids" />
+                                <div class="employee-status-setting">
+                                    <div>
+                                        <label for="create-employee-itr" class="mb-0">Сотрудник ИТР</label>
+                                        <div class="employee-field-hint">Инженерно-технический работник</div>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input id="create-employee-itr" v-model="formData.is_itr" class="form-check-input" type="checkbox" role="switch">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="employee-work-group">
+                                <h3>Назначение</h3>
+                                <div>
+                                    <label for="create-employee-agreement" class="form-label">Договор</label>
+                                    <select id="create-employee-agreement" v-model="formData.agreement_id" :disabled="formData.status" class="form-select form-select-sm">
+                                        <option :value="0">Не закреплён за договором</option>
+                                        <option v-for="agreement in agreements" :key="agreement.ID" :value="agreement.ID">{{ agreement.name }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="create-employee-start_date" class="form-label">Начало работы</label>
+                                    <input id="create-employee-start_date" v-model="formData.start_date" type="date" class="form-control form-control-sm">
+                                </div>
+                            </div>
+
+                            <div class="employee-work-group">
+                                <h3>Условия оплаты</h3>
+                                <div>
+                                    <label for="create-employee-salary_rate" class="form-label">Ставка за смену, ₽</label>
+                                    <MoneyInputComponent id="create-employee-salary_rate" v-model="formData.salary_rate" class="form-control form-control-sm" placeholder="3 000" />
+                                </div>
+                                <div class="employee-employment-fields">
+                                    <EmployeeEmploymentFields v-model:officially-employed="formData.officially_employed" v-model:monthly-salary-kopecks="formData.monthly_salary_kopecks" />
+                                </div>
+                            </div>
+
+                            <div class="employee-work-group">
+                                <div class="employee-status-setting">
+                                    <div>
+                                        <label for="create-employee-dismissed" class="mb-0">Сотрудник уволен</label>
+                                        <div class="employee-field-hint">При увольнении закрепление за договором снимается</div>
+                                    </div>
+                                    <div class="form-check form-switch mb-0">
+                                        <input id="create-employee-dismissed" v-model="formData.status" class="form-check-input" type="checkbox" role="switch">
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        <!-- --------- конец нового кода chat -->
                     </div>
                 </div>
                 <footer class="employee-form-footer">
@@ -30,8 +92,14 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import api from '../../../api';
+// --------- новый код chat: специализации, телефоны и денежные поля
+import EmployeePhoneFields from './EmployeePhoneFields.vue';
+import EmployeeSpecializationFields from './EmployeeSpecializationFields.vue';
+import MoneyInputComponent from '../../MoneyInputComponent.vue';
+// --------- конец нового кода chat
+import EmployeeSizeFields from './EmployeeSizeFields.vue'; // новый код chat: размеры и ИТР
 import EmployeeEmploymentFields from './EmployeeEmploymentFields.vue'; // новый код chat: новые поля карточки
 import { useRouter } from 'vue-router';
 
@@ -41,6 +109,14 @@ const isSubmit = ref(false);
 const errorMessage = ref(''); // новый код chat: видимая ошибка формы
 
 const formData = reactive({
+    // --------- новый код chat: размеры и категория сотрудника
+    phones: [""], // новый код chat: все номера сотрудника
+    specialization_ids: [], // новый код chat: связи со справочником
+    clothing_size: "",
+    shoe_size: "",
+    height_cm: null,
+    is_itr: false,
+    // --------- конец нового кода chat
     name: "",
     surname: "",
     middle_name: "",
@@ -63,6 +139,12 @@ const formData = reactive({
     status: false
 });
 
+// --------- новый код chat: увольнение снимает текущее закрепление
+watch(() => formData.status, dismissed => {
+    if (dismissed) formData.agreement_id = 0;
+}, {flush: 'sync'});
+// --------- конец нового кода chat
+
 const agreements = ref(null);
 
 const getAgreementHandler = async()=>{
@@ -84,6 +166,14 @@ const createEmployeeCardHandler = async() =>{
 
         router.push({name: 'employee-cards'});
 
+        // --------- новый код chat: сброс размеров и ИТР
+        formData.phones = [""]; // новый код chat
+        formData.specialization_ids = []; // новый код chat
+        formData.clothing_size = "";
+        formData.shoe_size = "";
+        formData.height_cm = null;
+        formData.is_itr = false;
+        // --------- конец нового кода chat
         formData.name = "",
         formData.surname = "";
         formData.middle_name = "";
@@ -140,6 +230,21 @@ onMounted(getAgreementHandler);
 .employee-form-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 0 8px; margin-top: 8px; }
 .employee-footer-note { color: var(--bs-secondary-color); font-size: 12px; }
 .employee-form-footer .btn { padding: 7px 14px; border-radius: 6px; font-size: 13px; }
+/* --------- новый код chat: размеры текста на странице создания, включая вложенные блоки */
+.employee-create-page :deep(.btn),
+.employee-create-page :deep(.btn-close) { font-size: 14px; }
+.employee-create-page :deep(.form-label),
+.employee-create-page :deep(.form-check-label),
+.employee-create-page .employee-status-setting label { font-size: 13px; }
+.employee-create-page .employee-section-heading h2,
+.employee-create-page :deep(.employee-size-fields h2) { font-size: 15px; }
+/* --------- конец нового кода chat */
+/* --------- новый код chat: группы с едиными отступами и тонкими разделителями */
+.employee-work-group { display: grid; gap: 14px; min-width: 0; }
+.employee-work-group + .employee-work-group { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--bs-border-color); }
+.employee-work-group h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--bs-secondary-color); }
+.employee-work-section .employee-employment-fields { border-top: 0; padding-top: 0; }
+/* --------- конец нового кода chat */
 @media (max-width: 575px) {
     .employee-form-section { padding: 14px; }
     .employee-create-header h1 { font-size: 20px; }

@@ -8,13 +8,14 @@
     </div>
     <div v-if="officiallyEmployed" class="col-4 pt-3">
         <label for="employee-monthly-salary" class="form-label">ЗП в месяц, ₽</label>
-        <input id="employee-monthly-salary" :value="salaryInput" type="text" inputmode="decimal" class="form-control form-control-sm" @focus="editing = true" @blur="editing = false" @input="changeSalary">
+        <MoneyInputComponent id="employee-monthly-salary" v-model="salaryInput" class="form-control form-control-sm" @focus="editing = true" @blur="editing = false" @input="changeSalary" />
     </div>
 </template>
 <!-- --------- конец нового кода chat -->
 <script setup>
 // --------- новый код chat: точное преобразование рублей в копейки
 import { computed, ref, watch } from 'vue';
+import MoneyInputComponent from '../../MoneyInputComponent.vue'; // новый код chat: единый ввод денег
 const props = defineProps({officiallyEmployed:Boolean, monthlySalaryKopecks:{type:Number, default:0}});
 const emit = defineEmits(['update:officiallyEmployed', 'update:monthlySalaryKopecks']);
 const salaryText = computed(() => {
@@ -34,7 +35,7 @@ const changeEmployment = event => {
 };
 const changeSalary = event => {
     salaryInput.value = event.target.value;
-    const value = event.target.value.trim().replace(',', '.') || '0';
+    const value = event.target.value.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.') || '0';
     let cents = null;
     if (/^\d+(?:\.\d{1,2})?$/.test(value)) {
         const [rubles, fraction = ''] = value.split('.');

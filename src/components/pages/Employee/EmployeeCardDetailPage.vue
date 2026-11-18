@@ -1,219 +1,248 @@
 <template>
-  <div class="container-fluid pt-3 d-flex">
-    <div class="col-sm-12 col-md-12 col-lg-10 col-xl-8">
-      <div v-if="employeeCard" class="list-group">
-        <div class="list-group-item d-flex">
-          <div class="col-4 pe-4">
-            <a
-              v-if="avatar && avatar.length !== 0"
-              :href="documentFileUrl(avatar.at(-1).ID)"
-              @click.prevent="openDocument(avatar.at(-1))"
-              rel="noopener"
-              target="_blank"
-              class="d-block w-100 ratio-3x4" 
-            >
-              <img
-                :src="avatarUrl"
-                class="w-100 h-100 object-fit-cover rounded"
-                alt="Фото сотрудника"
-              >
-            </a>
-
-            <div v-else class="d-flex justify-content-center align-items-center text-muted">
-              Нет фото
-            </div>
-          </div>
-          <div  class="col-8">
-            <div class="d-flex">
-              <div class="col-4 pe-3 fw-semibold">ФИО:</div>
-              <div class="col-8 employeecard-text" >{{ employeeCard.surname }} {{ employeeCard.name }} {{ employeeCard.middle_name }}</div>
-            </div>
-            
-            <div class="pt-3">
-              <div class="d-flex">
-                <div class="col-4 pe-3 fw-semibold">Дата рождения:</div>
-                <div class="col-8 employeecard-text" >{{ formatDateStr(employeeCard.date_of_birth) }}</div>
-              </div>
-              <div class="d-flex">
-                <div class="col-4 pe-3 fw-semibold">Город проживания:</div>
-                <div class="col-8 employeecard-text" >{{ employeeCard.place_of_residence }}</div>
-          </div>
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Семейное положение:</div>
-            <div class="col-8 employeecard-text" >{{ employeeCard.marital_status }}</div>
-          </div>
-        </div>
-        
-        <div class="pt-3">
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Образование:</div>
-            <div class="col-8 employeecard-text" >{{ employeeCard.education }}</div>
-          </div>
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Опыт:</div>
-            <div class="col-8 employeecard-text" >{{ employeeCard.experience }}</div>
-          </div>
-        </div>
-        
-        <div class="pt-3">
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Паспорт:</div>
-            <div class="col-8">  {{ employeeCard.pasport_serial }} {{ employeeCard.pasport_number }}</div>
-          </div>
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">СНИЛС:</div>
-            <div class="col-8"> {{ employeeCard.snils }}</div>
-          </div>
-        </div>
-        
-        <div class="pt-3">
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Номер телефона:</div>
-            <div class="col-8">{{ employeeCard.phone }}</div>
-          </div>
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Email:</div>
-            <div class="col-8">{{ employeeCard.email }}</div>
-          </div>
-        </div>
-        
-        <div class="pt-3">
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Должность:</div>
-            <div class="col-8">{{ employeeCard.profession }}</div>
-          </div>
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Дата начала работы:</div>
-            <div class="col-8 employeecard-text" >{{ formatDateStr(employeeCard.start_date) }}</div>
-          </div>
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Договор:</div>
-            <div class="col-8 employeecard-text" >
-              <div v-if="employeeCard.agreement_id !== 0">
-                {{ employeeCard.agreement.name }}
-              </div>
-              <div v-else>
-                Не приписан ни к какому договору
-              </div>
-            </div>
-          </div>
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Ставка ЗП:</div>
-            <div class="col-8 employeecard-text" >{{ employeeCard.salary_rate }}</div>
-          </div>
-          <div class="d-flex">
-            <!-- новый код chat: отображение официального трудоустройства -->
-            <div class="col-4 pe-3 fw-semibold">Устроен официально:</div>
-            <div class="col-8 employeecard-text">{{ employeeCard.officially_employed ? 'Да' : 'Нет' }}</div>
-          </div>
-          <div v-if="employeeCard.officially_employed" class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">ЗП в месяц:</div>
-            <div class="col-8 employeecard-text">{{ ((employeeCard.monthly_salary_kopecks || 0) / 100).toLocaleString('ru-RU', {style:'currency', currency:'RUB'}) }}</div>
-          </div>
-          <!-- конец нового кода chat -->
-          <div class="d-flex">
-            <div class="col-4 pe-3 fw-semibold">Статус сотрудника:</div>
-            <div class="col-8 employeecard-text" >{{ !employeeCard.status ? 'Активный': 'Уволен' }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="list-group-item fw-semibold d-flex justify-content-between" style="font-size: 16px;">
-      <div>Документы:</div>
-      <div>
-        <router-link class="me-3" style="font-size: 14px;" :to="{name: 'employee-card-update', params:{id:route.params.id}}">Изменить</router-link>
-        <router-link style="font-size: 14px;" :to="{name: 'employee-card-document-create', params:{id:route.params.id}}">Добавить документ</router-link>
-      </div>
-    </div>
-    <div v-for="(document, index) in employeeCard.employee_documents" :key="document.ID" class="list-group-item d-flex" style="font-size: 14px;">
-      <div class="col-1 fw-semibold"> {{ index + 1 }}</div>
-      <div class="col-5">
-        {{ document.category_document_card.category_name }}
-      </div>
-      <div class="col-5">
-        <a :href="documentFileUrl(document.ID)" rel="noopener" target="_blank" class="mx-2 d-block text-truncate" @click.prevent="openDocument(document)">
-          <span class="">{{ document.file_name }}</span>
+  <!-- --------- новый код chat: карточка сотрудника в стиле форм создания и редактирования -->
+  <div class="container-fluid employee-detail-page py-3">
+    <router-link :to="{name: 'employee-cards'}" class="employee-back-link"><i class="bi bi-arrow-left" aria-hidden="true"></i> Сотрудники</router-link>
+    <div v-if="errorMessage" class="alert alert-danger mt-3" role="alert">{{ errorMessage }}</div>
+    <div v-if="loading" class="employee-panel p-4 mt-3 text-secondary" role="status"><span class="spinner-border spinner-border-sm me-2"></span>Загрузка карточки…</div>
+    <template v-else-if="employeeCard">
+      <header class="employee-panel employee-profile-header mt-3">
+        <a v-if="avatarDocument && avatarUrl" :href="documentFileUrl(avatarDocument.ID)" @click.prevent="openDocument(avatarDocument)" target="_blank" rel="noopener" class="employee-avatar" aria-label="Открыть фото сотрудника">
+          <img :src="avatarUrl" alt="Фото сотрудника" @error="avatarUrl = null">
         </a>
-      </div>
-      <div class="col-1 d-flex justify-content-end">
-        <div class="dropdown">
-          <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-three-dots-vertical"></i>
-          </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item text-danger" type="button" @click="deleteEmployeeCardDocumentHandler(document.ID)">Удалить</a></li>
-            </ul>
+        <div v-else class="employee-avatar employee-avatar-empty"><i class="bi bi-person" aria-hidden="true"></i><span>Нет фото</span></div>
+        <div class="employee-profile-title">
+          <div class="employee-eyebrow">Карточка сотрудника</div>
+          <h1>{{ fullName }}</h1>
+          <p>{{ employeeCard.profession || 'Должность не указана' }}</p>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="employee-badge" :class="employeeCard.status ? 'text-danger border-danger' : 'text-success border-success'">{{ employeeCard.status ? 'Уволен' : 'Работает' }}</span>
+            <span v-if="employeeCard.is_itr" class="employee-badge text-primary border-primary">ИТР</span>
+            <span class="employee-badge text-secondary">{{ employeeCard.officially_employed ? 'Устроен официально' : 'Не устроен официально' }}</span>
           </div>
         </div>
-    </div>
+        <router-link :to="{name: 'employee-card-update', params: {id: route.params.id}}" class="btn btn-primary btn-sm employee-edit-button"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Редактировать</router-link>
+      </header>
+
+      <div class="row g-3 mt-0">
+        <div class="col-12 col-xl-8 employee-detail-sections">
+          <section class="employee-panel">
+            <div class="employee-panel-heading"><span class="employee-section-icon"><i class="bi bi-person" aria-hidden="true"></i></span><h2>Личные данные</h2></div>
+            <dl class="employee-data-grid">
+              <div><dt>Дата рождения</dt><dd>{{ displayDate(employeeCard.date_of_birth) }}</dd></div>
+              <div><dt>Город проживания</dt><dd>{{ employeeCard.place_of_residence || '—' }}</dd></div>
+              <div><dt>Семейное положение</dt><dd>{{ employeeCard.marital_status || '—' }}</dd></div>
+              <div><dt>Образование</dt><dd>{{ employeeCard.education || '—' }}</dd></div>
+              <div><dt>Опыт работы</dt><dd>{{ employeeCard.experience || '—' }}</dd></div>
+            </dl>
+          </section>
+          <section class="employee-panel">
+            <div class="employee-panel-heading"><span class="employee-section-icon"><i class="bi bi-telephone" aria-hidden="true"></i></span><h2>Контакты</h2></div>
+            <dl class="employee-data-grid employee-data-grid-two">
+              <div><dt>Телефоны</dt><dd>
+                <div v-for="(phone, index) in phones" :key="index" class="employee-phone"><a :href="'tel:' + phone.replace(/[^+0-9]/g, '')">{{ phone }}<i class="bi bi-telephone ms-2" aria-hidden="true"></i></a></div>
+                <span v-if="!phones.length">—</span>
+              </dd></div>
+              <div><dt>Электронная почта</dt><dd><a v-if="employeeCard.email" :href="'mailto:' + employeeCard.email">{{ employeeCard.email }}<i class="bi bi-envelope ms-2" aria-hidden="true"></i></a><span v-else>—</span></dd></div>
+            </dl>
+          </section>
+          <section class="employee-panel">
+            <div class="employee-panel-heading"><span class="employee-section-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span><h2>Паспорт и СНИЛС</h2></div>
+            <dl class="employee-data-grid">
+              <div><dt>Серия паспорта</dt><dd>{{ employeeCard.pasport_serial || '—' }}</dd></div>
+              <div><dt>Номер паспорта</dt><dd>{{ employeeCard.pasport_number || '—' }}</dd></div>
+              <div><dt>СНИЛС</dt><dd>{{ employeeCard.snils || '—' }}</dd></div>
+            </dl>
+          </section>
+          <section class="employee-panel">
+            <div class="employee-panel-heading"><span class="employee-section-icon"><i class="bi bi-person-bounding-box" aria-hidden="true"></i></span><h2>Рабочая одежда</h2></div>
+            <dl class="employee-data-grid">
+              <div><dt>Размер одежды</dt><dd>{{ employeeCard.clothing_size || '—' }}</dd></div>
+              <div><dt>Размер обуви</dt><dd>{{ employeeCard.shoe_size || '—' }}</dd></div>
+              <div><dt>Рост</dt><dd>{{ employeeCard.height_cm ? employeeCard.height_cm + ' см' : '—' }}</dd></div>
+            </dl>
+          </section>
+        </div>
+
+        <div class="col-12 col-xl-4">
+          <section class="employee-panel">
+            <div class="employee-panel-heading"><span class="employee-section-icon"><i class="bi bi-briefcase" aria-hidden="true"></i></span><h2>Работа и оплата</h2></div>
+            <dl class="employee-work-group">
+              <div><dt>Должность</dt><dd>{{ employeeCard.profession || '—' }}</dd></div>
+              <div><dt>Специализации</dt><dd class="d-flex flex-wrap gap-2">
+                <span v-for="item in employeeCard.specializations || []" :key="item.ID" class="employee-specialization">{{ item.name }}</span>
+                <span v-if="!employeeCard.specializations?.length">—</span>
+              </dd></div>
+              <div class="employee-inline-detail"><dt>Сотрудник ИТР</dt><dd>{{ employeeCard.is_itr ? 'Да' : 'Нет' }}</dd></div>
+            </dl>
+            <dl class="employee-work-group">
+              <div><dt>Договор</dt><dd><router-link v-if="employeeCard.agreement_id" :to="{name: 'agreement', params: {id: employeeCard.agreement_id}}">{{ employeeCard.agreement?.name || 'Договор № ' + employeeCard.agreement_id }}<i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i></router-link><span v-else class="text-secondary">Не закреплён за договором</span></dd></div>
+              <div><dt>Начало работы</dt><dd>{{ displayDate(employeeCard.start_date) }}</dd></div>
+            </dl>
+            <dl class="employee-work-group">
+              <div><dt>Ставка за смену</dt><dd class="employee-money">{{ salaryRate }}</dd></div>
+              <div class="employee-inline-detail"><dt>Устроен официально</dt><dd>{{ employeeCard.officially_employed ? 'Да' : 'Нет' }}</dd></div>
+              <div v-if="employeeCard.officially_employed"><dt>ЗП в месяц</dt><dd class="employee-money">{{ money((employeeCard.monthly_salary_kopecks || 0) / 100) }}</dd></div>
+            </dl>
+          </section>
+        </div>
+
+        <div class="col-12">
+          <section class="employee-panel employee-documents">
+            <div class="employee-panel-heading employee-documents-heading">
+              <div class="d-flex align-items-center gap-2"><span class="employee-section-icon"><i class="bi bi-files" aria-hidden="true"></i></span><h2>Документы</h2><span class="employee-document-count">{{ documents.length }}</span></div>
+              <router-link :to="{name: 'employee-card-document-create', params: {id: route.params.id}}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Добавить документ</router-link>
+            </div>
+            <div v-if="documents.length" class="table-responsive">
+              <table class="table employee-document-table mb-0">
+                <thead><tr><th class="text-center">№</th><th>Документ</th><th>Файл</th><th>Добавлен</th><th><span class="visually-hidden">Действия</span></th></tr></thead>
+                <tbody><tr v-for="(document, index) in documents" :key="document.ID">
+                  <td class="text-center text-secondary">{{ index + 1 }}</td>
+                  <td>{{ document.category_document_card?.category_name || 'Без категории' }}</td>
+                  <td><a :href="documentFileUrl(document.ID)" target="_blank" rel="noopener" class="employee-file-link" @click.prevent="openDocument(document)"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>{{ document.file_name }}</span></a></td>
+                  <td class="text-nowrap text-secondary">{{ displayDate(document.CreatedAt) }}</td>
+                  <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" :disabled="deletingID !== null" :aria-label="'Удалить документ ' + document.file_name" title="Удалить документ" @click="deleteEmployeeCardDocumentHandler(document.ID)"><span v-if="deletingID === document.ID" class="spinner-border spinner-border-sm" aria-hidden="true"></span><i v-else class="bi bi-trash" aria-hidden="true"></i></button></td>
+                </tr></tbody>
+              </table>
+            </div>
+            <div v-else class="employee-empty-state"><i class="bi bi-folder2-open" aria-hidden="true"></i><span>Документы пока не добавлены</span></div>
+          </section>
+        </div>
+      </div>
+    </template>
   </div>
-  </div>
-</div>
+  <!-- --------- конец нового кода chat -->
 </template>
 
 <script setup>
+// --------- новый код chat: представление данных и состояния карточки
 import { useRoute } from 'vue-router';
 import api from '../../../api';
-import { documentFileUrl, ensureFileAccess, openDocumentFile } from '../../../utils/fileAccess'; // новый код chat: прямые защищённые ссылки
-import { onMounted, ref } from 'vue';
+import { documentFileUrl, ensureFileAccess, openDocumentFile } from '../../../utils/fileAccess';
+import { computed, onMounted, ref } from 'vue';
 import { formatDateStr } from '../../../utils/date';
 
 const route = useRoute();
-
 const employeeCard = ref(null);
-const avatar = ref(null);
-const avatarUrl = ref(null)
+const avatarUrl = ref(null);
+const loading = ref(true);
+const errorMessage = ref('');
+const deletingID = ref(null);
+const documents = computed(() => employeeCard.value?.employee_documents || []);
+const avatarDocument = computed(() => documents.value.filter(item => item.category_document_card?.category_name === 'Фото').at(-1));
+const fullName = computed(() => [employeeCard.value?.surname, employeeCard.value?.name, employeeCard.value?.middle_name].filter(Boolean).join(' ') || 'Без имени');
+const phones = computed(() => employeeCard.value?.phones?.length ? employeeCard.value.phones : (employeeCard.value?.phone ? [employeeCard.value.phone] : []));
+const displayDate = value => value && !String(value).startsWith('0001-') ? formatDateStr(value) || '—' : '—';
+const money = value => Number(value).toLocaleString('ru-RU', {style: 'currency', currency: 'RUB'});
+const salaryRate = computed(() => {
+  const raw = employeeCard.value?.salary_rate;
+  if (!raw?.trim()) return '—';
+  const number = Number(raw.replace(/\s/g, '').replace(',', '.'));
+  return Number.isFinite(number) ? money(number) : raw;
+});
 
-const getEmployeeCardDetailHandler = async() =>{
-  try{
-    const res = await api.get(`/employeescard/${route.params.id}/detail`);
-    employeeCard.value = res.data;
-    avatar.value = employeeCard.value.employee_documents.filter(item => item.category_document_card.category_name === "Фото")
-    getAvatarHandler();
-    console.log(employeeCard.value)
-    console.log(avatar.value)
-  }catch(err){
-    console.log(err);
+const getEmployeeCardDetailHandler = async () => {
+  loading.value = true;
+  errorMessage.value = '';
+  try {
+    const {data} = await api.get(`/employeescard/${route.params.id}/detail`);
+    employeeCard.value = data;
+    await getAvatarHandler();
+  } catch (err) {
+    errorMessage.value = 'Не удалось загрузить карточку сотрудника. Обновите страницу.';
+  } finally {
+    loading.value = false;
   }
-}
+};
 
-const deleteEmployeeCardDocumentHandler = async(id) =>{
-    if (!window.confirm('Удалить документ сотрудника?')) return; // новый код chat: подтверждение удаления
-  try{
-    const res = await api.delete(`/employeescard/document/${id}/delete`)
-    employeeCard.value.employee_documents = employeeCard.value.employee_documents.filter(item => item.ID != id)
-  }catch(err){
-    console.log(err)
+const deleteEmployeeCardDocumentHandler = async id => {
+  if (deletingID.value !== null || !window.confirm('Удалить документ сотрудника?')) return;
+  deletingID.value = id;
+  errorMessage.value = '';
+  try {
+    await api.delete(`/employeescard/document/${id}/delete`);
+    employeeCard.value.employee_documents = documents.value.filter(item => item.ID !== id);
+    await getAvatarHandler();
+  } catch (err) {
+    errorMessage.value = 'Не удалось удалить документ. Попробуйте ещё раз.';
+  } finally {
+    deletingID.value = null;
   }
-}
+};
 
 const getAvatarHandler = async () => {
-    try {
-        if (!avatar.value || avatar.value.length === 0) {
-            avatarUrl.value = null
-            return
-        }
-        const document = avatar.value.at(-1)
-        await ensureFileAccess(); // новый код chat: cookie для обычного src изображения
-        avatarUrl.value = documentFileUrl(document.ID)
-
-    } catch (err) {
-        console.error(err)
-    }
-}
-
-const openDocument = document => openDocumentFile(document.ID); // новый код chat: без загрузки всего файла в Blob
-
+  avatarUrl.value = null;
+  const document = avatarDocument.value;
+  if (!document) return;
+  try {
+    await ensureFileAccess();
+    avatarUrl.value = documentFileUrl(document.ID);
+  } catch (err) {
+    console.error(err);
+  }
+};
+const openDocument = document => openDocumentFile(document.ID);
 onMounted(getEmployeeCardDetailHandler);
+// --------- конец нового кода chat
 </script>
 
-<style>
-.employee-card-text{
-font-size: 14px;
+<style scoped>
+/* --------- новый код chat: единое оформление карточки с формами сотрудника */
+.employee-detail-page { max-width: 1440px; font-size: 13px; }
+.employee-back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--bs-secondary-color); text-decoration: none; }
+.employee-back-link:hover { color: var(--bs-primary); }
+.employee-panel { border: 1px solid var(--bs-border-color); border-radius: 10px; padding: 18px; background: var(--bs-body-bg); }
+.employee-profile-header { display: flex; align-items: center; gap: 18px; }
+.employee-avatar { width: 86px; height: 106px; flex-shrink: 0; border-radius: 8px; overflow: hidden; }
+.employee-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.employee-avatar-empty { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: 11px; }
+.employee-avatar-empty > i { font-size: 32px; }
+.employee-profile-title { flex: 1; min-width: 0; }
+.employee-eyebrow { color: var(--bs-secondary-color); font-size: 12px; margin-bottom: 4px; }
+.employee-profile-title h1 { margin: 0 0 5px; font-size: 23px; font-weight: 600; overflow-wrap: anywhere; }
+.employee-profile-title p { margin: 0 0 10px; color: var(--bs-secondary-color); font-size: 14px; }
+.employee-badge { display: inline-block; border: 1px solid var(--bs-border-color); border-radius: 6px; padding: 3px 7px; font-size: 12px; font-weight: 400; }
+.employee-edit-button { flex-shrink: 0; }
+.employee-detail-sections { display: flex; flex-direction: column; gap: 16px; }
+.employee-panel-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; }
+.employee-panel-heading h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.employee-section-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; color: var(--bs-primary); background: var(--bs-primary-bg-subtle); font-size: 15px; }
+.employee-data-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 16px; margin: 0; }
+.employee-data-grid-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+dt { font-size: 13px; font-weight: 500; color: var(--bs-secondary-color); margin-bottom: 5px; }
+dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+dd a, .employee-file-link { text-decoration: none; }
+dd a:hover, .employee-file-link:hover { text-decoration: underline; }
+.employee-phone + .employee-phone { margin-top: 6px; }
+.employee-work-group { display: grid; gap: 16px; margin: 0; }
+.employee-work-group + .employee-work-group { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--bs-border-color); }
+.employee-inline-detail { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.employee-inline-detail dt { margin: 0; }
+.employee-specialization { font-size: 12px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--bs-border-color); }
+.employee-money { font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.employee-documents { padding: 0; overflow: hidden; }
+.employee-documents-heading { justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 18px; margin: 0; }
+.employee-document-count { border-radius: 5px; padding: 2px 6px; font-size: 12px; background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); }
+.employee-document-table { font-size: 14px; }
+.employee-document-table th { font-size: 13px; font-weight: 500; background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); white-space: nowrap; }
+.employee-document-table td, .employee-document-table th { padding: 10px 16px; vertical-align: middle; }
+.employee-document-table tr:last-child td { border-bottom: 0; }
+.employee-document-table th:first-child { width: 44px; }
+.employee-file-link { display: inline-flex; align-items: flex-start; gap: 8px; min-width: 160px; }
+.employee-file-link span { overflow-wrap: anywhere; }
+.employee-empty-state { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 28px 16px; color: var(--bs-secondary-color); border-top: 1px solid var(--bs-border-color); }
+.employee-detail-page .btn { font-size: 14px; border-radius: 6px; }
+@media (max-width: 767px) {
+  .employee-profile-header { flex-wrap: wrap; gap: 12px; }
+  .employee-profile-title h1 { font-size: 20px; }
+  .employee-data-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .employee-edit-button { margin-left: auto; }
 }
-
-.ratio-3x4 {
-  aspect-ratio: 3 / 4;
-  overflow: hidden;
+@media (max-width: 575px) {
+  .employee-panel { padding: 14px; }
+  .employee-documents { padding: 0; }
+  .employee-avatar { width: 64px; height: 80px; }
+  .employee-data-grid { grid-template-columns: 1fr; gap: 14px; }
+  .employee-documents-heading { padding: 14px; }
 }
+/* --------- конец нового кода chat */
 </style>
