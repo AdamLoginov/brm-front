@@ -1,4 +1,5 @@
 <template>
+    <NotificationToasts /> <!-- новый код chat: уведомления на всех страницах -->
     <div class="pe-2">
         <div class="d-flex">
             <div class="p-0 sticky-top vh-100 flex-shrink-0" :style="isClose ? 'width: 80px;' : 'width: 200px;'">
@@ -13,6 +14,7 @@
 </template>
 <script setup>
 import { ref } from "vue";
+import NotificationToasts from "./components/NotificationToasts.vue"; // новый код chat
 import Sidebar from "./components/Sidebar.vue"
 
 const isClose = ref(false);

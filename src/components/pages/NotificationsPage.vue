@@ -15,8 +15,9 @@
             <div v-if="state.error" class="alert alert-danger m-3" role="alert">{{ state.error }}</div>
             <div v-if="state.loading && !state.items.length" class="notification-empty" role="status">Загружаем уведомления…</div>
             <div v-else-if="!state.items.length && !state.error" class="notification-empty"><i class="bi bi-bell-slash d-block mb-2" aria-hidden="true"></i>Уведомлений пока нет</div>
+            <div v-if="targetMessage" class="alert alert-info m-3" role="status">{{ targetMessage }}</div> <!-- новый код chat -->
             <div class="notification-list">
-                <article v-for="item in state.items" :key="item.ID" class="notification-item" :class="{'notification-unread': !item.read_at}">
+                <article v-for="item in state.items" :key="item.ID" :id="'notification-' + item.ID" tabindex="-1" class="notification-item" :class="{'notification-unread': !item.read_at, 'notification-selected': String(item.ID) === selectedID}">
                     <div class="notification-icon" :class="`notification-icon-${item.kind}`"><i class="bi" :class="icons[item.kind] || 'bi-list-task'" aria-hidden="true"></i></div>
                     <div class="notification-content">
                         <div class="notification-heading"><strong>{{ titles[item.kind] || 'Задача' }}</strong><span v-if="!item.read_at" class="notification-unread-dot" role="img" aria-label="Не прочитано" title="Не прочитано"></span></div>
@@ -40,14 +41,40 @@
 </template>
 <script setup>
 // --------- новый код chat: переход не меняет статус прочтения
-import { onMounted, onBeforeUnmount } from 'vue';
-import { notificationsState as state, startNotifications, stopNotifications, refreshNotifications, readNotifications } from '../../utils/notifications';
+import { onMounted, onBeforeUnmount, computed, ref, watch, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
+import { notificationsState as state, startNotifications, stopNotifications, refreshNotifications, readNotifications, locateNotification } from '../../utils/notifications';
 const icons = {assigned:'bi-person-plus', reopened:'bi-arrow-counterclockwise', completed:'bi-check2'}; // новый код chat: иконки событий
 const titles = {assigned:'Вам назначена задача',reopened:'Задача возвращена в работу',completed:'Ваша задача выполнена'};
 const actorLabels = {assigned:'Назначил',reopened:'Вернул в работу',completed:'Отметил выполнение'};
 const dateLabel = value => new Date(value).toLocaleString('ru-RU');
-onMounted(() => { startNotifications(); refreshNotifications(1,true); });
-onBeforeUnmount(stopNotifications);
+// --------- новый код chat: поиск и подсветка уведомления без прочтения
+const route = useRoute();
+const selectedID = computed(() => String(route.query.notification || ''));
+const targetMessage = ref('');
+let focusVersion = 0;
+const showSelected = async () => {
+    const id = selectedID.value, request = ++focusVersion;
+    targetMessage.value = '';
+    if (!id) { await refreshNotifications(1,true); return; }
+    try {
+        const page = await locateNotification(id);
+        if (request !== focusVersion) return;
+        if (!page) { targetMessage.value = 'Уведомление больше недоступно.'; return; }
+        await refreshNotifications(page,true);
+        await focusSelected();
+    } catch { if (request === focusVersion) targetMessage.value = 'Не удалось найти уведомление. Попробуйте ещё раз.'; }
+};
+const focusSelected = async () => {
+    await nextTick();
+    const element = document.getElementById('notification-' + selectedID.value);
+    if (element) { element.scrollIntoView({block:'nearest', behavior:'smooth'}); element.focus({preventScroll:true}); }
+};
+watch(selectedID, showSelected);
+watch(() => state.items, focusSelected);
+onMounted(() => { startNotifications(); showSelected(); });
+// --------- конец нового кода chat
+onBeforeUnmount(() => { focusVersion++; stopNotifications(); });
 // --------- конец нового кода chat
 </script>
 
@@ -63,6 +90,8 @@ onBeforeUnmount(stopNotifications);
 .notification-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--bs-border-color); }
 .notification-item:last-child { border-bottom: none; }
 .notification-unread { background: rgba(var(--bs-primary-rgb), .035); box-shadow: inset 3px 0 0 rgba(var(--bs-primary-rgb), .5); }
+/* новый код chat: выделение уведомления, открытого из toast */
+.notification-selected { background: var(--bs-primary-bg-subtle); box-shadow: inset 0 0 0 2px var(--bs-primary); outline: none; }
 .notification-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 30px; height: 30px; border-radius: 8px; background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: 16px; }
 .notification-icon-assigned { background: var(--bs-primary-bg-subtle); color: var(--bs-primary); }
 .notification-icon-completed { background: var(--bs-success-bg-subtle); color: var(--bs-success); }

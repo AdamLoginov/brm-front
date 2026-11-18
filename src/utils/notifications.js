@@ -1,11 +1,12 @@
 // --------- новый код chat: общая лента, счётчик и проверка без перезагрузки страницы
 import { reactive } from 'vue';
 import api from '../api';
-export const notificationsState = reactive({items:[],unread:0,total:0,page:1,pageSize:50,loading:false,busy:false,error:''});
+export const notificationsState = reactive({items:[],unread:0,total:0,page:1,pageSize:50,loading:false,busy:false,error:'',toastItems:[],toastOwner:''});
+let toastVersion = 0; // новый код chat: защита очереди при смене пользователя
 let subscribers = 0, timer = null, version = 0, owner = '';
 const token = () => localStorage.getItem('user-token') || '';
 const errorText = error => typeof error.response?.data === 'string' ? error.response.data.trim() : 'Не удалось обновить уведомления.';
-const reset = () => { version++; owner=''; Object.assign(notificationsState,{items:[],unread:0,total:0,page:1,loading:false,busy:false,error:''}); };
+const reset = () => { toastVersion++; version++; owner=''; Object.assign(notificationsState,{items:[],unread:0,total:0,page:1,loading:false,busy:false,error:'',toastItems:[],toastOwner:''}); };
 export const refreshNotifications = async(page = notificationsState.page, force = false) => {
     const currentToken = token();
     if (!currentToken) { reset(); return; }
@@ -17,6 +18,7 @@ export const refreshNotifications = async(page = notificationsState.page, force 
         const {data} = await api.get('/notifications',{params:{page}});
         if (request !== version || token() !== currentToken) return;
         Object.assign(notificationsState,{items:data.items || [],unread:data.unread,total:data.total,page:data.page,pageSize:data.page_size,error:''});
+        refreshToastQueue(currentToken); // новый код chat: очередь независима от открытой страницы
     } catch (error) { if (request === version && token() === currentToken) notificationsState.error = errorText(error); }
     finally { if (request === version) notificationsState.loading = false; }
 };
@@ -43,8 +45,49 @@ export const readNotifications = async(id = null) => {
     notificationsState.busy=true; notificationsState.error='';
     try {
         await api.post(id === null ? '/notifications/read-all' : `/notifications/${id}/read`);
-        if (token() === currentToken) await refreshNotifications(notificationsState.page,true);
+        if (token() === currentToken) {
+            notificationsState.toastItems = id === null ? [] : notificationsState.toastItems.filter(item => String(item.ID) !== String(id)); // новый код chat
+            await refreshNotifications(notificationsState.page,true);
+        }
     } catch (error) { if (token() === currentToken) notificationsState.error=errorText(error); }
     finally { if (token() === currentToken) notificationsState.busy=false; }
+};
+// --------- конец нового кода chat
+
+
+// --------- новый код chat: непрочитанные уведомления со всех страниц, свежие первыми
+const refreshToastQueue = async currentToken => {
+    const request = ++toastVersion;
+    const user = localStorage.getItem('user-id') || '';
+    if (!user) return;
+    try {
+        const items = [];
+        let page = 1, pages = 1;
+        do {
+            const {data} = await api.get('/notifications', {params:{page}});
+            if (request !== toastVersion || token() !== currentToken) return;
+            items.push(...(data.items || []).filter(item => !item.read_at));
+            pages = Math.ceil(data.total / data.page_size);
+            page++;
+        } while (page <= pages);
+        notificationsState.toastOwner = user;
+        notificationsState.toastItems = [...new Map(items.map(item => [item.ID, item])).values()].sort((a,b) => b.ID-a.ID);
+    } catch {
+        // Основная лента сообщает о сетевых ошибках; уже показанные toast сохраняются.
+    }
+};
+
+// Поиск выполняется по свежей ленте: новые события могли сместить номер страницы.
+export const locateNotification = async id => {
+    const currentToken = token();
+    let page = 1, pages = 1;
+    do {
+        const {data} = await api.get('/notifications', {params:{page}});
+        if (token() !== currentToken) return null;
+        if ((data.items || []).some(item => String(item.ID) === String(id))) return data.page;
+        pages = Math.ceil(data.total / data.page_size);
+        page++;
+    } while (page <= pages);
+    return null;
 };
 // --------- конец нового кода chat
