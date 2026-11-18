@@ -17,7 +17,8 @@
           <div class="employee-eyebrow">Карточка сотрудника</div>
           <h1>{{ fullName }}</h1>
           <p>{{ employeeCard.profession || 'Должность не указана' }}</p>
-          <div class="d-flex flex-wrap gap-2">
+          <!-- новый код chat: на телефоне статусы занимают отдельную строку под фото -->
+          <div class="d-flex flex-wrap gap-2 employee-profile-badges">
             <span class="employee-badge" :class="employeeCard.status ? 'text-danger border-danger' : 'text-success border-success'">{{ employeeCard.status ? 'Уволен' : 'Работает' }}</span>
             <span v-if="employeeCard.is_itr" class="employee-badge text-primary border-primary">ИТР</span>
             <span class="employee-badge text-secondary">{{ employeeCard.officially_employed ? 'Устроен официально' : 'Не устроен официально' }}</span>
@@ -25,8 +26,14 @@
         </div>
         <router-link :to="{name: 'employee-card-update', params: {id: route.params.id}}" class="btn btn-primary btn-sm employee-edit-button"><i class="bi bi-pencil me-1" aria-hidden="true"></i>Редактировать</router-link>
       </header>
-
-
+      <!-- новый код chat: быстрый доступ к контактам сразу под шапкой на телефоне -->
+      <section class="employee-panel employee-mobile-contacts" aria-label="Контакты сотрудника">
+        <h2>Контакты</h2>
+        <a v-for="(phone, index) in phones" :key="index" :href="'tel:' + phone.replace(/[^+0-9]/g, '')"><i class="bi bi-telephone" aria-hidden="true"></i><span>{{ phone }}</span></a>
+        <p v-if="!phones.length">Телефон не указан</p>
+        <a v-if="employeeCard.email" :href="'mailto:' + employeeCard.email"><i class="bi bi-envelope" aria-hidden="true"></i><span>{{ employeeCard.email }}</span></a>
+        <p v-else>Электронная почта не указана</p>
+      </section>
         </aside>
         <div class="employee-main-column">
           <div class="employee-information-grid">
@@ -79,7 +86,7 @@
             </dl>
           </section>
 <!-- новый код chat: контакты в группе личных данных -->
-<section class="employee-panel">
+<section class="employee-panel employee-desktop-contacts">
             <div class="employee-panel-heading"><span class="employee-section-icon"><i class="bi bi-telephone" aria-hidden="true"></i></span><h2>Контакты</h2></div>
             <dl class="employee-data-grid employee-data-grid-two">
               <div><dt>Телефоны</dt><dd>
@@ -117,9 +124,11 @@
                 <thead><tr><th class="text-center">№</th><th>Документ</th><th>Файл</th><th>Добавлен</th><th><span class="visually-hidden">Действия</span></th></tr></thead>
                 <tbody><tr v-for="(document, index) in documents" :key="document.ID">
                   <td class="text-center text-secondary">{{ index + 1 }}</td>
-                  <td>{{ document.category_document_card?.category_name || 'Без категории' }}</td>
-                  <td><a :href="documentFileUrl(document.ID)" target="_blank" rel="noopener" class="employee-file-link" @click.prevent="openDocument(document)"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>{{ document.file_name }}</span></a></td>
-                  <td class="text-nowrap text-secondary">{{ displayDate(document.CreatedAt) }}</td>
+                  <!-- новый код chat: подписи документов в мобильном списке -->
+                  <td data-label="Категория" :title="document.category_document_card?.category_name || 'Без категории'">{{ document.category_document_card?.category_name || 'Без категории' }}</td>
+                  <td data-label="Файл"><a :href="documentFileUrl(document.ID)" :title="document.file_name" :aria-label="'Открыть файл: ' + document.file_name" target="_blank" rel="noopener" class="employee-file-link" @click.prevent="openDocument(document)"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>{{ document.file_name }}</span></a></td>
+                  <!-- новый код chat: короткая дата только для мобильной строки документа -->
+                  <td class="text-nowrap text-secondary" data-label="Добавлен" :title="displayDate(document.CreatedAt)"><span class="document-date-desktop">{{ displayDate(document.CreatedAt) }}</span><span class="document-date-mobile">{{ displayDate(document.CreatedAt).replace(/\.(\d{2})(\d{2})$/, '.$2') }}</span></td>
                   <td class="text-end"><button type="button" class="btn btn-outline-danger btn-sm" :disabled="deletingID !== null" :aria-label="'Удалить документ ' + document.file_name" title="Удалить документ" @click="deleteEmployeeCardDocumentHandler(document.ID)"><span v-if="deletingID === document.ID" class="spinner-border spinner-border-sm" aria-hidden="true"></span><i v-else class="bi bi-trash" aria-hidden="true"></i></button></td>
                 </tr></tbody>
               </table>
@@ -295,4 +304,68 @@ dd a:hover, .employee-file-link:hover { text-decoration: underline; }
   .employee-documents-heading { padding: 14px; }
 }
 /* --------- конец нового кода chat */
+/* новый код chat: мобильная компоновка не затрагивает экран от 768 px */
+.employee-mobile-contacts { display: none; }
+/* новый код chat: полная дата сохраняется на компьютере */
+.document-date-mobile { display: none; }
+@media (max-width: 767px) {
+  .employee-detail-page { font-size: 16px; color: #000; }
+  .employee-back-link { min-height: 44px; font-size: 16px; color: #000; }
+  .employee-overview, .employee-profile-column, .employee-main-column { gap: 12px; }
+  .employee-panel, .employee-personal-column > .employee-panel { padding: 14px; }
+  /* новый код chat: увеличенный портрет и отдельные строки статусов и редактирования */
+  .employee-profile-header { display: grid; grid-template-columns: clamp(108px, 32vw, 144px) minmax(0, 1fr); align-items: start; gap: 8px 14px; }
+  .employee-avatar { grid-column: 1; grid-row: 1 / 4; width: 100%; height: auto; aspect-ratio: 258 / 318; align-self: start; }
+  .employee-profile-title { display: contents; }
+  .employee-profile-title .employee-eyebrow { grid-column: 2; grid-row: 1; margin: 0; }
+  .employee-profile-title h1 { grid-column: 2; grid-row: 2; margin: 0; }
+  .employee-profile-title p { grid-column: 2; grid-row: 3; margin: 0; }
+  .employee-profile-badges { grid-column: 1 / -1; grid-row: 4; padding-top: 6px; margin-top: 4px; border-top: 1px solid var(--bs-border-color); }
+  .employee-avatar-empty { font-size: 12px; color: #000; }
+  .employee-profile-title h1 { font-size: 20px; line-height: 1.35; color: #000; }
+  .employee-profile-title p { font-size: 16px; color: #000; overflow-wrap: anywhere; }
+  .employee-eyebrow { font-size: 14px; color: #000; }
+  .employee-badge { font-size: 14px; white-space: normal; color: #000 !important; }
+  .employee-edit-button { grid-column: 1 / -1; grid-row: 5; margin-top: 4px; }
+  .employee-detail-page .btn { min-height: 44px; min-width: 44px; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; }
+  .employee-mobile-contacts { display: grid; gap: 8px; }
+  .employee-mobile-contacts h2 { font-size: 18px; margin: 0 0 4px; }
+  .employee-mobile-contacts a { display: flex; align-items: center; gap: 10px; min-height: 44px; color: #000; text-decoration: none; min-width: 0; }
+  .employee-mobile-contacts a span { min-width: 0; overflow-wrap: anywhere; }
+  .employee-mobile-contacts a i { flex-shrink: 0; }
+  .employee-mobile-contacts p { margin: 0; font-size: 14px; }
+  .employee-desktop-contacts { display: none; }
+  .employee-information-grid, .employee-data-grid, .employee-data-grid-two { grid-template-columns: minmax(0, 1fr); }
+  .employee-panel-heading h2 { font-size: 18px; }
+  dt, .employee-personal-column dt { font-size: 14px; color: #000; }
+  dd { font-size: 16px; color: #000; }
+  .employee-detail-page .text-secondary { color: #000 !important; }
+  .employee-status-card { gap: 8px; }
+  .employee-status-value { font-size: 14px; color: #000 !important; }
+  .employee-employment-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .employee-employment-summary .employee-monthly-label { margin-left: 0; padding-left: 0; border-left: 0; }
+  .employee-monthly-value { white-space: normal; overflow-wrap: anywhere; font-size: 16px; }
+  .employee-specialization { font-size: 14px; color: #000; overflow-wrap: anywhere; max-width: 100%; }
+  .employee-documents { padding: 0; }
+  .employee-documents-heading { padding: 14px; }
+  .employee-documents-heading > .btn { width: 100%; }
+  .employee-document-count { font-size: 14px; color: #000; }
+  /* новый код chat: компактные документы в одну строку с обрезкой длинных названий */
+  .employee-documents .table-responsive { overflow: visible; padding: 0 10px 10px; }
+  .employee-document-table { display: block; width: 100%; font-size: 12px; }
+  .employee-document-table thead { display: none; }
+  .employee-document-table tbody { display: grid; gap: 4px; }
+  .employee-document-table tr { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr) 50px 28px; align-items: center; gap: 6px; padding: 5px 6px; border: 1px solid var(--bs-border-color); border-radius: 6px; }
+  .employee-document-table td { display: block; min-width: 0; padding: 0; border: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .employee-document-table td:first-child { display: none; }
+  .employee-document-table td[data-label]::before { display: none; }
+  .employee-file-link { display: flex; min-width: 0; width: 100%; min-height: 32px; gap: 4px; align-items: center; color: #000; font-size: 12px; }
+  .employee-file-link span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .employee-file-link i { flex-shrink: 0; font-size: 13px; }
+  .document-date-desktop { display: none; }
+  .document-date-mobile { display: inline; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .employee-document-table .btn { width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; font-size: 12px; border-radius: 5px; }
+  .employee-document-table .spinner-border { width: 12px; height: 12px; }
+  .employee-empty-state { font-size: 16px; color: #000; }
+}
 </style>

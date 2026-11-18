@@ -13,7 +13,9 @@
         <div class="search-field"><label for="employees-search" class="visually-hidden">Поиск по ФИО</label><i class="bi bi-search" aria-hidden="true"></i><input id="employees-search" v-model="filters.search" class="form-control" type="search" placeholder="Фамилия, имя, отчество"></div>
         <button class="btn reset-button" type="button" :disabled="!hasFilters" @click="resetFilters"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Сбросить фильтры</button>
       </div>
-      <div class="filters-grid">
+      <!-- новый код chat: на телефоне дополнительные фильтры раскрываются кнопкой -->
+      <button type="button" class="mobile-filters-toggle btn btn-outline-primary" :aria-expanded="mobileFiltersOpen" aria-controls="employee-filters" @click="mobileFiltersOpen = !mobileFiltersOpen"><i class="bi bi-sliders2" aria-hidden="true"></i> Фильтры <span v-if="activeFilterCount">({{ activeFilterCount }})</span><i :class="mobileFiltersOpen ? 'bi bi-chevron-up' : 'bi bi-chevron-down'" aria-hidden="true"></i></button>
+      <div id="employee-filters" class="filters-grid" :class="{ 'mobile-filters-open': mobileFiltersOpen }">
         <div><label for="employees-status">Статус</label><select id="employees-status" v-model="filters.status" class="form-select form-select-sm" :class="{ 'filter-selected': filters.status !== '' }"><option value="">Все сотрудники</option><option value="false">Работает</option><option value="true">Уволен</option></select></div>
         <div><label for="employees-profession">Должность</label><select id="employees-profession" v-model="filters.profession" class="form-select form-select-sm" :class="{ 'filter-selected': filters.profession !== '' }"><option value="">Все должности</option><option value="__empty">Не указана</option><option v-for="item in professions" :key="item.value" :value="item.value">{{ item.label }}</option></select></div>
         <div><label for="employees-specialization">Специализация</label><select id="employees-specialization" v-model="filters.specialization" class="form-select form-select-sm" :class="{ 'filter-selected': filters.specialization !== '' }"><option value="">Все специализации</option><option value="__empty">Не указана</option><option v-for="item in specializations" :key="item.ID" :value="String(item.ID)">{{ item.name }}</option></select></div>
@@ -39,13 +41,19 @@
           <tbody><tr v-for="(card, index) in filteredCards" :key="card.ID" :class="{ 'dismissed-row': card.status }">
             <td class="number-cell">{{ index + 1 }}</td>
             <td class="name-cell"><router-link :to="{ name: 'employee-card-detail', params: { id: card.ID } }" class="employee-name">{{ fullName(card) || 'Без имени' }}</router-link><div class="employee-tags"><span class="employment-note"><i :class="card.officially_employed ? 'bi bi-shield-check' : 'bi bi-dash-circle'" aria-hidden="true"></i>{{ card.officially_employed ? 'Устроен официально' : 'Не устроен официально' }}</span></div></td>
-            <td><span class="status-badge" :class="card.status ? 'status-dismissed' : 'status-working'">{{ card.status ? 'Уволен' : 'Работает' }}</span></td>
+            <!-- новый код chat: статус располагается рядом с должностью на телефоне -->
+            <td class="employee-status-cell"><span class="status-badge" :class="card.status ? 'status-dismissed' : 'status-working'">{{ card.status ? 'Уволен' : 'Работает' }}</span></td>
             <!-- новый код chat: отдельная колонка специализаций -->
-            <td class="profession-cell">{{ card.profession || 'Не указана' }}</td>
-            <td class="specializations-cell"><div v-if="card.specializations?.length" class="specialization-tags"><span v-for="item in card.specializations" :key="item.ID" class="small-tag">{{ item.name }}</span></div><span v-else class="text-secondary" aria-label="Специализации не указаны">—</span></td>
-            <td class="agreement-cell"><router-link v-if="card.agreement_id" :to="{ name: 'agreement', params: { id: card.agreement_id } }">{{ card.agreement?.short_name || card.agreement?.name || 'Договор № ' + card.agreement_id }}</router-link><span v-else class="text-secondary">Не закреплён</span></td>
-            <td class="phone-cell"><button v-for="phone in employeePhones(card)" :key="phone" type="button" class="phone-copy" :title="'Скопировать номер ' + phone" :aria-label="'Скопировать номер ' + phone" @click="copyPhone(phone)">{{ phone }}<i class="bi bi-copy" aria-hidden="true"></i></button><span v-if="!employeePhones(card).length" class="text-secondary">—</span></td>
-            <td class="actions-cell"><button type="button" class="delete-button" :disabled="deletingIds.has(card.ID)" :aria-label="'Удалить карточку: ' + fullName(card)" title="Удалить карточку" @click="deleteEmployeeCardHandler(card)"><span v-if="deletingIds.has(card.ID)" class="spinner-border spinner-border-sm" aria-hidden="true"></span><i v-else class="bi bi-trash3" aria-hidden="true"></i></button></td>
+            <!-- новый код chat: подписи полей для мобильных карточек -->
+            <td class="profession-cell" data-label="Должность">{{ card.profession || 'Не указана' }}</td>
+            <td class="specializations-cell" data-label="Специализации"><div v-if="card.specializations?.length" class="specialization-tags"><span v-for="item in card.specializations" :key="item.ID" class="small-tag">{{ item.name }}</span></div><span v-else class="text-secondary" aria-label="Специализации не указаны">—</span></td>
+            <td class="agreement-cell" data-label="Место работы"><router-link v-if="card.agreement_id" :to="{ name: 'agreement', params: { id: card.agreement_id } }">{{ card.agreement?.short_name || card.agreement?.name || 'Договор № ' + card.agreement_id }}</router-link><span v-else class="text-secondary">Не закреплён</span></td>
+            <td class="phone-cell" data-label="Телефоны · нажмите, чтобы скопировать"><button v-for="phone in employeePhones(card)" :key="phone" type="button" class="phone-copy" :title="'Скопировать номер ' + phone" :aria-label="'Скопировать номер ' + phone" @click="copyPhone(phone)">{{ phone }}<i class="bi bi-copy" aria-hidden="true"></i></button><span v-if="!employeePhones(card).length" class="text-secondary">—</span></td>
+            <!-- новый код chat: удаление на телефоне находится в отдельном раскрываемом меню -->
+            <td class="actions-cell"><button type="button" class="delete-button desktop-delete-button" :disabled="deletingIds.has(card.ID)" :aria-label="'Удалить карточку: ' + fullName(card)" title="Удалить карточку" @click="deleteEmployeeCardHandler(card)"><span v-if="deletingIds.has(card.ID)" class="spinner-border spinner-border-sm" aria-hidden="true"></span><i v-else class="bi bi-trash3" aria-hidden="true"></i></button>
+              <!-- новый код chat: компактное меню в правом верхнем углу карточки -->
+              <details class="mobile-card-actions" @keydown.esc="$event.currentTarget.open = false" @focusout="!$event.currentTarget.contains($event.relatedTarget) && ($event.currentTarget.open = false)"><summary :aria-label="'Действия с карточкой: ' + fullName(card)" title="Действия с карточкой"><i class="bi bi-three-dots" aria-hidden="true"></i></summary><button type="button" class="delete-button" :disabled="deletingIds.has(card.ID)" :aria-label="'Удалить карточку: ' + fullName(card)" @click="deleteEmployeeCardHandler(card)"><i class="bi bi-trash3 me-2" aria-hidden="true"></i>{{ deletingIds.has(card.ID) ? 'Удаление…' : 'Удалить карточку' }}</button></details>
+            </td>
           </tr></tbody>
         </table>
       </div>
@@ -100,6 +108,9 @@ const errorMessage = ref('');
 const deletingIds = reactive(new Set());
 const emptyFilters = () => ({ search: '', status: 'false', profession: '', specialization: '', agreement: '', itr: '', official: '' });
 const filters = reactive(emptyFilters());
+// новый код chat: состояние мобильных фильтров, счётчик условий без строки поиска
+const mobileFiltersOpen = ref(false);
+const activeFilterCount = computed(() => Object.entries(filters).filter(([key, value]) => key !== 'search' && value !== '').length);
 const normalize = value => String(value ?? '').trim().toLocaleLowerCase('ru').replace(/ё/g, 'е').replace(/\s+/g, ' ');
 const fullName = card => [card.surname, card.name, card.middle_name].filter(Boolean).join(' ');
 const employeePhones = card => [...new Set((card.phones?.length ? card.phones : [card.phone]).filter(Boolean).map(String))];
@@ -251,4 +262,64 @@ onMounted(getEmployeeCardHandler);
 @media (max-width: 767px) { .list-header { align-items: flex-start; flex-direction: column; } .filters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 420px) { .filters-grid { grid-template-columns: 1fr; } .results-heading { align-items: flex-start; flex-direction: column; } }
 /* --------- конец нового кода chat */
+/* новый код chat: только мобильное представление; настольные правила остаются прежними */
+.mobile-filters-toggle { display: none; }
+.mobile-card-actions { display: none; }
+@media (max-width: 767px) {
+  .employee-list-page { font-size: 16px; color: #000; }
+  .list-header { gap: 12px; margin-bottom: 14px; }
+  .list-header p, .list-eyebrow { color: #000; font-size: 14px; }
+  .list-header .create-card-button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; width: 100%; }
+  .filter-panel { padding: 12px; gap: 10px; }
+  .filter-search-panel { gap: 8px; padding: 0; border: 0; }
+  .filter-title { font-size: 16px; color: #000; }
+  .filter-search-panel .search-field { max-width: none; }
+  .search-field input { height: 46px; font-size: 16px; color: #000; padding-left: 34px; }
+  .search-field > i { font-size: 16px; color: #000; }
+  .employee-list-page .reset-button { min-height: 44px; padding: 8px 0; font-size: 14px; color: #000; }
+  .mobile-filters-toggle { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; font-size: 16px; color: #000; }
+  .filters-grid { display: none; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .filters-grid.mobile-filters-open { display: grid; }
+  .filters-grid label { font-size: 14px; color: #000; }
+  .filters-grid select, .filters-grid select.filter-selected { height: 46px; font-size: 16px; color: #000; }
+  .results-heading { padding: 14px 12px; flex-wrap: wrap; }
+  .results-heading > span, .results-heading strong { color: #000; font-size: 14px; }
+  .employees-table-scroll { overflow: visible; padding: 0 12px 12px; }
+  .employees-table { display: block; min-width: 0; width: 100%; font-size: 16px; }
+  .employees-table thead { display: none; }
+  /* новый код chat: плотная карточка с должностью и статусом на общей строке */
+  .employees-table tbody { display: grid; gap: 8px; }
+  .employees-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name name' 'profession status' 'specializations specializations' 'agreement agreement' 'phone phone'; gap: 5px 8px; padding: 10px 12px; border: 1px solid #e2e7ef; border-radius: 9px; background: #fff; }
+  .employees-table td { display: block; width: auto; min-width: 0; max-width: none; padding: 0; border: 0; color: #000; overflow-wrap: anywhere; }
+  .employees-table tbody tr:hover td { background: transparent; }
+  .employees-table .number-cell { display: none; }
+  .employees-table td[data-label]::before { display: none; }
+  .employee-name { display: inline-flex; align-items: center; min-height: 32px; font-size: 16px; line-height: 1.35; }
+  .employee-tags { margin-top: 2px; }
+  .employment-note, .employees-table .text-secondary { color: #000 !important; font-size: 12px; }
+  .employee-status-cell { grid-area: status; align-self: center; }
+  .profession-cell { grid-area: profession; align-self: center; font-size: 14px; }
+  .status-badge { font-size: 12px; color: #000; padding: 2px 7px; }
+  .specializations-cell { grid-area: specializations; }
+  .specializations-cell .small-tag { font-size: 12px; color: #000; white-space: normal; padding: 2px 6px; }
+  .agreement-cell { grid-area: agreement; font-size: 13px; }
+  .employees-table .agreement-cell::before { content: 'Место работы: '; display: inline; font-size: 12px; }
+  .agreement-cell a { display: inline; color: #000; line-height: 1.7; }
+  .employees-table .phone-cell { grid-area: phone; display: flex; flex-wrap: wrap; gap: 0 12px; border-top: 1px solid #edf0f5; margin-top: 3px; padding-top: 3px; white-space: normal; }
+  .phone-copy { min-height: 40px; width: auto; max-width: 100%; font-size: 15px; color: #000; overflow-wrap: anywhere; }
+  .phone-copy i { font-size: 13px; color: #000; }
+  /* новый код chat: действия встроены в шапку без отдельной нижней строки */
+  .employees-table tbody tr { position: relative; }
+  .employees-table .name-cell { grid-area: name; padding-right: 34px; margin-bottom: 3px; }
+  .employees-table .actions-cell { position: absolute; top: 6px; right: 6px; padding: 0; text-align: right; }
+  .delete-button { min-width: 44px; min-height: 44px; color: #000; }
+  .desktop-delete-button { display: none; }
+  .mobile-card-actions { display: block; position: relative; }
+  .mobile-card-actions summary { display: grid; place-items: center; width: 40px; min-height: 40px; font-size: 21px; border-radius: 8px; cursor: pointer; list-style: none; }
+  .mobile-card-actions summary:hover, .mobile-card-actions[open] summary { background: #edf3fc; }
+  .mobile-card-actions summary::-webkit-details-marker { display: none; }
+  .mobile-card-actions .delete-button { position: absolute; right: 0; top: 44px; z-index: 2; width: 190px; padding: 10px 12px; text-align: left; background: #fff; border: 1px solid #e2e7ef; border-radius: 8px; box-shadow: 0 6px 20px #2634451a; font-size: 14px; }
+  .empty-state, .empty-state p { font-size: 16px; color: #000; }
+  .employee-list-page .alert { flex-wrap: wrap; }
+}
 </style>
