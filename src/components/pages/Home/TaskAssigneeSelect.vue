@@ -1,13 +1,13 @@
 <template>
   <!-- --------- новый код chat: выбор нескольких участников без Ctrl -->
   <details class="task-assignee-picker">
-    <summary :id="id" :class="{ 'text-secondary': !modelValue.length }">{{ modelValue.length ? 'Выбрано: ' + modelValue.length : 'Не назначены' }}</summary>
+    <summary :id="id">{{ modelValue.length ? 'Выбрано: ' + modelValue.length : 'Не назначены' }}</summary>
     <div class="assignee-options">
       <label v-for="user in users || []" :key="user.ID" class="assignee-option">
         <input type="checkbox" class="form-check-input" :checked="modelValue.includes(user.ID)" :disabled="disabled" @change="toggle(user.ID, $event.target.checked)">
         <span>{{ userName(user) }}</span>
       </label>
-      <span v-if="!users?.length" class="text-secondary">Нет доступных пользователей</span>
+      <span v-if="!users?.length">Нет доступных пользователей</span>
     </div>
   </details>
   <!-- --------- конец нового кода chat -->
@@ -21,7 +21,8 @@ const toggle = (id, checked) => emit('update:modelValue', checked ? [...new Set(
 </script>
 <style scoped>
 /* --------- новый код chat: компактный список с чекбоксами */
-.task-assignee-picker { position: relative; font-size: 13px; }
+/* новый код chat: чёрный текст списка исполнителей */
+.task-assignee-picker { color: #000; position: relative; font-size: 13px; }
 .task-assignee-picker summary { padding: 5px 10px; min-height: 31px; border: 1px solid var(--bs-border-color); border-radius: 5px; background: white; cursor: pointer; }
 .assignee-options { position: absolute; top: calc(100% + 4px); left: 0; width: max-content; min-width: 100%; max-width: min(300px, 80vw); max-height: 210px; overflow-y: auto; z-index: 20; background: white; border: 1px solid var(--bs-border-color); border-radius: 7px; padding: 8px; box-shadow: 0 5px 20px #23354d18; }
 .assignee-option { display: flex; align-items: center; gap: 8px; padding: 6px; cursor: pointer; overflow-wrap: anywhere; }

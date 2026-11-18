@@ -23,6 +23,8 @@
                     <option v-for="priority in 10" :key="priority" :value="priority">{{ priority }}</option>
                 </select>
             </div>
+            <!-- новый код chat: необязательный срок выполнения -->
+            <div><label for="task-new-due">Срок выполнения</label><input id="task-new-due" v-model="formData.due_date" type="date" max="9999-12-31" class="form-control form-control-sm" :disabled="taskBusy" title="До выбранной даты включительно"></div>
             <button type="submit" class="btn btn-sm btn-primary" :disabled="taskBusy"><i class="bi bi-plus-lg me-1"></i>Создать</button>
         </form>
         <div class="task-list">
@@ -36,6 +38,7 @@
                         <span title="Исполнители"><i class="bi bi-people me-1" aria-hidden="true"></i>{{ taskAssignees(task).map(taskUserName).join(', ') || 'Не назначены' }}</span>
                         <span class="task-author">От: {{ taskUserName(task.from_user_card) }}</span>
                         <time :datetime="task.CreatedAt">Создана: {{ getCreateDate(task.CreatedAt) }} · {{ getCreateTime(task.CreatedAt) }}</time> <!-- новый код chat: различаем даты создания и выполнения -->
+                        <time v-if="task.due_date" :datetime="task.due_date" title="До этой даты включительно">Выполнить до: {{ task.due_date.split('-').reverse().join('.') }}</time> <!-- новый код chat -->
                         <template v-if="task.status">
                             <span class="text-success">Выполнил: {{ task.completed_by_id ? taskUserName(task.completed_by) : 'Не указан' }}</span> <!-- новый код chat --> <!-- новый код chat: фактическое время выполнения -->
                             <time v-if="task.completed_at" :datetime="task.completed_at" class="text-success">Выполнена: {{ getCreateDate(task.completed_at) }} · {{ getCreateTime(task.completed_at) }}</time>
@@ -93,6 +96,8 @@
                                 <option :value="false">Не выполнено</option>
                             </select>
                         </div>
+                        <!-- новый код chat: изменение и очистка срока -->
+                        <div class="col-12 my-2"><label for="task-edit-due">Срок выполнения</label><input id="task-edit-due" v-model="formDataChange.due_date" type="date" max="9999-12-31" class="form-control form-control-sm" :disabled="taskBusy"><small>По выбранную дату включительно. Можно оставить пустым.</small></div>
                         <div class="col-12">
                             <label>Текст задачи</label>
                             <textarea v-model="formDataChange.message" class="form-control" rows="5" style="font-size: 14px;"></textarea>
@@ -151,6 +156,7 @@ const users = ref(null)
 const tasks = ref(null)
 
 const formData = reactive({
+    due_date: "", // новый код chat: необязательная дата
     message: "", 
     assignee_ids: [], // новый код chat: список исполнителей
     // новый код chat: from_user_id берётся backend из авторизации
@@ -159,6 +165,7 @@ const formData = reactive({
 
 const formDataChange = reactive({
     ID: 0,
+    due_date: "", // новый код chat: необязательная дата
     message: "",
     assignee_ids: [], // новый код chat: список исполнителей
     priority:0,
@@ -197,7 +204,7 @@ const runTaskAction = async action => {
 };
 const createTaskHandler = () => runTaskAction(async() => {
     await api.post('/task/create',formData);
-    formData.message=''; formData.assignee_ids=[];
+    formData.message=''; formData.assignee_ids=[]; formData.due_date='';
 });
 const updateSuccessTaskHanlder = id => runTaskAction(() => api.post(`/task/success/${id}`));
 const updateTaskHandler = () => runTaskAction(() => api.post('/task/update',{...formDataChange}));
@@ -210,6 +217,7 @@ const deleteTaskHandler = id => {
 const fillFormDataChange = (id) =>{
     const task = tasks.value.find(item => item.ID === id)
     formDataChange.ID = task.ID
+    formDataChange.due_date = task.due_date || '' // новый код chat
     formDataChange.message = task.message
     formDataChange.assignee_ids = taskAssignees(task).map(user => user.ID) // новый код chat
     formDataChange.priority = task.priority
@@ -235,47 +243,54 @@ onMounted(getUsersHandler);
 </script>
 
 <style scoped>
+/* --------- новый код chat: чёрный текст задач и полей для читаемости */
+.task-board .form-control, .task-board .form-select, .task-board .modal-content { color: #000; }
+.task-board .form-control::placeholder { color: #000; opacity: 1; }
+/* --------- конец нового кода chat */
 /* --------- новый код chat: компактные карточки задач и адаптивная форма */
-.task-board { border: 1px solid var(--bs-border-color); border-radius: 10px; background: var(--bs-body-bg); font-size: 13px; }
+.task-board { color: #000; border: 1px solid var(--bs-border-color); border-radius: 10px; background: var(--bs-body-bg); font-size: 13px; }
 .task-board-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; }
-.task-count { border-radius: 6px; padding: 1px 7px; background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: 12px; }
-.task-header-summary { color: var(--bs-secondary-color); font-size: 12px; }
-.task-header-summary strong { margin-left: 4px; color: var(--bs-body-color); }
-.task-create-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, 210px) 85px auto; gap: 8px; align-items: end; padding: 0 14px 12px; border-bottom: 1px solid var(--bs-border-color); }
+.task-count { border-radius: 6px; padding: 1px 7px; background: var(--bs-tertiary-bg); color: #000; font-size: 12px; }
+.task-header-summary { color: #000; font-size: 12px; }
+.task-header-summary strong { margin-left: 4px; color: #000; }
+.task-create-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, 190px) 75px 145px auto; gap: 8px; align-items: end; padding: 0 14px 12px; border-bottom: 1px solid var(--bs-border-color); }
 .task-create-form > div { min-width: 0; }
-.task-create-form label { display: block; margin-bottom: 4px; font-size: 11px; color: var(--bs-secondary-color); }
+.task-create-form label { display: block; margin-bottom: 4px; font-size: 11px; color: #000; }
 .task-create-form textarea { resize: vertical; min-height: 31px; max-height: 140px; }
 .task-create-form .form-control, .task-create-form .form-select { font-size: 13px; }
 .task-list { max-height: 420px; overflow-y: auto; padding: 6px; border-radius: 0 0 10px 10px; }
 .task-card { display: flex; align-items: flex-start; gap: 10px; padding: 9px 8px; border: 1px solid transparent; border-bottom-color: var(--bs-border-color); }
 .task-card:last-child { border-bottom-color: transparent; }
 .task-card:hover { background: var(--bs-tertiary-bg); border-radius: 6px; }
-.task-number { flex: 0 0 22px; padding-top: 1px; text-align: center; color: var(--bs-secondary-color); font-size: 11px; }
+/* новый код chat: увеличенный порядковый номер задачи */
+.task-number { flex: 0 0 22px; padding-top: 1px; text-align: center; color: #000; font-size: 13px; }
 .task-card-content { flex: 1; min-width: 0; }
 .task-message { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.4; font-weight: 500; }
-.task-meta { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 5px; color: var(--bs-secondary-color); font-size: 11px; }
+/* новый код chat: слегка смягчённый цвет участников и дат; выполнение выделено зелёным */
+.task-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px; color: #454545; font-size: 12px; }
 .task-meta > span { overflow-wrap: anywhere; }
 .task-meta time { white-space: nowrap; }
 .task-card-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; flex: 0 0 auto; }
 .task-status { display: inline-flex; align-items: center; gap: 4px; border: 1px solid; border-radius: 6px; padding: 2px 6px; font-size: 11px; white-space: nowrap; }
-.task-status-done { color: var(--bs-success); border-color: var(--bs-success-border-subtle); background: var(--bs-success-bg-subtle); }
-.task-status-open { color: var(--bs-primary); border-color: var(--bs-primary-border-subtle); background: var(--bs-primary-bg-subtle); }
-.task-priority { color: var(--bs-secondary-color); font-size: 11px; padding: 2px 5px; background: var(--bs-tertiary-bg); border-radius: 4px; }
+.task-status-done { color: #000; border-color: var(--bs-success-border-subtle); background: var(--bs-success-bg-subtle); }
+.task-status-open { color: #000; border-color: var(--bs-primary-border-subtle); background: var(--bs-primary-bg-subtle); }
+/* новый код chat: круглая метка приоритета с бледно-жёлтой заливкой */
+.task-priority { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; padding: 0; border: 1px solid #eadca5; border-radius: 50%; background: #fff8db; color: #000; font-size: 11px; line-height: 1; white-space: nowrap; }
 .task-actions { display: flex; gap: 2px; }
-.task-action { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; border: 0; border-radius: 5px; background: transparent; color: var(--bs-secondary-color); }
+.task-action { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; border: 0; border-radius: 5px; background: transparent; color: #000; }
 .task-action:hover { background: var(--bs-secondary-bg); color: var(--bs-primary); }
 .task-action-complete:hover { color: var(--bs-success); }
 .task-action-delete:hover { color: var(--bs-danger); background: var(--bs-danger-bg-subtle); }
 .task-action:focus-visible, .task-card:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
 .task-action:disabled { opacity: .45; cursor: default; }
-.task-card-completed .task-message { color: var(--bs-secondary-color); }
+.task-card-completed .task-message { color: #000; }
 .task-card.task-card-focused { border-color: var(--bs-primary); background: var(--bs-primary-bg-subtle); border-radius: 6px; }
-.task-empty { padding: 24px 12px; text-align: center; color: var(--bs-secondary-color); }
+.task-empty { padding: 24px 12px; text-align: center; color: #000; }
 @media (max-width: 1100px) {
     .task-card { flex-wrap: wrap; }
     .task-card-controls { flex-basis: 100%; padding-left: 32px; justify-content: flex-start; }
     .task-actions { margin-left: auto; }
-    .task-create-form { grid-template-columns: minmax(0, 1fr) 85px auto; }
+    .task-create-form { grid-template-columns: minmax(130px, 1fr) 75px 145px auto; }
     .task-create-message { grid-column: 1 / -1; }
 }
 @media (max-width: 575px) {
