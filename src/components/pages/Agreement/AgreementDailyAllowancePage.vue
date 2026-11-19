@@ -9,12 +9,13 @@
         <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div>
         <div v-if="successMessage" class="alert alert-success" role="status">{{ successMessage }}</div>
         <div v-if="!busy && months.length && !table.rate_kopecks" class="alert alert-info">Укажите суточные в настройках табеля. Выдача и автозаполнение пока недоступны.</div>
-        <div v-if="table.forecast_warning" class="alert alert-warning">{{ table.forecast_warning }}. Прогноз покрытия будущих дней неполный.</div>
+        <div v-if="table.forecast_warning" class="alert alert-warning">{{ table.forecast_warning }}. Прогноз оплаты будущих дней неполный.</div>
         <!-- новый код chat: пояснение перенесено над обозначениями цветов -->
         <p class="small text-secondary">Суммы должны быть кратны суточным выбранного табеля. Прогноз округляется вверх, остаток сохраняется. Красное ФИО — сотрудник переведён; новые выдачи здесь недоступны.</p>
         <div class="d-flex gap-3 flex-wrap small mb-3 daily-legend">
-            <span><i class="daily-paid"></i>С — отработан и покрыт</span><span><i class="daily-unpaid"></i>Отработан, не покрыт полностью</span><span><i class="daily-letter"></i>Буквенная отметка</span><span><i class="daily-reserved"></i>День обеспечен вперёд</span>
-            <span><i class="daily-preview"></i>Будущий день будет покрыт</span><span><i class="daily-preview-worked"></i>Отработанный день будет покрыт</span> <!-- новый код chat: отдельные цвета прогноза и погашения долга -->
+            <!-- новый код chat: формулировки оплаты дней -->
+            <span><i class="daily-paid"></i>С — отработан и оплачен</span><span><i class="daily-unpaid"></i>Отработан, не оплачен полностью</span><span><i class="daily-letter"></i>Буквенная отметка</span><span><i class="daily-reserved"></i>День обеспечен вперёд</span>
+            <span><i class="daily-preview"></i>Будущий день будет оплачен</span><span><i class="daily-preview-worked"></i>Отработанный день будет оплачен</span> <!-- новый код chat: отдельные цвета прогноза и погашения долга -->
         </div>
         <!-- новый код chat: одинаковая сумма и выбор сотрудников удалены; ставка сохранена -->
         <div class="d-flex align-items-center gap-3 flex-wrap mb-2"> <!-- новый код chat: ставка и дата обеспечения в одной строке -->
@@ -37,7 +38,7 @@
                         <td class="daily-name" :class="{'daily-transferred':!employee.is_assigned}" :title="employee.employee_name + (employee.is_assigned ? '' : ' — больше не закреплён за договором')">
                             {{ shortName(employee) }}
                         </td>
-                        <td v-for="cell in employee.cells" :key="cell.date" class="daily-day" :class="isPreviewCovered(employee, cell) ? (cell.state === 'unpaid' ? 'daily-preview-worked' : 'daily-preview') : `daily-${cell.state}`" :title="isPreviewCovered(employee, cell) ? `${cell.date}: будет покрыт после фиксации выдачи` : cellTitle(cell)">{{ cell.mark }}</td> <!-- новый код chat: покрытие отработанного дня выделено сиреневым без дополнительной отметки -->
+                        <td v-for="cell in employee.cells" :key="cell.date" class="daily-day" :class="isPreviewCovered(employee, cell) ? (cell.state === 'unpaid' ? 'daily-preview-worked' : 'daily-preview') : `daily-${cell.state}`" :title="isPreviewCovered(employee, cell) ? `${cell.date}: будет оплачен после фиксации выдачи` : cellTitle(cell)">{{ cell.mark }}</td> <!-- новый код chat: покрытие отработанного дня выделено сиреневым без дополнительной отметки -->
                         <td class="text-end daily-balance" :class="employee.balance_kopecks < 0 ? 'text-danger' : 'text-success'">{{ money(employee.balance_kopecks) }}</td>
                         <td class="daily-issue"><input v-if="employee.is_assigned" v-model="amounts[employee.employee_card_id]" inputmode="decimal" class="form-control form-control-sm" :disabled="busy || !table.rate_kopecks" :aria-label="`К выдаче: ${employee.employee_name}`" placeholder="0,00"></td>
                     </tr>
@@ -140,7 +141,7 @@ const isPreviewCovered = (employee, cell) => {
 const cellTitle = cell => {
     if (cell.state === 'letter') return `${cell.date}: ${cell.mark}, суточные не начисляются`;
     if (cell.state === 'empty' && !cell.amount_kopecks) return `${cell.date}: нет начисления`;
-    return `${cell.date}: ${cell.state === 'reserved' ? 'Обеспечено вперёд' : 'Покрытие'} ${money(cell.covered_kopecks)} из ${money(cell.amount_kopecks)} ₽`;
+    return `${cell.date}: ${cell.state === 'reserved' ? 'Обеспечено вперёд' : 'Оплачено'} ${money(cell.covered_kopecks)} из ${money(cell.amount_kopecks)} ₽`;
 };
 const loadTable = async() => {
     rememberSalaryMonth(route.params.id, 'daily-allowance', monthID.value); // новый код chat: сохраняем выбранный табель
