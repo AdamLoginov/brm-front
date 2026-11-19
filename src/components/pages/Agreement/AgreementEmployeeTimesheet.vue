@@ -75,16 +75,16 @@
             <div ref="timesheetTableArea">
             <div ref="timesheetStickyHeader" class="timesheet-sticky-header" :style="{transform: `translateY(${headerOffset}px)`}">
             <div class="list-group-item d-flex p-0">
-                <div class="col-3 px-2" style="font-size: 14px;"></div>
-                <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }" >
+                <div class="work-timesheet-name-column px-2" style="font-size: 14px;"></div>
+                <div class="work-timesheet-days-column days-grid" :style="{ '--days-count': daysInMonth }" >
                     <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center text-lowercase" :class="ifHollyday(getWeekDay(day, month, year)) ? 'bg-warning-subtle': ''"  style="font-size: 12px;">
                         {{ getWeekDay(day, month, year) }}
                     </div>
                 </div>
             </div>  
             <div class="list-group-item d-flex p-0">
-                <div class="col-3 px-2 fw-semibold" style="font-size: 14px;">Сотрудник:</div>
-                <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }" >
+                <div class="work-timesheet-name-column px-2 fw-semibold" style="font-size: 14px;">Сотрудник:</div>
+                <div class="work-timesheet-days-column days-grid" :style="{ '--days-count': daysInMonth }" >
                     <div v-for="day in daysInMonth" :key="day" class="day-cell d-flex justify-content-center align-items-center fw-semibold" :class="{'bg-primary-subtle': displayRange && day - 1 >= displayRange.left && day - 1 <= displayRange.right}" style="font-size: 12px;"> <!-- новый код chat: все даты выбранного диапазона -->
                         {{ day }}
                     </div>
@@ -94,11 +94,11 @@
             </div>
             <div @copy="copySelectedCells" @paste="pasteSelectedCells">
             <div v-for="(employee, index) in timesheetMonth_select.employees" :key="employee.ID" class="list-group-item d-flex p-0">
-                <div class="col-3 px-2 d-flex" :class="{'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: все сотрудники выбранного диапазона -->
+                <div class="work-timesheet-name-column px-2 d-flex" :class="{'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: все сотрудники выбранного диапазона -->
                     <div class="col-1 border-end d-flex justify-content-center me-1 fw-semibold">{{ index + 1 }}</div>
-                    <div class="col-11">{{ employee.surname }} {{ employee.name }} {{ employee.middle_name }}</div>
+                    <div class="col-11"><router-link :to="{ name: 'employee-card-detail', params: { id: employee.ID } }" class="timesheet-employee-link" :class="{ 'employee-itr-name': employee.is_itr }" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ [employee.surname, employee.name?.trim()?.[0] ? employee.name.trim()[0] + '.' : '', employee.middle_name?.trim()?.[0] ? employee.middle_name.trim()[0] + '.' : ''].filter(Boolean).join(' ') }}</router-link></div> <!-- новый код chat: фамилия и инициалы, ссылка на карточку с подсветкой ИТР -->
                 </div>
-                <div class="col-9 days-grid" :style="{ '--days-count': daysInMonth }">
+                <div class="work-timesheet-days-column days-grid" :style="{ '--days-count': daysInMonth }">
                     <!-- ????? ??? chat: ?????? ?????? ????? ?????? ???? ?????????? ????? ??? -->
                     <div v-for="day in daysInMonth" :key="day" class="day-cell timesheet-value-cell d-flex justify-content-center align-items-center fw-semibold" :class="selectionClasses(index, day - 1)" :tabindex="isChange ? -1 : 0" :id="`view-cell-${employee.ID}-${getDate(day, month, year)}`" :aria-label="`${employee.surname || employee.name}, ${day}: ${timesheet[employee.ID][getDate(day, month, year)].status || 'пусто'}`" @mousedown="startCellSelection($event, index, day - 1)" @mouseenter="extendCellSelection($event, index, day - 1)" @focus.self="inputFocus(index, day)" @blur.self="inputBlur(index, day)" @keydown="handleCellKeydown($event, employee.ID, day)" style="font-size: 12px;" :style="{ backgroundColor: timesheet_color[timesheet[employee.ID][getDate(day, month, year)].status ?? ''] ?? '#fff' }">
                         <input v-if="isChange" class="text-center" :value="timesheet[employee.ID][getDate(day, month, year)]['status']" type="text" maxlength="2"
@@ -655,6 +655,10 @@ onMounted(getTimeSheetMonthHandler);
 </script>
 
 <style>
+/* --------- новый код chat: фамилия и имя, более узкая колонка с одинаковой шириной в шапке и строках */
+.work-timesheet-name-column { flex: 0 0 22%; width: 22%; min-width: 0; }
+.work-timesheet-days-column { flex: 0 0 78%; width: 78%; min-width: 0; }
+/* --------- конец нового кода chat */
 /* --------- новый код chat: центр не зависит от длины и наличия соседних кнопок */
 .list-group-item.timesheet-month-navigation { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; } /* новый код chat: повышен приоритет относительно стилей Bootstrap */
 .timesheet-month-navigation > :last-child { text-align: right; }
@@ -698,4 +702,10 @@ onMounted(getTimeSheetMonthHandler);
 .timesheet-value-cell.sheet-right::after { border-right-width: 2px; }
 .timesheet-fill-handle { position: absolute; width: 8px; height: 8px; right: 0; bottom: 0; background: #0d6efd; border: 1px solid #fff; cursor: crosshair; z-index: 3; } /* новый код chat: маркер заполнения шаблоном */
 /* --------- конец нового кода chat */
+/* новый код chat: единая жёлтая подсветка ФИО ИТР в обоих табелях */
+.employee-itr-name { background: #fff3cd; color: #000; border-radius: 3px; padding: 1px 3px; box-decoration-break: clone; }
+/* новый код chat: ссылка ФИО с сохранением оформления табеля */
+.timesheet-employee-link { color: inherit; text-decoration: none; }
+.timesheet-employee-link:hover { text-decoration: underline; }
+.timesheet-employee-link:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
 </style>
