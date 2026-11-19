@@ -4,7 +4,9 @@
         <!-- Основное поле -->
         <div class="form-select form-select-sm multi-select-control" :class="{ 'is-open': isOpen }" @click="toggleDropdown">
             <!-- Если что-то выбрано -->
-            <div v-if="modelValue.length" class="d-flex flex-wrap gap-1">
+            <!-- новый код chat: обычный текст выбранных значений в стиле Bootstrap select -->
+            <span v-if="plainSelection && modelValue.length" class="multi-select-plain" :title="modelValue.map(getLabel).join(', ')">{{ modelValue.map(getLabel).join(', ') }}</span>
+            <div v-else-if="modelValue.length" class="d-flex flex-wrap gap-1">
                 <span v-for="id in modelValue" :key="id" class="badge text-bg-primary fw-normal align-items-center lh-1" style="font-size: 11px;">
                     {{ getLabel(id) }}
                     <span class="ms-1 remove" @click.stop="remove(id)"> × </span>
@@ -24,8 +26,8 @@
             </div>
 
             <div v-if="multiple" class="form-check mb-2"> <!-- новый код chat: выбор всех только в множественном режиме -->
-                <input id="selectAll" class="form-check-input" type="checkbox" :checked="isAllSelected" @change="toggleAll">
-                <label class="form-check-label" for="selectAll"> Выбрать все </label>
+                <input :id="`${singleGroup}-all`" class="form-check-input" type="checkbox" :checked="isAllSelected" @change="toggleAll"> <!-- новый код chat: независимые списки на одной странице -->
+                <label class="form-check-label" :for="`${singleGroup}-all`"> Выбрать все </label> <!-- новый код chat -->
             </div>
 
             <!-- Список -->
@@ -51,6 +53,11 @@ import { ref, computed, onMounted, onBeforeUnmount, useId } from 'vue' // нов
 
 
 const props = defineProps({
+    // новый код chat: включается только там, где выбранные значения нужны без тегов
+    plainSelection: {
+        type: Boolean,
+        default: false
+    },
 
     // новый код chat: прежнее поведение сохраняется по умолчанию
     multiple: {
@@ -243,6 +250,9 @@ onBeforeUnmount(() => {
     position: relative;
     width: 100%;
 }
+
+/* новый код chat: выбранные значения без цветного фона и рамки тега */
+.multi-select-plain { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--bs-body-color, #212529); }
 
 .multi-select-control {
     min-height: 31px;

@@ -28,6 +28,19 @@ test('Inclusive local dates, open boundaries and invalid period', () => {
     assert.equal(expenseDateKey(date.toISOString()), `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`);
 });
 // --------- конец нового кода chat
+// --------- новый код chat: категория сочетается с остальными фильтрами
+test('Category filters include uncategorized legacy expenses', () => {
+    const expenses = [{ ...rows[0], category_id: 7 }, { ...rows[1], category_id: 8 }, rows[2]];
+    const select = extra => filterExpenses(expenses, { ...emptyExpenseFilters(), ...extra }).map(row => row.ID);
+    assert.deepEqual(select({ categoryIDs: [7] }), [1]); // новый код chat
+    assert.deepEqual(select({ categoryIDs: ['none'] }), [3]);
+    assert.deepEqual(select({ categoryIDs: [8], status: 'unreimbursed' }), []);
+    assert.deepEqual(select({ categoryIDs: [8], search: 'бензин', employeeIDs: [20] }), [2]);
+    assert.deepEqual(select({ categoryIDs: [7, '8'] }), [1, 2]);
+    assert.deepEqual(select({ categoryIDs: [7, 'none'] }), [1, 3]);
+    assert.deepEqual(select({}), [1, 2, 3]);
+});
+// --------- конец нового кода chat
 // --------- новый код chat: выбранная дата важнее технического времени записи
 test('Expense date overrides CreatedAt and remains a calendar date', () => {
     const expense = { ...rows[0], expense_date: '2026-09-15' };

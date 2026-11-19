@@ -1,5 +1,5 @@
 // --------- новый код chat: совместные фильтры расходов по отображаемой локальной дате
-export const emptyExpenseFilters = () => ({ search: '', employeeIDs: [], account: '', status: '', from: '', to: '' });
+export const emptyExpenseFilters = () => ({ search: '', employeeIDs: [], account: '', status: '', from: '', to: '', categoryIDs: [] }); // новый код chat: пустой список — все категории
 
 export const expenseDateKey = value => {
     if (!value) return '';
@@ -13,10 +13,12 @@ export const filterExpenses = (expenses, filters) => {
     if (filters.from && filters.to && filters.from > filters.to) return [];
     const search = filters.search.trim().toLocaleLowerCase('ru');
     const employees = new Set(filters.employeeIDs.map(Number));
+    const categories = new Set((filters.categoryIDs || []).map(String)); // новый код chat
     return (expenses || []).filter(item => {
         if (search && !String(item.name || '').toLocaleLowerCase('ru').includes(search)) return false;
         if (employees.size && !employees.has(Number(item.employee_card_id || item.employee_card?.ID || 0))) return false;
         if (filters.account && item.account !== filters.account) return false;
+        if (categories.size && !categories.has(item.category_id ? String(item.category_id) : 'none')) return false; // новый код chat: объединение выбранных категорий
         if (filters.status === 'reimbursed' && (item.account !== 'employee' || !item.is_reimbursed)) return false;
         if (filters.status === 'unreimbursed' && (item.account !== 'employee' || item.is_reimbursed)) return false;
         if (filters.status === 'not_applicable' && item.account === 'employee') return false;
