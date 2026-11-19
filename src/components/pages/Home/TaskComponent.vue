@@ -2,8 +2,8 @@
     <div class="task-board">
         <!-- --------- новый код chat: компактная панель задач -->
         <div class="task-board-header">
-            <div class="d-flex align-items-center gap-2"><i class="bi bi-list-task text-primary"></i><h6 class="mb-0">Задачи</h6><span class="task-count">{{ tasks?.length || 0 }}</span></div>
-            <span class="task-header-summary">В работе <strong>{{ tasks?.filter(task => !task.status).length || 0 }}</strong></span>
+            <div class="d-flex align-items-center gap-2"><i class="bi bi-list-task text-primary"></i><h6 class="mb-0">Задачи</h6><span class="task-count">{{ visibleTasks.length }}</span></div>
+            <span class="task-header-summary">В работе <strong>{{ visibleTasks.filter(task => !task.status).length }}</strong></span>
         </div>
         <div v-if="taskError" class="alert alert-danger m-2" role="alert">{{ taskError }}</div>
         <div v-if="focusedTaskID && tasks && !tasks.some(task => task.ID === focusedTaskID)" class="alert alert-info m-2">Задача больше недоступна.</div>
@@ -27,10 +27,16 @@
             <div><label for="task-new-due">Срок выполнения</label><input id="task-new-due" v-model="formData.due_date" type="date" max="9999-12-31" class="form-control form-control-sm" :disabled="taskBusy" title="До выбранной даты включительно"></div>
             <button type="submit" class="btn btn-sm btn-primary" :disabled="taskBusy"><i class="bi bi-plus-lg me-1"></i>Создать</button>
         </form>
+        <!-- --------- новый код chat: фильтры задач текущего пользователя -->
+        <div class="task-filters" role="group" aria-label="Показать задачи">
+            <button v-for="item in taskFilters" :key="item.value" type="button" :aria-pressed="taskFilter === item.value" :class="{ active: taskFilter === item.value }" @click="taskFilter = item.value">{{ item.label }}</button>
+        </div>
+        <!-- --------- конец нового кода chat -->
         <div class="task-list">
             <div v-if="!tasks" class="task-empty" role="status">Загружаем задачи…</div>
             <div v-else-if="!tasks.length" class="task-empty"><i class="bi bi-check2-circle me-2"></i>Задач пока нет</div>
-            <article v-for="(task, index) in tasks" :key="task.ID ?? index" :id="`task-item-${task.ID}`" tabindex="-1" class="task-card" :class="{'task-card-focused':task.ID === focusedTaskID, 'task-card-completed':task.status}">
+            <div v-else-if="!visibleTasks.length" class="task-empty" role="status">{{ taskFilter === 'assigned' ? 'Вам пока не назначены задачи' : 'Вы пока не создали задач' }}</div>
+            <article v-for="(task, index) in visibleTasks" :key="task.ID ?? index" :id="`task-item-${task.ID}`" tabindex="-1" class="task-card" :class="{'task-card-focused':task.ID === focusedTaskID, 'task-card-completed':task.status}">
                 <span class="task-number">{{ index + 1 }}</span>
                 <div class="task-card-content">
                     <div class="task-message">{{ task.message || 'Без описания' }}</div>
@@ -132,6 +138,8 @@ const taskUserName = user => {
 };
 const focusTask = async() => {
     if (!focusedTaskID.value) return;
+    // новый код chat: переход из уведомления должен открыть задачу даже при другом фильтре
+    if (tasks.value?.some(task => task.ID === focusedTaskID.value) && !visibleTasks.value.some(task => task.ID === focusedTaskID.value)) taskFilter.value = 'all';
     await nextTick();
     const element = document.getElementById(`task-item-${focusedTaskID.value}`);
     element?.scrollIntoView({block:'nearest',behavior:'smooth'});
@@ -154,6 +162,23 @@ const canChangeStatus = computed(() => {
 const users = ref(null)
 
 const tasks = ref(null)
+// --------- новый код chat: авторство и участие, включая общие задачи
+const taskFilter = ref('all');
+const taskFilters = [
+    { value: 'all', label: 'Все задачи' },
+    { value: 'assigned', label: 'Назначены мне' },
+    { value: 'created', label: 'Созданы мной' },
+];
+const visibleTasks = computed(() => {
+    const userID = Number(localStorage.getItem('user-id'));
+    return (tasks.value || []).filter(task => {
+        if (taskFilter.value === 'all') return true;
+        if (!userID) return false;
+        if (taskFilter.value === 'created') return Number(task.from_user_id) === userID;
+        return taskAssignees(task).some(user => Number(user.ID) === userID);
+    });
+});
+// --------- конец нового кода chat
 
 const formData = reactive({
     due_date: "", // новый код chat: необязательная дата
@@ -258,6 +283,13 @@ onMounted(getUsersHandler);
 .task-create-form label { display: block; margin-bottom: 4px; font-size: 11px; color: #000; }
 .task-create-form textarea { resize: vertical; min-height: 31px; max-height: 140px; }
 .task-create-form .form-control, .task-create-form .form-select { font-size: 13px; }
+/* --------- новый код chat: компактный переключатель списка задач */
+.task-filters { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 14px 4px; padding: 3px; width: fit-content; max-width: calc(100% - 28px); background: #f3f5f8; border-radius: 8px; }
+.task-filters button { border: 1px solid transparent; border-radius: 6px; background: transparent; color: #000; font-size: 12px; padding: 5px 10px; }
+.task-filters button.active { background: #fff; border-color: #dfe5ee; box-shadow: 0 1px 3px #2634450a; }
+.task-filters button:hover { background: #fff; }
+.task-filters button:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+/* --------- конец нового кода chat */
 .task-list { max-height: 420px; overflow-y: auto; padding: 6px; border-radius: 0 0 10px 10px; }
 .task-card { display: flex; align-items: flex-start; gap: 10px; padding: 9px 8px; border: 1px solid transparent; border-bottom-color: var(--bs-border-color); }
 .task-card:last-child { border-bottom-color: transparent; }
