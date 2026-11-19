@@ -221,7 +221,7 @@ const load = async() => {
         penalties.value = detail.penalties || [];
         bonuses.value = detail.bonuses || [];
         debts.value = detail.debts || [];
-        expenses.value = (detail.expenses || []).map(row => ({ID:row.ID,date:row.CreatedAt.slice(0,10),amount_kopecks:Math.round(Number(row.price)*100),comment:row.name}));
+        expenses.value = (detail.expenses || []).map(row => ({ID:row.ID,date:row.expense_date || row.CreatedAt.slice(0,10),amount_kopecks:Math.round(Number(row.price)*100),comment:row.name})); // новый код chat: дата расхода
         loading.value = false;
         return;
     }
@@ -239,7 +239,7 @@ const load = async() => {
         const byDate = (a,b) => a.date.localeCompare(b.date) || a.ID - b.ID;
         bonuses.value = (bonusRows.data || []).filter(row => belongs(row) && Number(row.month) === Number(props.month.month) && Number(row.year) === Number(props.month.year)); // новый код chat: премии строго за месяц табеля
         // --------- новый код chat: приводим личные расходы к общему виду списков
-        expenses.value = (expenseRows.data.expenses || []).filter(row => belongs(row) && row.account === 'employee' && !row.is_reimbursed).map(row => ({ID:row.ID, date:row.CreatedAt.slice(0,10), amount_kopecks:Math.round(Number(row.price) * 100), comment:row.name})).sort(byDate);
+        expenses.value = (expenseRows.data.expenses || []).filter(row => belongs(row) && row.account === 'employee' && !row.is_reimbursed).map(row => ({ID:row.ID, date:row.expense_date || row.CreatedAt.slice(0,10), amount_kopecks:Math.round(Number(row.price) * 100), comment:row.name})).sort(byDate); // новый код chat: дата расхода
         // --------- конец нового кода chat
         entries.value = (sheet.data.time_sheets || []).filter(belongs);
         advances.value = (advanceRows.data || []).filter(row => belongs(row) && !row.is_settled).sort(byDate);

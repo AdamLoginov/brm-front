@@ -20,17 +20,17 @@
         <div v-if="isOpen" class="multi-select-dropdown" style="font-size: 14px;">
             <!-- Поиск -->
             <div v-if="searchable" class="mb-2">
-                <input v-model="search" type="text" class="form-control form-control-sm" :placeholder="searchPlaceholder" @click.stop>
+                <input v-model="search" type="text" class="form-control form-control-sm" :placeholder="searchPlaceholder" @click.stop @keydown.enter.prevent> <!-- новый код chat: поиск не отправляет форму -->
             </div>
 
-            <div class="form-check mb-2">
+            <div v-if="multiple" class="form-check mb-2"> <!-- новый код chat: выбор всех только в множественном режиме -->
                 <input id="selectAll" class="form-check-input" type="checkbox" :checked="isAllSelected" @change="toggleAll">
                 <label class="form-check-label" for="selectAll"> Выбрать все </label>
             </div>
 
             <!-- Список -->
             <div v-for="option in filteredOptions" :key="option[valueKey]" class="multi-select-option" @click="toggle(option[valueKey])">
-                <input type="checkbox" class="form-check-input me-2" :checked="modelValue.includes(option[valueKey])" @click.stop @change="toggle(option[valueKey])">
+                <input :type="multiple ? 'checkbox' : 'radio'" :name="multiple ? undefined : singleGroup" class="form-check-input me-2" :checked="modelValue.includes(option[valueKey])" @click.stop @change="toggle(option[valueKey])"> <!-- новый код chat: один или несколько вариантов -->
                 <span>
                     {{ getOptionLabel(option) }}
                 </span>
@@ -47,10 +47,16 @@
 
 <script setup>
 
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, useId } from 'vue' // новый код chat: уникальная группа радиокнопок
 
 
 const props = defineProps({
+
+    // новый код chat: прежнее поведение сохраняется по умолчанию
+    multiple: {
+        type: Boolean,
+        default: true
+    },
 
     modelValue: {
         type: Array,
@@ -70,6 +76,11 @@ const props = defineProps({
     labelKey: {
         type: [String, Function],
         default: 'name'
+    },
+    // новый код chat: отдельный полный текст для поиска при сокращённой подписи
+    searchKey: {
+        type: [String, Function],
+        default: null
     },
 
     placeholder: {
@@ -96,6 +107,7 @@ const emit = defineEmits([
 const isOpen = ref(false)
 const search = ref('')
 const selectRef = ref(null)
+const singleGroup = useId() // новый код chat: независимые одиночные списки
 
 // Открыть / закрыть
 const toggleDropdown = () => {
@@ -135,6 +147,14 @@ const toggleAll = () => {
 
 // Выбор элемента
 const toggle = (id) => {
+    // --------- новый код chat: одиночный выбор заменяет сотрудника и закрывает список
+    if (!props.multiple) {
+        emit('update:modelValue', [id])
+        isOpen.value = false
+        search.value = ''
+        return
+    }
+    // --------- конец нового кода chat
     const selected = [...props.modelValue]
     const index = selected.indexOf(id)
 
@@ -181,7 +201,8 @@ const filteredOptions = computed(() => {
     }
     const query = search.value.toLowerCase()
     return props.options.filter(option => {
-        const label = getOptionLabel(option)
+        const searchLabel = typeof props.searchKey === 'function' ? props.searchKey(option) : option[props.searchKey] // новый код chat
+        const label = props.searchKey ? `${getOptionLabel(option)} ${searchLabel || ''}` : getOptionLabel(option) // новый код chat
         return String(label)
             .toLowerCase()
             .includes(query)
