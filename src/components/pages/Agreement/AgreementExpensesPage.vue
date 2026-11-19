@@ -33,7 +33,7 @@
                     <div class="col-12 col-md-6 col-xl-5"> <!-- новый код chat: поля второй строки занимают всю ширину -->
                         <!-- новый код chat: тот же поиск, что в фильтрах, с выбором одного сотрудника -->
                         <div id="expense-create-employee-label" class="form-label">Сотрудник</div>
-                        <MultiSelect v-model="createEmployeeSelection" :options="managerCards || []" :label-key="createEmployeeLabel" :search-key="employeeSearchLabel" :multiple="false" placeholder="Выбрать сотрудника" search-placeholder="Поиск сотрудника" aria-labelledby="expense-create-employee-label" /> <!-- новый код chat: инициалы и поиск по полному ФИО -->
+                        <MultiSelect v-model="createEmployeeSelection" plain-selection :options="managerCards || []" :label-key="createEmployeeLabel" :search-key="employeeSearchLabel" :multiple="false" placeholder="Выбрать сотрудника" search-placeholder="Поиск сотрудника" aria-labelledby="expense-create-employee-label" /> <!-- новый код chat: обычный текст как у счёта, поиск по полному ФИО сохранён -->
                     </div>
 
                     <div class="col-12 col-md-6 col-xl-4"> <!-- новый код chat: место для суммы и выражения -->
@@ -100,7 +100,7 @@
                 <!-- новый код chat: фильтр по категории, включая расходы без категории -->
                 <div class="col-12 col-md-6 col-xl-4">
                     <div id="expense-category-filter-label" class="form-label">Категории</div>
-                    <MultiSelect v-model="filters.categoryIDs" plain-selection :options="categoryOptions" placeholder="Все категории" search-placeholder="Поиск категории" aria-labelledby="expense-category-filter-label" /> <!-- новый код chat: несколько категорий обычным текстом -->
+                    <MultiSelect v-model="filters.categoryIDs" :options="categoryOptions" placeholder="Все категории" search-placeholder="Поиск категории" aria-labelledby="expense-category-filter-label" /> <!-- новый код chat: выбранные категории тегами, как сотрудники в фильтре -->
                 </div>
                 <div class="col-auto"><button type="button" class="btn btn-outline-secondary btn-sm" :disabled="!hasExpenseFilters" @click="resetExpenseFilters">Сбросить фильтры</button></div>
             </div>
@@ -112,22 +112,36 @@
         <section class="expense-statistics border rounded-3 px-3 py-2 mt-3 col-12" aria-labelledby="expense-statistics-title"> <!-- новый код chat: полная ширина -->
             <h2 id="expense-statistics-title" class="expense-section-heading mb-2"><i class="bi bi-bar-chart text-primary me-2" aria-hidden="true"></i>Статистика расходов</h2>
             <div v-if="!expenses" class="text-secondary">Загрузка…</div>
-            <div v-else-if="invalidDateRange" class="text-danger">Укажите корректный период в фильтрах.</div>
             <div v-else class="row g-2"> <!-- новый код chat: компактная сетка статистики -->
-                <div v-for="period in expenseStatistics" :key="period.title" :class="hasExpenseFilters ? 'col-12' : 'col-12 col-xl-6'">
+                <div v-for="(period, index) in expenseStatistics" :key="index" class="col-12 col-xl-6"> <!-- новый код chat: постоянные две колонки -->
                     <div class="expense-statistics-card rounded-3 px-3 py-2 h-100">
                         <!-- новый код chat: сумма и период в одной строке -->
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                             <h3 class="expense-statistics-subtitle m-0">{{ period.title }}</h3>
-                            <span class="text-secondary">Записей: {{ period.count }}</span>
-                            <span class="expense-statistics-total ms-auto">{{ formatExpenseAmount(period.total / 100) }}</span>
+                            <span v-if="!period.invalid" class="text-secondary">Записей: {{ period.count }}</span>
+                            <span v-if="!period.invalid" class="expense-statistics-total ms-auto">{{ formatExpenseAmount(period.total / 100) }}</span>
                         </div>
+                        <!-- новый код chat: ошибка периода не скрывает общую статистику -->
+                        <div v-if="period.invalid" class="text-danger">Укажите корректный период в фильтрах.</div>
+                        <template v-else>
                         <dl class="expense-statistics-values mb-0">
                             <div><dt>Счёт компании</dt><dd>{{ formatExpenseAmount(period.company / 100) }}</dd></div>
                             <div><dt>Личный счёт</dt><dd>{{ formatExpenseAmount(period.employee / 100) }}</dd></div>
                             <div><dt>Счёт не указан</dt><dd>{{ formatExpenseAmount(period.none / 100) }}</dd></div>
                             <div class="expense-statistics-outstanding"><dt>Из личных — не возмещено</dt><dd>{{ formatExpenseAmount(period.unreimbursed / 100) }}</dd></div>
                         </dl>
+                        <!-- новый код chat: разбивка расходов по категориям, включая нераспределённые -->
+                        <div class="expense-statistics-categories mt-2 pt-2">
+                            <h4 class="expense-statistics-subtitle mb-2">По категориям</h4>
+                            <div v-if="!period.categories.length" class="text-secondary">Расходов нет.</div>
+                            <dl v-else class="expense-category-totals mb-0">
+                                <div v-for="category in period.categories" :key="category.id" class="expense-category-total">
+                                    <dt><span class="expense-category-tag">{{ category.name }}</span></dt>
+                                    <dd>{{ formatExpenseAmount(category.total / 100) }}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -250,25 +264,35 @@ const invalidDateRange = computed(() => Boolean(filters.from && filters.to && fi
 const filteredExpenses = computed(() => filterExpenses(expenses.value, filters));
 // --------- новый код chat: считаем в копейках, при фильтрации используем ровно строки таблицы
 const summarizeExpenses = (rows, title) => {
+    const categories = new Map(); // новый код chat: суммы по ID категории
     const result = { title, count: rows.length, total: 0, company: 0, employee: 0, none: 0, unreimbursed: 0 };
     rows.forEach(item => {
         const amount = Number(item.price);
         const kopecks = Number.isFinite(amount) ? Math.round(amount * 100) : 0;
         result.total += kopecks;
+        // --------- новый код chat: группировка без объединения разных категорий по названию
+        const id = item.category_id || 'none';
+        if (!categories.has(id)) categories.set(id, { id, name: expenseCategoryName(item.category_id), total: 0 });
+        categories.get(id).total += kopecks;
+        // --------- конец нового кода chat
         const account = ['company', 'employee'].includes(item.account) ? item.account : 'none';
         result[account] += kopecks;
         if (account === 'employee' && !item.is_reimbursed) result.unreimbursed += kopecks;
     });
+    result.categories = [...categories.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'ru')); // новый код chat
     return result;
 };
 const expenseStatistics = computed(() => {
-    if (hasExpenseFilters.value) return [summarizeExpenses(filteredExpenses.value, 'По выбранным фильтрам')];
     const rows = expenses.value || [];
+    // --------- новый код chat: общая статистика всегда слева, фильтры заменяют только текущий месяц
+    const overall = summarizeExpenses(rows, 'За весь период');
+    if (hasExpenseFilters.value) return [overall, { ...summarizeExpenses(filteredExpenses.value, 'По выбранным фильтрам'), invalid: invalidDateRange.value }];
+    // --------- конец нового кода chat
     const today = new Date();
     const month = expenseDateKey(today).slice(0, 7);
     const monthLabel = today.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
     const monthRows = rows.filter(item => expenseDateKey(item.expense_date || item.CreatedAt).slice(0, 7) === month);
-    return [summarizeExpenses(rows, 'За весь период'), summarizeExpenses(monthRows, `Текущий месяц · ${monthLabel}`)];
+    return [overall, summarizeExpenses(monthRows, `Текущий месяц · ${monthLabel}`)]; // новый код chat
 });
 // --------- конец нового кода chat
 const expenseEmployeeCard = item => {
@@ -450,6 +474,13 @@ onMounted(loadExpenseCategories); // новый код chat
 </script>
 
 <style>
+/* --------- новый код chat: компактная разбивка статистики по категориям */
+.expense-statistics-categories { border-top: 1px solid var(--bs-border-color); }
+.expense-category-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 6px 20px; }
+.expense-category-total { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.expense-category-total dt { min-width: 0; font-weight: 400; }
+.expense-category-total dd { margin: 0; white-space: nowrap; font-size: 12px; font-weight: 500; }
+/* --------- конец нового кода chat */
 /* --------- новый код chat: узкие колонки и категория в стиле специализаций сотрудников */
 .expense-status-column, .expense-category-column { flex: 0 0 12.5%; width: 12.5%; min-width: 0; padding-right: 8px; }
 .expense-status-column .badge { max-width: 100%; white-space: normal; }
