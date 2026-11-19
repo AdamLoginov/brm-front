@@ -35,8 +35,8 @@
                 <tbody>
                     <tr v-for="(employee, index) in table.employees" :key="employee.employee_card_id">
                         <td class="daily-number">{{ index + 1 }}</td> <!-- новый код chat: номер строки -->
-                        <td class="daily-name" :class="{'daily-transferred':!employee.is_assigned}" :title="employee.employee_name + (employee.is_assigned ? '' : ' — больше не закреплён за договором')">
-                            <router-link :to="{ name: 'employee-card-detail', params: { id: employee.employee_card_id } }" class="timesheet-employee-link" :class="{ 'employee-itr-name': employee.is_itr }" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ shortName(employee) }}</router-link> <!-- новый код chat: ссылка на карточку сотрудника с подсветкой ИТР -->
+                        <td class="daily-name" :class="{'daily-transferred':!employee.is_assigned, 'daily-itr-cell':employee.is_itr}" :title="employee.employee_name + (employee.is_assigned ? '' : ' — больше не закреплён за договором')"> <!-- новый код chat: ИТР — фон всей ячейки -->
+                            <router-link :to="{ name: 'employee-card-detail', params: { id: employee.employee_card_id } }" class="timesheet-employee-link" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ shortName(employee) }}</router-link> <!-- новый код chat: фон перенесён на ячейку -->
                         </td>
                         <td v-for="cell in employee.cells" :key="cell.date" class="daily-day" :class="isPreviewCovered(employee, cell) ? (cell.state === 'unpaid' ? 'daily-preview-worked' : 'daily-preview') : `daily-${cell.state}`" :title="isPreviewCovered(employee, cell) ? `${cell.date}: будет оплачен после фиксации выдачи` : cellTitle(cell)">{{ cell.mark }}</td> <!-- новый код chat: покрытие отработанного дня выделено сиреневым без дополнительной отметки -->
                         <td class="text-end daily-balance" :class="employee.balance_kopecks < 0 ? 'text-danger' : 'text-success'">{{ money(employee.balance_kopecks) }}</td>
@@ -238,7 +238,7 @@ onBeforeUnmount(() => { version++; });
 .daily-table td { box-shadow: none; }
 /* --------- конец нового кода chat */
 /* новый код chat: жёлтая отметка ФИО не скрывает статус перевода и выбор строки */
-.employee-itr-name { background: #fff3cd; color: #000; border-radius: 3px; padding: 1px 3px; box-decoration-break: clone; }
+.daily-name.daily-itr-cell { background: #fff3cd; color: #000; } /* новый код chat: перевод и фокус сохраняют приоритет */
 /* новый код chat: ссылка ФИО с сохранением оформления табеля */
 .timesheet-employee-link { color: inherit; text-decoration: none; }
 .timesheet-employee-link:hover { text-decoration: underline; }

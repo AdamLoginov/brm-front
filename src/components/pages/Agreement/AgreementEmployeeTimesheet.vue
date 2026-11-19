@@ -29,7 +29,7 @@
             <div>Ctrl+C — копировать, Ctrl+V — вставить, Delete — очистить выделение. Одно скопированное значение заполняет всю выбранную область. Можно копировать данные из Excel и обратно.</div>
             <div>В режиме «Изменить» тяните квадрат в правом нижнем углу выделения: значение или шаблон повторится в соседних ячейках. Отпустите мышь для заполнения; Escape отменяет протягивание.</div> <!-- новый код chat: правило протягивания -->
             <div>Ctrl+Z или Ctrl+Я — отменить последнее изменение. Вставка, очистка и протягивание области отменяются целиком. История действует до сохранения или смены табеля.</div> <!-- новый код chat: отмена операций -->
-            <div>Для вставки и очистки нажмите «Изменить», затем «Сохранить». Допустимы 0–24, П, Б, Д, В и пустые ячейки. Блок с ошибками или за границами табеля не вставляется.</div>
+            <div>Для вставки и очистки нажмите «Изменить», затем «Сохранить». Допустимы 0–24, П, Б, Д, В, О и пустые ячейки. Блок с ошибками или за границами табеля не вставляется.</div> <!-- новый код chat: отпуск -->
         </div>
         <!-- --------- конец нового кода chat -->
         <fieldset :disabled="savingTimesheet" class="border-0 p-0 m-0">
@@ -55,19 +55,17 @@
                     </button>
                 </div>
             </div>
-            <div class="list-group-item d-flex">
-                <div class="col-5 d-flex align-items-center" style="font-size: 12px;">
+            <div class="list-group-item d-flex flex-wrap align-items-center gap-2"> <!-- новый код chat: легенда занимает доступную ширину -->
+                <div class="d-flex flex-wrap align-items-center flex-grow-1 text-nowrap" style="font-size: 12px;"> <!-- новый код chat: обозначения не разрываются внутри -->
                     <div class="fw-semibold">Правила заполнения:</div>
                     <div class="ms-1"> <span class="bg-success fw-semibold px-1 rounded-1">0-24</span> - Часы;</div>
                     <div class="ms-1"> <span class="bg-danger fw-semibold px-1 rounded-1">П</span> - Прогул;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #e97c17;">Б</span> - Болен;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #fff200;">В</span> - Выходной;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #c07ff1;">Д</span> - В дороге;</div>
+                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #EAF044;">О</span> - Отпуск;</div> <!-- новый код chat -->
                 </div>
-                <div class="col-3"></div>
-                <div class="col-2"></div>
-                <div class="col-1"></div>
-                <div class="col-1 ps-2 d-flex justify-content-end">
+                <div class="ms-auto ps-2 d-flex justify-content-end"> <!-- новый код chat: кнопка справа без пустых колонок -->
                     <button type="button" class="btn  btn-sm" :class="isChange ? 'btn-success' : 'btn-primary'" @click="isChange ? postTimesheetHandler() : changeTimesheet()">{{ isChange ? 'Сохранить' : 'Изменить' }}</button>
                 </div>
             </div>
@@ -94,9 +92,9 @@
             </div>
             <div @copy="copySelectedCells" @paste="pasteSelectedCells">
             <div v-for="(employee, index) in timesheetMonth_select.employees" :key="employee.ID" class="list-group-item d-flex p-0">
-                <div class="work-timesheet-name-column px-2 d-flex" :class="{'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: все сотрудники выбранного диапазона -->
+                <div class="work-timesheet-name-column px-2 d-flex" :class="{'work-timesheet-itr-cell': employee.is_itr, 'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: ИТР подсвечивает весь блок сотрудника -->
                     <div class="col-1 border-end d-flex justify-content-center me-1 fw-semibold">{{ index + 1 }}</div>
-                    <div class="col-11"><router-link :to="{ name: 'employee-card-detail', params: { id: employee.ID } }" class="timesheet-employee-link" :class="{ 'employee-itr-name': employee.is_itr }" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ [employee.surname, employee.name?.trim()?.[0] ? employee.name.trim()[0] + '.' : '', employee.middle_name?.trim()?.[0] ? employee.middle_name.trim()[0] + '.' : ''].filter(Boolean).join(' ') }}</router-link></div> <!-- новый код chat: фамилия и инициалы, ссылка на карточку с подсветкой ИТР -->
+                    <div class="col-11"><router-link :to="{ name: 'employee-card-detail', params: { id: employee.ID } }" class="timesheet-employee-link" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ [employee.surname, employee.name?.trim()?.[0] ? employee.name.trim()[0] + '.' : '', employee.middle_name?.trim()?.[0] ? employee.middle_name.trim()[0] + '.' : ''].filter(Boolean).join(' ') }}</router-link></div> <!-- новый код chat: фон перенесён на ячейку -->
                 </div>
                 <div class="work-timesheet-days-column days-grid" :style="{ '--days-count': daysInMonth }">
                     <!-- ????? ??? chat: ?????? ?????? ????? ?????? ???? ?????????? ????? ??? -->
@@ -191,6 +189,7 @@ const monthValue = {
 }
 
 const timesheet_color = {
+    'О': '#EAF044', // новый код chat: отпуск
     '':   '#fff',
     'Д':  '#c07ff1',
     'В':  '#fff200',
@@ -695,7 +694,7 @@ onMounted(getTimeSheetMonthHandler);
 /* --------- новый код chat: рамка диапазона сохраняет исходные цвета отметок */
 .timesheet-value-cell { position: relative; user-select: none; cursor: cell; }
 .timesheet-value-cell:focus { outline: none; }
-.timesheet-value-cell.sheet-selected::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: rgba(13,110,253,.12); border: 0 solid #0d6efd; z-index: 1; }
+.timesheet-value-cell.sheet-selected::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: rgba(13,110,253,.05); border: 0 solid #0d6efd; z-index: 1; } /* новый код chat: более прозрачное выделение */
 .timesheet-value-cell.sheet-top::after { border-top-width: 2px; }
 .timesheet-value-cell.sheet-bottom::after { border-bottom-width: 2px; }
 .timesheet-value-cell.sheet-left::after { border-left-width: 2px; }
@@ -703,7 +702,7 @@ onMounted(getTimeSheetMonthHandler);
 .timesheet-fill-handle { position: absolute; width: 8px; height: 8px; right: 0; bottom: 0; background: #0d6efd; border: 1px solid #fff; cursor: crosshair; z-index: 3; } /* новый код chat: маркер заполнения шаблоном */
 /* --------- конец нового кода chat */
 /* новый код chat: единая жёлтая подсветка ФИО ИТР в обоих табелях */
-.employee-itr-name { background: #fff3cd; color: #000; border-radius: 3px; padding: 1px 3px; box-decoration-break: clone; }
+.work-timesheet-itr-cell { background: #fff3cd; color: #000; } /* новый код chat: фон всей ячейки, выделение диапазона остаётся приоритетным */
 /* новый код chat: ссылка ФИО с сохранением оформления табеля */
 .timesheet-employee-link { color: inherit; text-decoration: none; }
 .timesheet-employee-link:hover { text-decoration: underline; }
