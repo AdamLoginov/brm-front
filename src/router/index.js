@@ -119,6 +119,7 @@ const routes = [
     }
   },
 
+  { path: '/agreements/:id/contacts', name: 'agreement-contacts', component: () => import('../components/pages/Agreement/AgreementContactsPage.vue'), meta: { requiresAuth: true } }, // новый код chat: контакты другой стороны договора
   { path: '/agreements/update/:id', name: 'agreement-update', component: AgreementUpdatePage, meta:{requiresAuth: true}},
 
   { path: '/agreements/detail/:id', 

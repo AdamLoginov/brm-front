@@ -112,6 +112,7 @@
     const deleting = ref(false);
     const errorMessage = ref('');
     const navigation = [
+        {label: 'Контакты', route: 'agreement-contacts', icon: 'bi-person-lines-fill'}, // новый код chat
         {label: 'Табель', route: 'agreement-timesheet-detail', icon: 'bi-calendar3'},
         {label: 'Суточные', route: 'agreement-daily-allowance', icon: 'bi-calendar-check'},
         {label: 'Начисления', route: 'agreement-salary-accruals', icon: 'bi-calculator'},

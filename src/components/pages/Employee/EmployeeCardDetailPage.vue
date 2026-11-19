@@ -29,9 +29,9 @@
       <!-- новый код chat: быстрый доступ к контактам сразу под шапкой на телефоне -->
       <section class="employee-panel employee-mobile-contacts" aria-label="Контакты сотрудника">
         <h2>Контакты</h2>
-        <a v-for="(phone, index) in phones" :key="index" :href="'tel:' + phone.replace(/[^+0-9]/g, '')"><i class="bi bi-telephone" aria-hidden="true"></i><span>{{ phone }}</span></a>
+        <a v-for="(phone, index) in phones" :key="index" href="#" role="button" :title="'Скопировать номер ' + phone" @click.prevent="copyContactValue(phone)" @keydown.space.prevent="copyContactValue(phone)"><i class="bi bi-copy" aria-hidden="true"></i><span>{{ phone }}</span></a> <!-- новый код chat: копирование на телефоне -->
         <p v-if="!phones.length">Телефон не указан</p>
-        <a v-if="employeeCard.email" :href="'mailto:' + employeeCard.email"><i class="bi bi-envelope" aria-hidden="true"></i><span>{{ employeeCard.email }}</span></a>
+        <a v-if="employeeCard.email" href="#" role="button" title="Скопировать email" @click.prevent="copyContactValue(employeeCard.email)" @keydown.space.prevent="copyContactValue(employeeCard.email)"><i class="bi bi-copy" aria-hidden="true"></i><span>{{ employeeCard.email }}</span></a> <!-- новый код chat -->
         <p v-else>Электронная почта не указана</p>
       </section>
         </aside>
@@ -90,10 +90,10 @@
             <div class="employee-panel-heading"><span class="employee-section-icon"><i class="bi bi-telephone" aria-hidden="true"></i></span><h2>Контакты</h2></div>
             <dl class="employee-data-grid employee-data-grid-two">
               <div><dt>Телефоны</dt><dd>
-                <div v-for="(phone, index) in phones" :key="index" class="employee-phone"><a :href="'tel:' + phone.replace(/[^+0-9]/g, '')">{{ phone }}<i class="bi bi-telephone ms-2" aria-hidden="true"></i></a></div>
+                <div v-for="(phone, index) in phones" :key="index" class="employee-phone"><a href="#" role="button" :title="'Скопировать номер ' + phone" @click.prevent="copyContactValue(phone)" @keydown.space.prevent="copyContactValue(phone)">{{ phone }}<i class="bi bi-copy ms-2" aria-hidden="true"></i></a></div> <!-- новый код chat -->
                 <span v-if="!phones.length">—</span>
               </dd></div>
-              <div><dt>Электронная почта</dt><dd><a v-if="employeeCard.email" :href="'mailto:' + employeeCard.email">{{ employeeCard.email }}<i class="bi bi-envelope ms-2" aria-hidden="true"></i></a><span v-else>—</span></dd></div>
+              <div><dt>Электронная почта</dt><dd><a v-if="employeeCard.email" href="#" role="button" title="Скопировать email" @click.prevent="copyContactValue(employeeCard.email)" @keydown.space.prevent="copyContactValue(employeeCard.email)">{{ employeeCard.email }}<i class="bi bi-copy ms-2" aria-hidden="true"></i></a><span v-else>—</span></dd></div> <!-- новый код chat -->
             </dl>
           </section>
 <section class="employee-panel">
@@ -141,6 +141,7 @@
     </template>
   </div>
   <!-- --------- конец нового кода chat -->
+  <div v-if="copyMessage" class="copy-feedback" :class="{ 'text-danger': copyFailed }" role="status" aria-live="polite">{{ copyMessage }}</div> <!-- новый код chat: уведомление снизу -->
 </template>
 
 <script setup>
@@ -148,7 +149,38 @@
 import { useRoute } from 'vue-router';
 import api from '../../../api';
 import { documentFileUrl, ensureFileAccess, openDocumentFile } from '../../../utils/fileAccess';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'; // новый код chat
+// --------- новый код chat: копирование контактов с уведомлением, включая локальный HTTP
+const copyMessage = ref(''), copyFailed = ref(false);
+let copyTimer, copyDisposed = false;
+const copyContactValue = async value => {
+  clearTimeout(copyTimer);
+  copyFailed.value = false;
+  try {
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+    } else {
+      const previousFocus = document.activeElement;
+      const field = document.createElement('textarea');
+      field.value = value;
+      field.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+      document.body.appendChild(field);
+      try {
+        field.focus(); field.select();
+        if (!document.execCommand('copy')) throw new Error('Copy failed');
+      } finally { field.remove(); previousFocus?.focus(); }
+    }
+    if (copyDisposed) return;
+    copyMessage.value = `Скопировано: ${value}`;
+  } catch {
+    if (copyDisposed) return;
+    copyFailed.value = true;
+    copyMessage.value = 'Не удалось скопировать. Проверьте разрешения браузера.';
+  }
+  copyTimer = setTimeout(() => { copyMessage.value = ''; }, 3000);
+};
+onBeforeUnmount(() => { copyDisposed = true; clearTimeout(copyTimer); });
+// --------- конец нового кода chat
 import { formatDateStr } from '../../../utils/date';
 
 const route = useRoute();
@@ -216,6 +248,8 @@ onMounted(getEmployeeCardDetailHandler);
 </script>
 
 <style scoped>
+/* новый код chat: уведомление как в списке сотрудников */
+.copy-feedback { position: fixed; right: 20px; bottom: 20px; z-index: 1090; padding: 12px 16px; max-width: calc(100vw - 40px); border: 1px solid #dfe5ed; border-radius: 10px; background: #fff; color: #218259; box-shadow: 0 4px 20px #26344518; font-size: 13px; overflow-wrap: anywhere; }
 /* --------- новый код chat: единое оформление карточки с формами сотрудника */
 .employee-detail-page { max-width: none; font-size: 14px; }
 .employee-back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--bs-secondary-color); text-decoration: none; }
