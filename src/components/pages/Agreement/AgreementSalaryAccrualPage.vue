@@ -58,7 +58,7 @@
                     <tr v-for="(accrual, index) in sortedAccruals" :key="accrual.employee_card_id" class="salary-accrual-row" :class="{'salary-approved-row': accrual.approved}" tabindex="0" aria-haspopup="dialog" :aria-label="`Подробности начисления: ${accrual.employee_name}`" @click="selectedAccrual = accrual" @keydown.enter.prevent="selectedAccrual = accrual" @keydown.space.prevent="selectedAccrual = accrual">
                         <!-- новый код chat: выбор без открытия окна -->
 <td v-if="selectionMode" @click.stop @keydown.stop><input v-model="approvalSelection[accrual.employee_card_id]" type="checkbox" class="form-check-input" :aria-label="`Согласовать: ${accrual.employee_name}`" :disabled="busy"></td><td class="salary-number">{{ index + 1 }}</td> <!-- новый код chat: номер по центру -->
-<td :title="accrual.employee_name">{{ formatEmployeeName(accrual) }}</td> <!-- новый код chat: фамилия и инициалы, полное имя в подсказке -->
+<td :title="accrual.employee_name"><router-link :to="{ name: 'employee-card-detail', params: { id: accrual.employee_card_id } }" class="salary-employee-link" @click.stop @keydown.stop>{{ formatEmployeeName(accrual) }}</router-link></td> <!-- новый код chat: ссылка на сотрудника без открытия модального окна строки -->
                         <td class="text-end">{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</td> <!-- новый код chat: часы сотрудника из начисления без округления -->
                         <td class="text-end">{{ formatShifts(accrual.total_hours, accrual.shift_hours) }}</td> <!-- новый код chat: норма смены из табеля -->
                         <td class="text-end text-nowrap">{{ formatMoney(accrual.salary_rate_kopecks) }}</td>
@@ -355,4 +355,8 @@ onBeforeUnmount(() => { requestVersion++; });
 .salary-table > :not(caption) > tr > :last-child { border-right: 0; }
 .salary-payment { width: 100px; font-size: 13px; padding: 2px 4px; min-height: 24px; } /* новый код chat: шрифт поля выплаты как в таблице */
 /* --------- конец нового кода chat */
+/* новый код chat: оформление ссылок ФИО */
+.salary-employee-link { color: inherit; text-decoration: none; }
+.salary-employee-link:hover { color: #0d6efd; text-decoration: underline; }
+.salary-employee-link:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
 </style>

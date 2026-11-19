@@ -6,7 +6,7 @@
       <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
         <div class="modal-body p-3 p-md-4">
             <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                <div><h5 id="salary-detail-title" class="mb-1">{{ accrual.employee_name }}</h5><div class="text-secondary">{{ monthLabel }}</div></div>
+                <div><h5 id="salary-detail-title" class="mb-1"><router-link :to="{ name: 'employee-card-detail', params: { id: accrual.employee_card_id } }" class="salary-employee-link">{{ accrual.employee_name }}</router-link></h5><!-- новый код chat: переход из начисления в карточку сотрудника --><div class="text-secondary">{{ monthLabel }}</div></div>
                 <button class="btn-close" aria-label="Закрыть" @click="close"></button>
             </div>
             <!-- --------- новый код chat: финансовые данные слева, справочные справа -->
@@ -286,4 +286,8 @@ onBeforeUnmount(() => {
 .detail-table th { font-weight: 600; }
 .detail-comment { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 120px; }
 /* --------- конец нового кода chat */
+/* новый код chat: оформление ссылок ФИО */
+.salary-employee-link { color: inherit; text-decoration: none; }
+.salary-employee-link:hover { color: #0d6efd; text-decoration: underline; }
+.salary-employee-link:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
 </style>
