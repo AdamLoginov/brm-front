@@ -5,17 +5,21 @@
             <RouterLink class="btn btn-outline-secondary btn-sm" :to="{name:'agreement-work-orders',params:{id:route.params.id},query:{book:route.params.bookId}}"><i class="bi bi-arrow-left me-1"></i>К книге</RouterLink>
             <h2 class="fs-5 mb-0">Работы по позициям</h2>
             <span v-if="book" class="ms-auto">{{ monthLabel }}</span>
+            <button v-if="book" type="button" class="btn btn-outline-success btn-sm" :disabled="exporting||loading" @click="exportExcel">{{ exporting?'Выгрузка…':'Выгрузить все позиции в Excel' }}</button> <!-- новый код chat -->
         </header>
         <div v-if="error" class="alert alert-danger" role="alert">{{ error }} <button class="btn btn-link btn-sm" @click="load">Повторить</button></div>
         <div v-if="loading" class="p-3 text-secondary">Загрузка…</div>
         <template v-else-if="book">
-            <section class="border rounded-3 bg-white p-3 mb-3">
-                <div class="row g-2">
-                    <div class="col-md-3"><label for="position-shop" class="form-label">Цех</label><select id="position-shop" v-model="shopID" class="form-select form-select-sm" @change="blockID=0;positionID=0"><option :value="0">Все цеха</option><option v-for="shop in refs.workshops" :key="shop.ID" :value="shop.ID">{{ shop.name }}</option></select></div>
-                    <div class="col-md-3"><label for="position-block" class="form-label">Блок</label><select id="position-block" v-model="blockID" class="form-select form-select-sm" @change="positionID=0"><option :value="0">Все блоки</option><option v-for="block in blocks" :key="block.ID" :value="block.ID">{{ block.name }}</option></select></div>
-                    <div class="col-md-6"><label for="position-choice" class="form-label">Позиция</label><select id="position-choice" v-model="positionID" class="form-select form-select-sm"><option :value="0">Выберите позицию</option><option v-for="position in positions" :key="position.ID" :value="position.ID">{{ position.number }} · {{ position.name }} · {{ blockName(position.block_id) }}</option></select></div>
+            <!-- новый код chat: позиции сгруппированы по блокам без фильтров -->
+            <nav class="position-pagination my-3" aria-label="Позиции книги по блокам"> <!-- новый код chat: компактные кнопки позиций -->
+                <div v-for="group in positionGroups" :key="group.id" class="mb-2">
+                    <div class="fw-semibold mb-1">{{ group.name }} <span class="text-secondary fw-normal">· {{ group.shop }}</span></div>
+                    <div class="d-flex flex-wrap gap-1">
+                        <button v-for="position in group.positions" :key="position.ID" type="button" class="btn btn-sm" :class="positionID===position.ID?'btn-primary':usedPositions.has(position.ID)?'btn-outline-success':'btn-outline-secondary'" :aria-pressed="positionID===position.ID" :title="position.name" @click="positionID=position.ID">{{ position.number }} <span v-if="usedPositions.has(position.ID)" aria-label="есть работы">•</span></button>
+                    </div>
                 </div>
-            </section>
+                <span v-if="!positions.length" class="text-secondary">Позиции пока не добавлены.</span>
+            </nav>
             <p v-if="!positionID" class="border rounded-3 bg-white p-3">Выберите позицию для просмотра выполненных работ за {{ monthLabel }}.</p>
             <template v-else>
                 <div class="d-flex flex-wrap gap-3 border rounded-3 bg-white p-3 mb-3">
@@ -48,7 +52,8 @@
             <p class="text-secondary">Записей: {{ selectedGroup.rows.length }} · Позиция {{ selectedPosition?.number }} · {{ monthLabel }}</p>
             <div class="table-responsive"><table class="table table-sm align-middle mb-0">
                 <thead><tr><th>Дата</th><th>Смена</th><th>Работа</th><th class="text-end">Объём</th><th>Ед.</th><th class="text-end">Чел.-ч</th><th>Материалы</th></tr></thead>
-                <tbody><tr v-for="row in selectedGroup.rows" :key="row.task.ID"><td class="text-nowrap">{{ dateLabel(row.date) }}</td><td>{{ row.shift.number }}</td><td>{{ row.task.name }}</td><td class="text-end" :class="{'text-danger':!row.task.quantity_hundredths}">{{ row.task.quantity_hundredths?quantityDisplay(row.task.quantity_hundredths,2):'—' }}</td><td>{{ unitName(row.task.unit_id) }}</td><td class="text-end" :class="{'text-danger':hoursMissing(row.task)}">{{ hoursMissing(row.task)?'—':quantityDisplay(row.task.hours_hundredths,2) }}</td><td><div v-for="usage in row.task.materials" :key="usage.ID">{{ materialName(usage.material_id) }} — {{ quantityDisplay(usage.quantity_thousandths) }} {{ materialUnit(usage.material_id) }}</div><span v-if="!row.task.materials?.length">—</span></td></tr></tbody>
+                <!-- новый код chat: ссылка открывает исходную книгу на дате выбранной работы -->
+                <tbody><tr v-for="row in selectedGroup.rows" :key="row.task.ID"><td class="text-nowrap">{{ dateLabel(row.date) }}</td><td>{{ row.shift.number }}</td><td><RouterLink :to="{name:'agreement-work-orders',params:{id:route.params.id},query:{book:route.params.bookId,date:row.date}}" title="Открыть день в книге наряд-заданий">{{ row.task.name }}</RouterLink></td><td class="text-end" :class="{'text-danger':!row.task.quantity_hundredths}">{{ row.task.quantity_hundredths?quantityDisplay(row.task.quantity_hundredths,2):'—' }}</td><td>{{ unitName(row.task.unit_id) }}</td><td class="text-end" :class="{'text-danger':hoursMissing(row.task)}">{{ hoursMissing(row.task)?'—':quantityDisplay(row.task.hours_hundredths,2) }}</td><td><div v-for="usage in row.task.materials" :key="usage.ID">{{ materialName(usage.material_id) }} — {{ quantityDisplay(usage.quantity_thousandths) }} {{ materialUnit(usage.material_id) }}</div><span v-if="!row.task.materials?.length">—</span></td></tr></tbody>
                 <tfoot><tr><th colspan="3">Итого</th><th class="text-end" :class="{'text-danger':selectedGroup.missingQuantity}">{{ quantityDisplay(selectedGroup.quantity,2) }}</th><td>{{ unitName(selectedGroup.unitID) }}</td><th class="text-end" :class="{'text-danger':selectedGroup.missingHours}">{{ quantityDisplay(selectedGroup.hours,2) }}</th><td></td></tr></tfoot>
             </table></div>
             <p v-if="selectedGroup.missingQuantity||selectedGroup.missingHours" class="text-danger mt-2 mb-0">Незаполненные значения приняты за 0. Итоги с пропусками выделены красным.</p>
@@ -64,14 +69,36 @@ import WorkOrderDialog from './WorkOrderDialog.vue'; // новый код chat
 import { emptyWorkReferences, quantityDisplay, workError } from './workOrderHelpers';
 const route=useRoute();
 const book=ref(null),refs=ref(emptyWorkReferences()),materials=ref([]),loading=ref(false),error=ref('');
-const shopID=ref(0),blockID=ref(0),positionID=ref(0);
+const positionID=ref(0); // новый код chat: выбор только через кнопки позиций
 const selectedGroup=ref(null); // новый код chat
+// --------- новый код chat: выгрузка всей книги независимо от выбранных фильтров
+const exporting=ref(false);
+const exportExcel=async()=>{
+    if(exporting.value||!book.value)return;
+    const id=route.params.id,bookId=route.params.bookId,month=book.value.month,year=book.value.year;
+    exporting.value=true;error.value='';
+    try{
+        const response=await api.get(`/agreements/${id}/work-orders/books/${bookId}/positions/excel`,{responseType:'blob'});
+        const url=URL.createObjectURL(response.data),link=document.createElement('a');
+        link.href=url;link.download=`Работы_по_позициям_${String(month).padStart(2,'0')}_${year}.xlsx`;
+        document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(e){if(String(route.params.id)===String(id)&&String(route.params.bookId)===String(bookId))error.value=e.response?.data instanceof Blob?await e.response.data.text():workError(e);}
+    finally{exporting.value=false;}
+};
+// --------- конец нового кода chat
 let version=0;
 const monthLabel=computed(()=>book.value?new Date(book.value.year,book.value.month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'}):'');
-const blocks=computed(()=>refs.value.blocks.filter(block=>!shopID.value||block.workshop_id===shopID.value));
-const positions=computed(()=>refs.value.positions.filter(position=>blocks.value.some(block=>block.ID===position.block_id)&&(!blockID.value||position.block_id===blockID.value)).slice().sort((a,b)=>a.number.localeCompare(b.number,'ru',{numeric:true})));
+// --------- новый код chat: естественная сортировка блоков и номеров позиций
+const positionGroups=computed(()=>refs.value.blocks.map(block=>({
+    id:block.ID,name:block.name,shop:refs.value.workshops.find(shop=>shop.ID===block.workshop_id)?.name||'Цех',
+    positions:refs.value.positions.filter(position=>position.block_id===block.ID).slice().sort((a,b)=>a.number.localeCompare(b.number,'ru',{numeric:true}))
+})).filter(group=>group.positions.length).sort((a,b)=>a.name.localeCompare(b.name,'ru',{numeric:true})||a.shop.localeCompare(b.shop,'ru',{numeric:true})||a.id-b.id));
+const positions=computed(()=>positionGroups.value.flatMap(group=>group.positions));
+// --------- конец нового кода chat
 const selectedPosition=computed(()=>refs.value.positions.find(position=>position.ID===positionID.value));
-const blockName=id=>refs.value.blocks.find(block=>block.ID===id)?.name||'—';
+// новый код chat: отмечаем позиции с работами и открываем первую доступную позицию
+const usedPositions=computed(()=>new Set((book.value?.shifts||[]).flatMap(shift=>(shift.tasks||[]).map(task=>task.position_id))));
+watch([positions,positionID],()=>{if(!positions.value.some(position=>position.ID===positionID.value))positionID.value=positions.value[0]?.ID||0;});
 const unitName=id=>refs.value.units.find(unit=>unit.ID===id)?.name||'—';
 const materialName=id=>materials.value.find(material=>material.ID===id)?.name||`Материал № ${id}`;
 const materialUnit=id=>unitName(materials.value.find(material=>material.ID===id)?.unit_id);
@@ -107,7 +134,7 @@ watch([positionID,book],()=>{selectedGroup.value=null;});
 // --------- конец нового кода chat
 const load=async()=>{
     const current=++version,id=route.params.id,bookId=route.params.bookId;
-    loading.value=true;error.value='';book.value=null;shopID.value=0;blockID.value=0;positionID.value=0;
+    loading.value=true;error.value='';book.value=null;positionID.value=0; // новый код chat
     try{
         const [detail,references,stock]=await Promise.all([api.get(`/agreements/${id}/work-orders/books/${bookId}`),api.get(`/agreements/${id}/work-references`),api.get(`/agreements/${id}/warehouse`)]);
         if(current!==version)return;
@@ -121,6 +148,9 @@ onBeforeUnmount(()=>version++);
 <style scoped>
 .position-page{font-size:13px;color:#000;}
 .position-page .btn,.position-page .form-select{font-size:13px;}
+/* новый код chat: компактная пагинация без изменения остальных кнопок */
+.position-pagination .btn{font-size:11px;padding:2px 6px;line-height:1.3;border-radius:4px;}
+.position-pagination .gap-1{gap:3px!important;}
 .form-label{font-weight:500;}
 .table th,.table td{padding:8px 10px;}
 .table th{font-weight:600;white-space:nowrap;}
