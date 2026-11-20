@@ -98,7 +98,17 @@ const positions=computed(()=>positionGroups.value.flatMap(group=>group.positions
 const selectedPosition=computed(()=>refs.value.positions.find(position=>position.ID===positionID.value));
 // новый код chat: отмечаем позиции с работами и открываем первую доступную позицию
 const usedPositions=computed(()=>new Set((book.value?.shifts||[]).flatMap(shift=>(shift.tasks||[]).map(task=>task.position_id))));
-watch([positions,positionID],()=>{if(!positions.value.some(position=>position.ID===positionID.value))positionID.value=positions.value[0]?.ID||0;});
+// --------- новый код chat: последняя позиция сохраняется отдельно для договора и книги
+const positionStorageKey=()=>`work-order-position:${route.params.id}:${route.params.bookId}`;
+watch([positions,positionID],()=>{
+    if(loading.value||!book.value)return;
+    if(!positions.value.some(position=>position.ID===positionID.value))positionID.value=positions.value[0]?.ID||0;
+    try{
+        if(positionID.value)localStorage.setItem(positionStorageKey(),String(positionID.value));
+        else localStorage.removeItem(positionStorageKey());
+    }catch{/* Недоступное хранилище не мешает переключению позиций. */}
+});
+// --------- конец нового кода chat
 const unitName=id=>refs.value.units.find(unit=>unit.ID===id)?.name||'—';
 const materialName=id=>materials.value.find(material=>material.ID===id)?.name||`Материал № ${id}`;
 const materialUnit=id=>unitName(materials.value.find(material=>material.ID===id)?.unit_id);
@@ -139,6 +149,10 @@ const load=async()=>{
         const [detail,references,stock]=await Promise.all([api.get(`/agreements/${id}/work-orders/books/${bookId}`),api.get(`/agreements/${id}/work-references`),api.get(`/agreements/${id}/warehouse`)]);
         if(current!==version)return;
         book.value=detail.data;refs.value=references.data;materials.value=stock.data;
+        // новый код chat: восстанавливаем позицию после загрузки актуальных справочников
+        let savedPosition=0;
+        try{savedPosition=Number(localStorage.getItem(positionStorageKey()));}catch{/* Используем первую позицию. */}
+        positionID.value=positions.value.some(position=>position.ID===savedPosition)?savedPosition:positions.value[0]?.ID||0;
     }catch(e){if(current===version)error.value=workError(e);}finally{if(current===version)loading.value=false;}
 };
 watch(()=>[route.params.id,route.params.bookId],load,{immediate:true});
