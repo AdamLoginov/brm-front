@@ -9,6 +9,8 @@
             </router-link>
             <!-- новый код chat: табель в общей оболочке -->
             <router-link :to="{name:'agreement-timesheet-detail', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Табель</router-link>
+            <router-link :to="{name:'agreement-work-orders', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Книга наряд-заданий</router-link> <!-- новый код chat -->
+            <router-link :to="{name:'agreement-warehouse', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Склад</router-link> <!-- новый код chat -->
             <router-link :to="{name:'agreement-daily-allowance', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Суточные</router-link> <!-- новый код chat: после табеля -->
             <router-link :to="{name:'agreement-salary-accruals', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Начисления</router-link>
             <router-link :to="{name:'agreement-salary-advances', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Авансы</router-link>
