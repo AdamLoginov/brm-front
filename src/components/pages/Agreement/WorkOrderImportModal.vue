@@ -3,28 +3,17 @@
     <WorkOrderDialog title="Загрузка книги из Excel" :busy="busy" @close="$emit('close')">
         <div v-if="error" class="alert alert-danger" role="alert">{{ error }}</div>
         <fieldset :disabled="busy" class="border-0 p-0">
+            <!-- --------- новый код chat: отдельный формат общего журнала без служебных ключей -->
+            <p class="alert alert-info py-2">Будут заменены только смены, представленные в журнале. Сотрудники сопоставляются по ФИО, справочники — по названиям и номерам. Часы сотрудников и цех обязательны. Поступления склада не меняются. Все изменения и удаления появятся перед подтверждением.</p>
+            <!-- --------- конец нового кода chat -->
             <label class="form-label" for="work-import-file">Файл XLSX · до 10 МБ</label>
             <input id="work-import-file" type="file" accept=".xlsx" class="form-control form-control-sm mb-3" @change="chooseFile">
-            <label for="work-import-mode" class="form-label">Режим загрузки</label>
-            <select id="work-import-mode" v-model="mode" class="form-select form-select-sm mb-2">
-                <option value="merge">Добавить и обновить — без удаления отсутствующих строк</option>
-                <option value="replace">Заменить выбранные данные — с удалением отсутствующих строк</option>
-            </select>
-            <div v-if="mode==='replace'" class="border rounded-3 p-3 mb-3">
-                <p class="mb-2">Выберите смены, которые нужно заменить целиком. Если выбранной смены нет в файле, она будет удалена вместе с сотрудниками и работами.</p>
-                <div class="d-flex gap-2 mb-2"><button type="button" class="btn btn-outline-secondary btn-sm" @click="selected=book.shifts.map(s=>s.ID)">Выбрать все</button><button type="button" class="btn btn-outline-secondary btn-sm" @click="selected=[]">Снять выбор</button></div>
-                <div class="import-shift-list">
-                    <label v-for="shift in book.shifts" :key="shift.ID" class="d-flex align-items-center gap-2 py-1"><input v-model="selected" type="checkbox" class="form-check-input m-0" :value="shift.ID">{{ shiftLabel(shift) }}</label>
-                    <span v-if="!book.shifts.length" class="text-secondary">Существующих смен нет.</span>
-                </div>
-                <label class="d-flex gap-2 align-items-start border-top mt-2 pt-2"><input v-model="replaceReceipts" type="checkbox" class="form-check-input flex-shrink-0">Заменить все поступления материалов за месяц этой книги. Отсутствующие в файле поступления будут удалены.</label>
-                <small class="d-block text-secondary mt-2">Остальные смены обновляются без удаления отсутствующих строк. Другие месяцы не заменяются.</small>
-            </div>
             <button type="button" class="btn btn-primary btn-sm" :disabled="!file" @click="preview">{{ busy ? 'Проверка…' : 'Проверить файл' }}</button>
         </fieldset>
 
         <section v-if="report" class="mt-3 border-top pt-3" aria-live="polite">
-            <div v-if="report.errors.length" class="alert alert-danger"><strong>Импорт заблокирован</strong><ul class="mb-0 mt-1"><li v-for="(message,i) in report.errors" :key="i">{{ message }}</li></ul></div>
+            <!-- новый код chat: количество замечаний в списке ошибок импорта -->
+            <div v-if="report.errors.length" class="alert alert-danger"><strong>Импорт заблокирован · Замечаний: {{ report.errors.length }}</strong><ul class="mb-0 mt-1"><li v-for="(message,i) in report.errors" :key="i">{{ message }}</li></ul></div>
             <div v-if="report.warnings.length" class="alert alert-warning"><strong>Предупреждения — сохранение разрешено</strong><ul class="mb-0 mt-1"><li v-for="(message,i) in report.warnings" :key="i">{{ message }}</li></ul></div>
             <div class="d-flex flex-wrap gap-2 mb-3">
                 <span class="badge text-bg-success">Новые: {{ count('create') }}</span><span class="badge text-bg-primary">Изменяемые: {{ count('update') }}</span><span class="badge text-bg-danger">Удаляемые: {{ count('delete') }}</span>
@@ -46,22 +35,20 @@
     </WorkOrderDialog>
 </template>
 <script setup>
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import api from '../../../api';
 import WorkOrderDialog from './WorkOrderDialog.vue';
 import { workError } from './workOrderHelpers';
-const props=defineProps({ agreementId:[String,Number], book:Object, refs:Object });
+const props=defineProps({ agreementId:[String,Number], book:Object });
 const emit=defineEmits(['close','saved']);
-const file=ref(null),mode=ref('merge'),selected=ref([]),replaceReceipts=ref(false),busy=ref(false),error=ref(''),report=ref(null);
+const file=ref(null),busy=ref(false),error=ref(''),report=ref(null); // новый код chat: общий журнал
 const reset=()=>{report.value=null;error.value='';};
-watch([mode,selected,replaceReceipts],reset,{deep:true});
 const chooseFile=event=>{reset();file.value=event.target.files?.[0]||null;if(file.value&&file.value.size>10*1024*1024){error.value='Максимальный размер файла — 10 МБ';file.value=null;}};
-const shiftLabel=shift=>`${props.book.days.find(d=>d.ID===shift.day_id)?.date} · ${props.refs.workshops.find(w=>w.ID===shift.workshop_id)?.name||'Цех'} · смена ${shift.number}`;
 const count=action=>report.value?.changes.filter(c=>c.action===action).length||0;
 const actionLabel=action=>({create:'Добавить',update:'Изменить',delete:'Удалить'}[action]);
 const actionClass=action=>({create:'text-bg-success',update:'text-bg-primary',delete:'text-bg-danger'}[action]);
 const request=async(action,token='')=>{
-    const form=new FormData();form.append('file',file.value);form.append('options',JSON.stringify({mode:mode.value,replace_shifts:mode.value==='replace'?selected.value:[],replace_receipts:mode.value==='replace'&&replaceReceipts.value}));form.append('token',token);
+    const form=new FormData();form.append('file',file.value);form.append('token',token); // новый код chat
     return api.post(`/agreements/${props.agreementId}/work-orders/books/${props.book.ID}/excel/${action}`,form);
 };
 const preview=async()=>{if(busy.value||!file.value)return;busy.value=true;reset();try{report.value=(await request('preview')).data;}catch(e){error.value=workError(e);}finally{busy.value=false;}};
@@ -72,7 +59,6 @@ const confirmImport=async()=>{
 };
 </script>
 <style scoped>
-.import-shift-list{max-height:180px;overflow:auto;}
 .import-changes{max-height:440px;overflow:auto;}
 .import-changes table{table-layout:fixed;font-size:12px;}
 .import-changes th:first-child{width:24%;}
