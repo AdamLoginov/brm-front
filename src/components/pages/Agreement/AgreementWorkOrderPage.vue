@@ -5,6 +5,13 @@
     <div class="border rounded-3 p-3 bg-white"><label class="form-label">Месячная книга</label><select v-model="bookID" :disabled="loading||!!editor" class="form-select form-select-sm" style="max-width:300px" @change="loadBook"><option :value="0" disabled>Выберите месяц</option><option v-for="b in books" :key="b.ID" :value="b.ID">{{ bookLabel(b) }}</option></select><div v-if="!books.length&&!loading" class="text-secondary mt-2">Создайте книгу для нужного месяца.</div></div>
     <div v-if="loading" class="p-3 text-secondary">Загрузка…</div>
     <template v-else-if="book">
+        <!-- --------- новый код chat: шаблон, выгрузка и импорт выбранного месяца -->
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <button class="btn btn-outline-secondary btn-sm" :disabled="!!editor||excelBusy" @click="downloadExcel(true)">Скачать шаблон Excel</button>
+            <button class="btn btn-outline-success btn-sm" :disabled="!!editor||excelBusy" @click="downloadExcel(false)">Выгрузить в Excel</button>
+            <button class="btn btn-outline-primary btn-sm" :disabled="!!editor||excelBusy" @click="importOpen=true">Загрузить из Excel</button>
+        </div>
+        <!-- --------- конец нового кода chat -->
         <div class="d-flex flex-wrap gap-1 my-3" aria-label="Дни книги"><button v-for="day in book.days" :key="day.ID" class="btn btn-sm" :class="dayID===day.ID?'btn-primary':hasEntries(day.ID)?'btn-outline-success':'btn-outline-secondary'" :disabled="!!editor" @click="dayID=day.ID">{{ Number(day.date.slice(-2)) }} <span v-if="hasEntries(day.ID)" aria-label="есть записи">•</span></button></div>
         <div class="d-flex align-items-center justify-content-between"><h3 class="fs-6 mb-0">{{ selectedDay?.date.split('-').reverse().join('.') }}</h3><button class="btn btn-outline-primary btn-sm" :disabled="!!editor||!selectedDay" @click="editor={shift:null,key:Date.now()}">Добавить цех / смену</button></div>
         <div v-if="!dayShifts.length&&!editor" class="text-secondary p-3 border rounded-3 mt-3">Записей за этот день нет.</div>
@@ -26,6 +33,7 @@
                 <span>Работы <strong>{{ shift.tasks.length }}</strong></span>
                 <span>Распределено <strong>{{ quantityDisplay(sumHours(shift.tasks,'hours_hundredths'),2) }} чел.-ч</strong></span>
                 <span v-if="sumHours(shift.employees,'hours_hundredths')>sumHours(shift.tasks,'hours_hundredths')" class="shift-hours-warning">Не распределено: {{ quantityDisplay(sumHours(shift.employees,'hours_hundredths')-sumHours(shift.tasks,'hours_hundredths'),2) }} ч</span>
+                <span v-else-if="sumHours(shift.tasks,'hours_hundredths')>sumHours(shift.employees,'hours_hundredths')" class="shift-hours-warning">Превышение: {{ quantityDisplay(sumHours(shift.tasks,'hours_hundredths')-sumHours(shift.employees,'hours_hundredths'),2) }} ч</span> <!-- новый код chat -->
                 <span v-else class="shift-hours-complete"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Часы распределены</span>
             </div>
             <div class="shift-summary-content">
@@ -44,7 +52,7 @@
                         <div class="shift-task-heading">
                             <span class="shift-task-number">{{ index+1 }}</span>
                             <h6>{{ task.name }}</h6>
-                            <div class="shift-task-metric"><span>Объём</span><strong>{{ quantityDisplay(task.quantity_hundredths,2) }} {{ unitName(task.unit_id) }}</strong></div>
+                            <div class="shift-task-metric"><span>Объём</span><strong>{{ task.quantity_hundredths ? quantityDisplay(task.quantity_hundredths,2) : '—' }}<template v-if="task.unit_id"> {{ unitName(task.unit_id) }}</template></strong></div> <!-- новый код chat: пустой объём отображаем прочерком -->
                             <div class="shift-task-metric"><span>Человеко-часы</span><strong>{{ quantityDisplay(task.hours_hundredths,2) }}</strong></div>
                         </div>
                         <dl class="shift-task-location">
@@ -66,9 +74,23 @@
         <WorkOrderShiftComponent v-if="editor&&selectedDay" :key="editor.key" :agreement-id="agreementID" :day-id="dayID" :date="selectedDay.date" :shift="editor.shift" :refs="refs" :materials="materials" @close="editor=null" @saved="saved" />
     </template>
     <WorkOrderBookModal v-if="createOpen" :agreement-id="agreementID" @close="createOpen=false" @created="created" />
+    <WorkOrderImportModal v-if="importOpen&&book" :agreement-id="agreementID" :book="book" :refs="refs" @close="importOpen=false" @saved="importSaved" /> <!-- новый код chat -->
     <WorkOrderReferenceModal v-if="referencesOpen" :agreement-id="agreementID" :refs="refs" @close="referencesOpen=false" @changed="loadReferences" />
 </div></template>
 <script setup>
+// --------- новый код chat: Excel использует существующий авторизованный API
+import WorkOrderImportModal from './WorkOrderImportModal.vue';
+const importOpen=ref(false),excelBusy=ref(false);
+const downloadExcel=async template=>{
+    if(excelBusy.value||!book.value)return;excelBusy.value=true;error.value='';
+    const selectedBook=book.value; // новый код chat: имя файла сохраняет выбранный при запросе месяц
+    try{
+        const response=await api.get(`/agreements/${agreementID.value}/work-orders/books/${bookID.value}/excel`,{params:{template:template?'1':'0'},responseType:'blob'});
+        const url=URL.createObjectURL(response.data),link=document.createElement('a');link.href=url;link.download=`${template?'Шаблон':'Книга'}_${selectedBook.year}-${String(selectedBook.month).padStart(2,'0')}.xlsx`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(e){error.value=e.response?.data instanceof Blob?await e.response.data.text():workError(e);}finally{excelBusy.value=false;}
+};
+const importSaved=async warning=>{importOpen.value=false;notice.value=warning||'Данные из Excel сохранены.';await loadBook();};
+// --------- конец нового кода chat
 import {ref,computed,watch,onBeforeUnmount} from 'vue';import {useRoute,onBeforeRouteLeave,onBeforeRouteUpdate} from 'vue-router';import api from '../../../api';import WorkOrderBookModal from './WorkOrderBookModal.vue';import WorkOrderReferenceModal from './WorkOrderReferenceModal.vue';import WorkOrderShiftComponent from './WorkOrderShiftComponent.vue';import {emptyWorkReferences,quantityDisplay,workError} from './workOrderHelpers';
 const route=useRoute(),agreementID=computed(()=>String(route.params.id));const refs=ref(emptyWorkReferences()),books=ref([]),materials=ref([]),book=ref(null),bookID=ref(0),dayID=ref(0),editor=ref(null),error=ref(''),notice=ref(''),loading=ref(false),deleting=ref(false),createOpen=ref(false),referencesOpen=ref(false);let version=0;
 const bookLabel=b=>new Date(b.year,b.month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
@@ -94,7 +116,7 @@ const created=async b=>{createOpen.value=false;books.value.unshift(b);bookID.val
 const saved=async warning=>{editor.value=null;notice.value=warning||'';await loadBook();};
 const removeShift=async shift=>{if(!confirm('Удалить запись смены, сотрудников и работы? Материалы вернутся на склад.'))return;deleting.value=true;try{await api.delete(`/agreements/${agreementID.value}/work-orders/shifts/${shift.ID}`,{params:{version:shift.version}});await loadBook();}catch(e){error.value=workError(e);}finally{deleting.value=false;}};
 const canLeave=()=>!editor.value||confirm('Покинуть книгу без сохранения открытой формы?');onBeforeRouteLeave(canLeave);onBeforeRouteUpdate(canLeave);
-watch(()=>route.fullPath,()=>{editor.value=null;book.value=null;dayID.value=0;bookID.value=0;createOpen.value=false;referencesOpen.value=false;notice.value='';load();},{immediate:true});onBeforeUnmount(()=>version++);
+watch(()=>route.fullPath,()=>{importOpen.value=false;editor.value=null;book.value=null;dayID.value=0;bookID.value=0;createOpen.value=false;referencesOpen.value=false;notice.value='';load();},{immediate:true});onBeforeUnmount(()=>version++); // новый код chat: закрываем импорт при смене договора
 </script>
 <style scoped>
 .work-order-page {font-size:13px;} :deep(.btn),:deep(.form-control),:deep(.form-select){font-size:13px;} :deep(label){font-weight:500;}

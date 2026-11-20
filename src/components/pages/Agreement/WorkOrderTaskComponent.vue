@@ -4,8 +4,9 @@
     <!-- новый код chat: работа → единица → количество → часы → блок → позиция -->
     <div class="work-task-fields">
         <div class="work-task-name"><label class="form-label">Наименование работы</label><input v-model="task.name" required maxlength="500" class="form-control form-control-sm"></div>
-        <div><label class="form-label">Ед. изм.</label><select v-model="task.unit_id" required class="form-select form-select-sm"><option :value="0" disabled>Выберите</option><option v-for="unit in refs.units" :key="unit.ID" :value="unit.ID">{{ unit.name }}</option></select></div>
-        <div><label class="form-label">Кол-во</label><QuantityInputComponent v-model="task.quantity" required class="form-control form-control-sm" /></div>
+        <!-- новый код chat: объём и единица работы необязательны, выбор можно очистить -->
+        <div><label class="form-label">Ед. изм.</label><select v-model="task.unit_id" class="form-select form-select-sm"><option :value="0">Не указана</option><option v-for="unit in refs.units" :key="unit.ID" :value="unit.ID">{{ unit.name }}</option></select></div>
+        <div><label class="form-label">Кол-во</label><QuantityInputComponent v-model="task.quantity" placeholder="Не указано" class="form-control form-control-sm" /></div>
         <div><label class="form-label" title="Человеко-часы">Часы</label><QuantityInputComponent v-model="task.hours" required class="form-control form-control-sm" /></div>
         <div><label class="form-label">Блок</label><select v-model="selectedBlockID" required class="form-select form-select-sm" @change="task.position_id=0"><option :value="0" disabled>Выберите блок</option><option v-for="block in blocks" :key="block.ID" :value="block.ID">{{ block.name }}</option></select></div>
         <div><label class="form-label">Позиция</label><select v-model="task.position_id" :disabled="!selectedBlockID" required class="form-select form-select-sm"><option :value="0" disabled>{{ selectedBlockID ? 'Выберите позицию' : 'Сначала выберите блок' }}</option><option v-for="p in positions" :key="p.ID" :value="p.ID">{{ p.number }} — {{ p.name }}</option></select><small v-if="selectedBlockID&&!positions.length" class="text-secondary">В блоке пока нет позиций.</small></div>

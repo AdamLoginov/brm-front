@@ -27,13 +27,14 @@
         <!-- --------- конец нового кода chat -->
         <div class="d-flex flex-wrap gap-3 border-top pt-3 mt-3"><span>Сотрудники: <strong>{{ quantityDisplay(employeeHours,2) }} ч</strong></span><span>Работы: <strong>{{ quantityDisplay(taskHours,2) }} ч</strong></span><span :class="taskHours>employeeHours?'text-danger':'text-warning-emphasis'">{{ hoursMessage }}</span></div>
         <WorkOrderTaskComponent v-for="(task,i) in form.tasks" :key="i" :task="task" :index="i" :refs="refs" :workshop-id="form.workshop_id" :materials="availableMaterials" @remove="form.tasks.splice(i,1)" />
-        <div class="d-flex flex-wrap gap-2 mt-3"><button type="button" class="btn btn-outline-primary btn-sm" :disabled="!form.workshop_id" @click="addTask">Добавить работу</button><button class="btn btn-primary btn-sm ms-auto" :disabled="taskHours>employeeHours">{{ busy?'Сохранение…':'Сохранить смену' }}</button></div>
+        <!-- новый код chat: предупреждение о часах не блокирует сохранение -->
+        <div class="d-flex flex-wrap gap-2 mt-3"><button type="button" class="btn btn-outline-primary btn-sm" :disabled="!form.workshop_id" @click="addTask">Добавить работу</button><button class="btn btn-primary btn-sm ms-auto">{{ busy?'Сохранение…':'Сохранить смену' }}</button></div>
     </fieldset>
 </form></template>
 <script setup>
 import {reactive,ref,computed} from 'vue';import api from '../../../api';import MultiSelect from '../../MultiSelect.vue';import QuantityInputComponent from '../../QuantityInputComponent.vue';import WorkOrderTaskComponent from './WorkOrderTaskComponent.vue';import {workError,quantityText,quantityDisplay,scaledQuantity,employeeName} from './workOrderHelpers';
 const props=defineProps({agreementId:[String,Number],dayId:Number,date:String,shift:Object,refs:Object,materials:Array});const emit=defineEmits(['saved','close']);const busy=ref(false),error=ref('');
-const form=reactive({day_id:props.dayId,workshop_id:props.shift?.workshop_id||0,number:props.shift?.number||1,version:props.shift?.version||0,employees:(props.shift?.employees||[]).map(e=>({employee_card_id:e.employee_card_id,hours:quantityText(e.hours_hundredths,2)})),tasks:(props.shift?.tasks||[]).map(t=>({position_id:t.position_id,name:t.name,unit_id:t.unit_id,quantity:quantityText(t.quantity_hundredths,2),hours:quantityText(t.hours_hundredths,2),materials:t.materials.map(m=>({material_id:m.material_id,quantity:quantityText(m.quantity_thousandths)}))}))});
+const form=reactive({day_id:props.dayId,workshop_id:props.shift?.workshop_id||0,number:props.shift?.number||1,version:props.shift?.version||0,employees:(props.shift?.employees||[]).map(e=>({employee_card_id:e.employee_card_id,hours:quantityText(e.hours_hundredths,2)})),tasks:(props.shift?.tasks||[]).map(t=>({position_id:t.position_id,name:t.name,unit_id:t.unit_id,quantity:t.quantity_hundredths?quantityText(t.quantity_hundredths,2):'',hours:quantityText(t.hours_hundredths,2),materials:t.materials.map(m=>({material_id:m.material_id,quantity:quantityText(m.quantity_thousandths)}))}))}); // новый код chat: пустой объём остаётся пустым при редактировании
 const initial=JSON.stringify(form);const cancel=()=>{if(JSON.stringify(form)===initial||confirm('Закрыть форму без сохранения изменений?'))emit('close');};
 const employeeOptions=computed(()=>{const rows=new Map(props.refs.employees.map(e=>[e.ID,{ID:e.ID,label:employeeName(e)}]));for(const e of props.shift?.employees||[])if(!rows.has(e.employee_card_id))rows.set(e.employee_card_id,{ID:e.employee_card_id,label:e.employee_name+' (переведён)'});return [...rows.values()].sort((a,b)=>a.label.localeCompare(b.label,'ru'));});
 // --------- новый код chat: смена выбора сохраняет часы оставшихся сотрудников
@@ -49,7 +50,7 @@ const selectedEmployeeIDs = computed({
 const fillEmployeeHours = () => { form.employees.forEach(row => { row.hours = '11'; }); };
 // --------- конец нового кода chat
 const employeeHours=computed(()=>form.employees.reduce((sum,e)=>sum+(scaledQuantity(e.hours)||0),0));const taskHours=computed(()=>form.tasks.reduce((sum,t)=>sum+(scaledQuantity(t.hours)||0),0));
-const hoursMessage=computed(()=>taskHours.value>employeeHours.value?'Превышение часов — сохранение запрещено':taskHours.value<employeeHours.value?'Распределены не все часы. Можно сохранить.':'Часы распределены полностью');
+const hoursMessage=computed(()=>taskHours.value>employeeHours.value?'Часы работ превышают часы сотрудников. Можно сохранить.':taskHours.value<employeeHours.value?'Распределены не все часы. Можно сохранить.':'Часы распределены полностью'); // новый код chat
 const availableMaterials=computed(()=>props.materials.filter(m=>m.workshop_id===form.workshop_id).map(m=>({...m,available:m.balance+(props.shift?.tasks||[]).flatMap(t=>t.materials).filter(u=>u.material_id===m.ID).reduce((s,u)=>s+u.quantity_thousandths,0)})));
 const addTask=()=>form.tasks.push({position_id:0,name:'',unit_id:0,quantity:'',hours:'',materials:[]});
 const removeEmployee=i=>{if(confirm('Убрать сотрудника из смены?'))form.employees.splice(i,1);};
