@@ -7,6 +7,8 @@
     <template v-else-if="book">
         <!-- --------- новый код chat: шаблон, выгрузка и импорт выбранного месяца -->
         <div class="d-flex flex-wrap gap-2 mt-3">
+            <!-- новый код chat: просмотр работ по позициям выбранной книги -->
+            <RouterLink v-if="!editor" class="btn btn-outline-secondary btn-sm" :to="{name:'agreement-work-order-positions',params:{id:agreementID,bookId:book.ID}}">Работы по позициям</RouterLink>
             <button class="btn btn-outline-primary btn-sm" :disabled="!!editor" @click="importOpen=true">Загрузить из Excel</button>
         </div>
         <!-- --------- конец нового кода chat -->

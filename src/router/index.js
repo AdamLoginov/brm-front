@@ -90,6 +90,7 @@ const routes = [
     meta: {requiresAuth: true},
     children: [
       { path: 'work-orders', name: 'agreement-work-orders', component: () => import('../components/pages/Agreement/AgreementWorkOrderPage.vue') }, // новый код chat
+      { path: 'work-orders/books/:bookId/positions', name: 'agreement-work-order-positions', component: () => import('../components/pages/Agreement/AgreementWorkOrderPositionPage.vue') }, // новый код chat: работы по позициям месячной книги
       { path: 'warehouse', name: 'agreement-warehouse', component: () => import('../components/pages/Agreement/AgreementWarehousePage.vue') }, // новый код chat
       { path: '', redirect: to => ({name: 'agreement-salary-accruals', params: {id: to.params.id}}) },
       { path: 'timesheet', name: 'agreement-timesheet-detail', component: AgreementEmployee }, // новый код chat: табель внутри общей оболочки
