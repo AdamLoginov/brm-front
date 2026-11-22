@@ -5,6 +5,8 @@
             <RouterLink class="btn btn-outline-secondary btn-sm" :to="{name:'agreement-work-orders',params:{id:route.params.id},query:{book:route.params.bookId}}"><i class="bi bi-arrow-left me-1"></i>К книге</RouterLink>
             <h2 class="fs-5 mb-0">Работы по позициям</h2>
             <span v-if="book" class="ms-auto">{{ monthLabel }}</span>
+            <button v-if="book" type="button" class="btn btn-outline-primary btn-sm" :disabled="statementExporting||loading" @click="exportStatement(true)">Скачать архив ведомостей</button> <!-- новый код chat -->
+            <button v-if="book" type="button" class="btn btn-outline-primary btn-sm" :disabled="statementExporting||loading||!canExportStatement" @click="exportStatement">{{ statementExporting?'Выгрузка…':String(positionID).startsWith('block:')?'Выгрузить работы без позиции в шаблон':'Выгрузить выбранную позицию в шаблон' }}</button> <!-- новый код chat -->
             <button v-if="book" type="button" class="btn btn-outline-success btn-sm" :disabled="exporting||loading" @click="exportExcel">{{ exporting?'Выгрузка…':'Выгрузить все позиции в Excel' }}</button> <!-- новый код chat -->
         </header>
         <div v-if="error" class="alert alert-danger" role="alert">{{ error }} <button class="btn btn-link btn-sm" @click="load">Повторить</button></div>
@@ -98,6 +100,26 @@ const toggleAccounted=async(row,event)=>{
 // --------- конец нового кода chat
 // --------- новый код chat: выгрузка всей книги независимо от выбранных фильтров
 const exporting=ref(false);
+// --------- новый код chat: ведомость выбранной позиции, виртуальные группы недоступны
+const statementExporting=ref(false);
+const canExportStatement=computed(()=>typeof positionID.value==='number'?positionID.value>0:/^block:[1-9]\d*$/.test(String(positionID.value))); // новый код chat
+const exportStatement=async(all=false)=>{
+    all=all===true; // новый код chat: событие клика одиночной кнопки не включает общую выгрузку
+    if(statementExporting.value||!book.value||(!all&&!canExportStatement.value))return;
+    const id=route.params.id,bookId=route.params.bookId,position=positionID.value;
+    const block=String(position).startsWith('block:')?String(position).slice(6):''; // новый код chat
+    const name=String(block?selectedPosition.value?.name||block:selectedPosition.value?.number||position).replace(/[\\/:*?"<>|]/g,'_');
+    const period=`${String(book.value.month).padStart(2,'0')}_${book.value.year}`;
+    statementExporting.value=true;error.value='';
+    try{
+        const path=all?`/agreements/${id}/work-orders/books/${bookId}/statements/all`:block?`/agreements/${id}/work-orders/books/${bookId}/blocks/${block}/statement`:`/agreements/${id}/work-orders/books/${bookId}/positions/${position}/statement`; // новый код chat
+        const {data}=await api.get(path,{responseType:'blob'});
+        const url=URL.createObjectURL(data),link=document.createElement('a');link.href=url;link.download=all?`Ведомости_все_позиции_${period}.zip`:`Ведомость_поз_${name}_${period}.xlsx`; // новый код chat
+        document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(e){if(String(route.params.id)===String(id)&&String(route.params.bookId)===String(bookId))error.value=e.response?.data instanceof Blob?await e.response.data.text():workError(e);}
+    finally{statementExporting.value=false;}
+};
+// --------- конец нового кода chat
 const exportExcel=async()=>{
     if(exporting.value||!book.value)return;
     const id=route.params.id,bookId=route.params.bookId,month=book.value.month,year=book.value.year;
