@@ -43,7 +43,7 @@
                 <div class="shift-works-scroll">
                     <table class="shift-works-table">
                         <!-- новый код chat: позиция перед блоком, часы по центру -->
-                        <colgroup><col style="width:32px"><col><col style="width:72px"><col style="width:78px"><col style="width:78px"><col style="width:150px"><col style="width:120px"><col style="width:90px"></colgroup>
+                        <colgroup><col style="width:32px"><col><col style="width:72px"><col style="width:78px"><col style="width:78px"><col style="width:150px"><col style="width:80px"><col style="width:150px"></colgroup> <!-- новый код chat: действия в одну строку за счёт ширины названия -->
                         <thead><tr><th>№</th><th>Наименование работы</th><th>Ед.</th><th>Объём</th><th class="text-center" title="Человеко-часы">Чел.-ч</th><th>Позиция</th><th>Блок</th><th>Действия</th></tr></thead>
                         <tbody><WorkOrderTaskComponent v-for="(task,i) in form.tasks" :key="taskKey(task)" :task="task" :index="i" :refs="refs" :workshop-id="form.workshop_id" :materials="availableMaterials" @remove="form.tasks.splice(i,1)" @duplicate="duplicateTask(i)" /></tbody>
                     </table>
@@ -61,7 +61,7 @@
 <script setup>
 import {reactive,ref,computed,nextTick} from 'vue';import api from '../../../api';import MultiSelect from '../../MultiSelect.vue';import QuantityInputComponent from '../../QuantityInputComponent.vue';import WorkOrderTaskComponent from './WorkOrderTaskComponent.vue';import {workError,quantityText,quantityDisplay,scaledQuantity,employeeName} from './workOrderHelpers';
 const props=defineProps({agreementId:[String,Number],dayId:Number,date:String,shift:Object,refs:Object,materials:Array});const emit=defineEmits(['saved','close']);const busy=ref(false),error=ref('');
-const form=reactive({day_id:props.dayId,workshop_id:props.shift?.workshop_id||0,number:props.shift?.number||1,version:props.shift?.version||0,employees:(props.shift?.employees||[]).map(e=>({employee_card_id:e.employee_card_id,hours:quantityText(e.hours_hundredths,2)})),tasks:(props.shift?.tasks||[]).map(t=>({block_id:t.block_id||props.refs.positions.find(p=>p.ID===t.position_id)?.block_id||0,position_id:t.position_id,name:t.name,unit_id:t.unit_id,quantity:t.quantity_hundredths?quantityText(t.quantity_hundredths,2):'',hours:t.hours_not_specified?'':quantityText(t.hours_hundredths,2),materials:t.materials.map(m=>({material_id:m.material_id,quantity:quantityText(m.quantity_thousandths)}))}))}); // новый код chat: пустой объём остаётся пустым при редактировании
+const form=reactive({day_id:props.dayId,workshop_id:props.shift?.workshop_id||0,number:props.shift?.number||1,version:props.shift?.version||0,employees:(props.shift?.employees||[]).map(e=>({employee_card_id:e.employee_card_id,hours:quantityText(e.hours_hundredths,2)})),tasks:(props.shift?.tasks||[]).map(t=>({block_id:t.block_id||props.refs.positions.find(p=>p.ID===t.position_id)?.block_id||0,position_id:t.position_id,accounted:!!t.accounted,name:t.name,unit_id:t.unit_id,quantity:t.quantity_hundredths?quantityText(t.quantity_hundredths,2):'',hours:t.hours_not_specified?'':quantityText(t.hours_hundredths,2),materials:t.materials.map(m=>({material_id:m.material_id,quantity:quantityText(m.quantity_thousandths)}))}))}); // новый код chat: пустой объём остаётся пустым при редактировании
 const initial=JSON.stringify(form);const cancel=()=>{if(JSON.stringify(form)===initial||confirm('Закрыть форму без сохранения изменений?'))emit('close');};
 // --------- новый код chat: копирование работает и через границу месяца, без дублей и потери введённых часов
 const copyingEmployees=ref(false),copyNotice=ref('');
@@ -113,7 +113,7 @@ const availableMaterials=computed(()=>props.materials.filter(m=>m.workshop_id===
 const editorElement=ref(null),taskKeys=new WeakMap();let nextTaskKey=0;
 const taskKey=task=>{if(!taskKeys.has(task))taskKeys.set(task,++nextTaskKey);return taskKeys.get(task);};
 const focusTask=async index=>{await nextTick();editorElement.value?.querySelectorAll('.work-task-name-input')[index]?.focus();};
-const addTask=()=>{form.tasks.push({block_id:0,position_id:0,name:'',unit_id:0,quantity:'',hours:'',materials:[]});focusTask(form.tasks.length-1);};
+const addTask=()=>{form.tasks.push({block_id:0,position_id:0,accounted:false,name:'',unit_id:0,quantity:'',hours:'',materials:[]});focusTask(form.tasks.length-1);};
 const duplicateTask=index=>{const source=form.tasks[index];form.tasks.splice(index+1,0,{...source,materials:source.materials.map(row=>({...row}))});focusTask(index+1);};
 const shortEmployeeName=id=>{
     const label=employeeOptions.value.find(e=>e.ID===id)?.label||'Сотрудник';
@@ -151,7 +151,7 @@ const save=async()=>{if(busy.value)return;busy.value=true;error.value='';try{con
 .shift-employees-table tr:focus-within td { background:#f0f6ff; }
 .shift-employees-table :deep(.form-control) { padding:4px; font-size:13px; min-height:32px; }
 .shift-works-scroll { overflow:auto; max-height:65vh; }
-.shift-works-table { width:100%; min-width:960px; table-layout:fixed; border-collapse:collapse; }
+.shift-works-table { width:100%; min-width:820px; table-layout:fixed; border-collapse:collapse; } /* новый код chat: уменьшаем минимальную ширину формы */
 .shift-works-table th { position:sticky; top:0; z-index:2; text-align:left; padding:7px 4px; font-size:12px; font-weight:500; background:#f1f4f8; box-shadow:0 1px #dfe5ed; }
 .shift-save-bar { position:sticky; bottom:0; z-index:5; display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px 12px; background:#fff; border-top:1px solid #dfe5ed; border-radius:0 0 10px 10px; box-shadow:0 -3px 12px #172a4610; }
 .shift-hours-totals { display:flex; flex-wrap:wrap; gap:5px 16px; align-items:center; }

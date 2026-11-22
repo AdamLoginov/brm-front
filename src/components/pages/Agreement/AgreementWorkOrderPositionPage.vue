@@ -32,7 +32,7 @@
                     <div class="table-responsive"><table class="table table-sm align-middle mb-0">
                         <!-- новый код chat: суммарные работы и материалы в одной строке -->
                         <thead class="table-light"><tr><th class="text-center">№</th><th>Наименование работы</th><th class="text-center">Кол-во записей</th><th class="text-end">Объём</th><th>Ед.</th><th class="text-end">Чел.-ч</th><th>Материалы</th></tr></thead>
-                        <tbody><tr v-for="(group,index) in groupedRows" :key="group.key">
+                        <tbody><tr v-for="(group,index) in groupedRows" :key="group.key" :class="{'accounted-row':group.accounted}"> <!-- новый код chat -->
                             <td class="text-center">{{ index+1 }}</td><td class="work-name"><button type="button" class="work-link" @click="selectedGroup=group">{{ group.name }}</button></td><td class="text-center">{{ group.rows.length }}</td>
                             <td class="text-end" :class="{'text-danger':group.missingQuantity}" :title="group.missingQuantity?'Есть незаполненные объёмы, приняты за 0':''">{{ quantityDisplay(group.quantity,2) }}</td><td>{{ unitName(group.unitID) }}</td>
                             <td class="text-end" :class="{'text-danger':group.missingHours}" :title="group.missingHours?'Есть незаполненные часы, приняты за 0':''">{{ quantityDisplay(group.hours,2) }}</td>
@@ -48,16 +48,20 @@
             </template>
         </template>
         <!-- новый код chat: расшифровка суммы с исходными датами и сменами -->
-        <WorkOrderDialog v-if="selectedGroup" title="Исходные записи работы" @close="selectedGroup=null">
+        <WorkOrderDialog v-if="selectedGroup" title="Исходные записи работы" :busy="taskBusy" @close="closeTaskDialog">
+            <div v-if="taskError" class="alert alert-danger py-2">{{ taskError }}</div> <!-- новый код chat -->
             <h3 class="fs-6">{{ selectedGroup.name }}</h3>
             <p class="text-secondary">Записей: {{ selectedGroup.rows.length }} · {{ selectionTitle }} · {{ monthLabel }}</p> <!-- новый код chat -->
             <div class="table-responsive"><table class="table table-sm align-middle mb-0">
-                <thead><tr><th>Дата</th><th>Смена</th><th>Работа</th><th class="text-end">Объём</th><th>Ед.</th><th class="text-end">Чел.-ч</th><th>Материалы</th></tr></thead>
+                <thead><tr><th>Дата</th><th>Смена</th><th>Работа</th><th class="text-end">Объём</th><th>Ед.</th><th class="text-end">Чел.-ч</th><th>Материалы</th><th>Действия</th></tr></thead>
                 <!-- новый код chat: ссылка открывает исходную книгу на дате выбранной работы -->
-                <tbody><tr v-for="row in selectedGroup.rows" :key="row.task.ID"><td class="text-nowrap">{{ dateLabel(row.date) }}</td><td>{{ row.shift.number }}</td><td><RouterLink :to="{name:'agreement-work-orders',params:{id:route.params.id},query:{book:route.params.bookId,date:row.date}}" title="Открыть день в книге наряд-заданий">{{ row.task.name }}</RouterLink></td><td class="text-end" :class="{'text-danger':!row.task.quantity_hundredths}">{{ row.task.quantity_hundredths?quantityDisplay(row.task.quantity_hundredths,2):'—' }}</td><td>{{ unitName(row.task.unit_id) }}</td><td class="text-end" :class="{'text-danger':hoursMissing(row.task)}">{{ hoursMissing(row.task)?'—':quantityDisplay(row.task.hours_hundredths,2) }}</td><td><div v-for="usage in row.task.materials" :key="usage.ID">{{ materialName(usage.material_id) }} — {{ quantityDisplay(usage.quantity_thousandths) }} {{ materialUnit(usage.material_id) }}</div><span v-if="!row.task.materials?.length">—</span></td></tr></tbody>
-                <tfoot><tr><th colspan="3">Итого</th><th class="text-end" :class="{'text-danger':selectedGroup.missingQuantity}">{{ quantityDisplay(selectedGroup.quantity,2) }}</th><td>{{ unitName(selectedGroup.unitID) }}</td><th class="text-end" :class="{'text-danger':selectedGroup.missingHours}">{{ quantityDisplay(selectedGroup.hours,2) }}</th><td></td></tr></tfoot>
+                <!-- новый код chat: SVG-действия с подсказками и доступными названиями -->
+                <!-- новый код chat: действия расположены в одну строку -->
+                <tbody><tr v-for="row in selectedGroup.rows" :key="row.task.ID"><td class="text-nowrap">{{ dateLabel(row.date) }}</td><td>{{ row.shift.number }}</td><td><RouterLink :to="{name:'agreement-work-orders',params:{id:route.params.id},query:{book:route.params.bookId,date:row.date}}" title="Открыть день в книге наряд-заданий">{{ row.task.name }}</RouterLink></td><td class="text-end" :class="{'text-danger':!row.task.quantity_hundredths}">{{ row.task.quantity_hundredths?quantityDisplay(row.task.quantity_hundredths,2):'—' }}</td><td>{{ unitName(row.task.unit_id) }}</td><td class="text-end" :class="{'text-danger':hoursMissing(row.task)}">{{ hoursMissing(row.task)?'—':quantityDisplay(row.task.hours_hundredths,2) }}</td><td><div v-for="usage in row.task.materials" :key="usage.ID">{{ materialName(usage.material_id) }} — {{ quantityDisplay(usage.quantity_thousandths) }} {{ materialUnit(usage.material_id) }}</div><span v-if="!row.task.materials?.length">—</span></td><td><div class="d-flex align-items-center gap-2 flex-nowrap"><label class="d-flex gap-1 align-items-center text-nowrap m-0" title="Учтён"><input type="checkbox" class="form-check-input m-0" aria-label="Учтён" :checked="row.task.accounted" :disabled="taskBusy||!!editingRow" @change="toggleAccounted(row,$event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></label><button type="button" class="task-action flex-shrink-0" title="Изменить работу" aria-label="Изменить работу" :disabled="taskBusy||!!editingRow" @click="editingRow=row;taskError=''"><i class="bi bi-pencil" aria-hidden="true"></i></button></div></td></tr></tbody>
+                <tfoot><tr><th colspan="3">Итого</th><th class="text-end" :class="{'text-danger':selectedGroup.missingQuantity}">{{ quantityDisplay(selectedGroup.quantity,2) }}</th><td>{{ unitName(selectedGroup.unitID) }}</td><th class="text-end" :class="{'text-danger':selectedGroup.missingHours}">{{ quantityDisplay(selectedGroup.hours,2) }}</th><td colspan="2"></td></tr></tfoot>
             </table></div>
             <p v-if="selectedGroup.missingQuantity||selectedGroup.missingHours" class="text-danger mt-2 mb-0">Незаполненные значения приняты за 0. Итоги с пропусками выделены красным.</p>
+            <WorkOrderTaskEditComponent v-if="editingRow" :key="editingRow.task.ID" :agreement-id="route.params.id" :row="editingRow" :refs="refs" :materials="materials" @busy="taskBusy=$event" @cancel="editingRow=null" @saved="taskSaved(editingRow,$event)" /> <!-- новый код chat -->
         </WorkOrderDialog>
     </div>
 </template>
@@ -66,12 +70,32 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../../../api';
+import WorkOrderTaskEditComponent from './WorkOrderTaskEditComponent.vue'; // новый код chat
 import WorkOrderDialog from './WorkOrderDialog.vue'; // новый код chat
 import { emptyWorkReferences, quantityDisplay, workError } from './workOrderHelpers';
 const route=useRoute();
 const book=ref(null),refs=ref(emptyWorkReferences()),materials=ref([]),loading=ref(false),error=ref('');
 const positionID=ref(0); // новый код chat: выбор только через кнопки позиций
 const selectedGroup=ref(null); // новый код chat
+// --------- новый код chat: адресное сохранение без перезагрузки смены
+const editingRow=ref(null),taskBusy=ref(false),taskError=ref('');
+const closeTaskDialog=()=>{if(taskBusy.value)return;if(editingRow.value&&!confirm('Закрыть окно без сохранения изменений работы?'))return;editingRow.value=null;taskError.value='';selectedGroup.value=null;};
+const taskSaved=(row,data)=>{
+    for(const usage of row.task.materials||[]){const material=materials.value.find(m=>m.ID===usage.material_id);if(material)material.balance+=usage.quantity_thousandths;}
+    for(const usage of data.task.materials||[]){const material=materials.value.find(m=>m.ID===usage.material_id);if(material)material.balance-=usage.quantity_thousandths;}
+    Object.assign(row.task,data.task);row.shift.version=data.version;
+    editingRow.value=null;
+    // После смены позиции окно закрывается, чтобы не показывать данные другого раздела.
+    if(taskSelection(row.task)!==positionID.value){selectedGroup.value=null;return;}
+    selectedGroup.value=groupedRows.value.find(group=>group.rows.some(item=>item.task.ID===data.task.ID))||null;
+};
+const toggleAccounted=async(row,event)=>{
+    const value=event.target.checked;event.target.checked=!!row.task.accounted;
+    if(taskBusy.value)return;taskBusy.value=true;taskError.value='';
+    try{const {data}=await api.patch(`/agreements/${route.params.id}/work-orders/tasks/${row.task.ID}`,{version:row.shift.version,accounted:value});taskSaved(row,data);}
+    catch(e){taskError.value=workError(e);}finally{taskBusy.value=false;}
+};
+// --------- конец нового кода chat
 // --------- новый код chat: выгрузка всей книги независимо от выбранных фильтров
 const exporting=ref(false);
 const exportExcel=async()=>{
@@ -140,8 +164,8 @@ const sumMaterials=source=>{
 const groupedRows=computed(()=>{
     const groups=new Map();
     for(const row of rows.value){
-        const task=row.task,key=JSON.stringify([task.name.trim().replace(/\s+/g,' ').toLocaleLowerCase('ru-RU'),task.unit_id||0]);
-        if(!groups.has(key))groups.set(key,{key,name:task.name,unitID:task.unit_id,rows:[],quantity:0,hours:0,missingQuantity:false,missingHours:false});
+        const task=row.task,key=task.accounted?`accounted:${task.ID}`:JSON.stringify([task.name.trim().replace(/\s+/g,' ').toLocaleLowerCase('ru-RU'),task.unit_id||0]); // новый код chat: учтённые записи никогда не объединяются
+        if(!groups.has(key))groups.set(key,{key,accounted:!!task.accounted,name:task.name,unitID:task.unit_id,rows:[],quantity:0,hours:0,missingQuantity:false,missingHours:false});
         const group=groups.get(key);
         group.rows.push(row);
         group.quantity+=task.quantity_hundredths||0;
@@ -149,10 +173,10 @@ const groupedRows=computed(()=>{
         group.missingQuantity||=!task.quantity_hundredths;
         group.missingHours||=hoursMissing(task);
     }
-    return [...groups.values()].map(group=>({...group,materials:sumMaterials(group.rows)}));
+    return [...groups.values()].map(group=>({...group,materials:sumMaterials(group.rows)})).sort((a,b)=>Number(a.accounted)-Number(b.accounted)); // новый код chat
 });
-const totalHours=computed(()=>groupedRows.value.reduce((sum,group)=>sum+group.hours,0));
-const materialTotals=computed(()=>sumMaterials(rows.value));
+const totalHours=computed(()=>groupedRows.value.filter(group=>!group.accounted).reduce((sum,group)=>sum+group.hours,0)); // новый код chat
+const materialTotals=computed(()=>sumMaterials(rows.value.filter(row=>!row.task.accounted))); // новый код chat: списания склада остаются неизменными
 watch([positionID,book],()=>{selectedGroup.value=null;});
 // --------- конец нового кода chat
 const load=async()=>{
@@ -173,6 +197,11 @@ onBeforeUnmount(()=>version++);
 // --------- конец нового кода chat
 </script>
 <style scoped>
+/* новый код chat: кнопка изменения как в заданиях */
+.task-action{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border:0;border-radius:5px;background:transparent;color:#000;}
+.task-action:hover{background:var(--bs-secondary-bg);color:var(--bs-primary);}
+.task-action:focus-visible{outline:2px solid var(--bs-primary);outline-offset:1px;}
+.task-action:disabled{opacity:.45;cursor:default;}
 .position-page{font-size:13px;color:#000;}
 .position-page .btn,.position-page .form-select{font-size:13px;}
 /* новый код chat: компактная пагинация без изменения остальных кнопок */
@@ -187,5 +216,7 @@ onBeforeUnmount(()=>version++);
 .work-link:hover{text-decoration:underline;color:#0d6efd;}
 .work-link:focus-visible{outline:2px solid #86b7fe;outline-offset:3px;}
 .materials-cell{min-width:180px;font-size:12px;}
+/* новый код chat: учтённые работы показаны отдельно и исключены из общих итогов */
+.accounted-row>td{background:#fce8e8;}
 </style>
 <!-- --------- конец нового кода chat -->

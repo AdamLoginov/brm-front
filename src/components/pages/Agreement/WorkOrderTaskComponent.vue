@@ -1,7 +1,7 @@
 <!-- --------- новый код chat: работа, позиция и материалы только выбранного цеха -->
 <!-- --------- новый код chat: одна работа — строка таблицы, материалы непосредственно под ней -->
 <template>
-    <tr class="work-task-row">
+    <tr class="work-task-row" :class="{'table-danger':task.accounted}"> <!-- новый код chat -->
         <td class="text-center text-secondary">{{ index+1 }}</td>
         <td><textarea ref="nameInput" v-model="task.name" rows="1" required maxlength="500" class="form-control form-control-sm work-task-name-input" :aria-label="`Наименование работы ${index+1}`" placeholder="Наименование работы"></textarea></td>
         <td><select v-model="task.unit_id" class="form-select form-select-sm" :aria-label="`Единица работы ${index+1}`"><option :value="0">—</option><option v-for="unit in refs.units" :key="unit.ID" :value="unit.ID">{{ unit.name }}</option></select></td>
@@ -11,6 +11,7 @@
         <td><select v-model="task.position_id" class="form-select form-select-sm" :aria-label="`Позиция работы ${index+1}`"><option :value="0">—</option><option v-for="p in positions" :key="p.ID" :value="p.ID">{{ p.number }} — {{ p.name }}</option></select><small v-if="workshopId&&!positions.length" class="text-secondary">В цехе нет позиций.</small></td> <!-- новый код chat: позиция выбирается независимо от блока -->
         <td><select v-model="selectedBlockID" class="form-select form-select-sm" :aria-label="`Блок работы ${index+1}`" @change="task.position_id=0"><option :value="0">—</option><option v-for="block in blocks" :key="block.ID" :value="block.ID">{{ block.name }}</option></select></td>
         <td><div class="work-row-actions">
+            <label class="d-flex align-items-center gap-1 small" title="Учтён"><input v-model="task.accounted" type="checkbox" class="form-check-input m-0" aria-label="Учтён"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></label> <!-- новый код chat: крест в круге вместо подписи -->
             <button type="button" class="btn btn-sm text-primary" title="Добавить материал" :aria-label="`Добавить материал к работе ${index+1}`" @click="task.materials.push({material_id:0,quantity:''})"><i class="bi bi-box-seam" aria-hidden="true"></i></button>
             <button type="button" class="btn btn-sm text-secondary" title="Дублировать работу с материалами" :aria-label="`Дублировать работу ${index+1}`" @click="$emit('duplicate')"><i class="bi bi-copy" aria-hidden="true"></i></button>
             <button type="button" class="btn btn-sm text-danger" title="Удалить работу" :aria-label="`Удалить работу ${index+1}`" @click="remove"><i class="bi bi-trash" aria-hidden="true"></i></button>
@@ -67,7 +68,8 @@ const removeMaterial=i=>{if(confirm('Убрать материал из рабо
 .form-control,.form-select { font-size: 13px; min-height: 32px; padding: 4px 7px; }
 .form-select { padding-right: 24px; }
 .work-task-name-input { resize: vertical; overflow: hidden; line-height: 1.45; }
-.work-row-actions { display:flex; align-items:center; gap:0; }
+.work-row-actions { display:flex; flex-wrap:nowrap; align-items:center; gap:0; } /* новый код chat: все действия в одну строку */
+.work-row-actions>label { flex-shrink:0; margin:0 4px 0 0; } /* новый код chat */
 .work-row-actions .btn { padding:4px 5px; }
 .work-material-row td { background:#f8fafc; padding:5px 4px 7px; border-bottom:1px solid #e5e9ef; }
 .work-materials { display:flex; gap:10px; align-items:flex-start; padding-right:8px; }

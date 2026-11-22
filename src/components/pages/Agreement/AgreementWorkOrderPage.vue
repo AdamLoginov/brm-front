@@ -5,6 +5,11 @@
     <div class="border rounded-3 p-3 bg-white"><label class="form-label">Месячная книга</label><select v-model="bookID" :disabled="loading||!!editor" class="form-select form-select-sm" style="max-width:300px" @change="loadBook"><option :value="0" disabled>Выберите месяц</option><option v-for="b in books" :key="b.ID" :value="b.ID">{{ bookLabel(b) }}</option></select><div v-if="!books.length&&!loading" class="text-secondary mt-2">Создайте книгу для нужного месяца.</div></div>
     <div v-if="loading" class="p-3 text-secondary">Загрузка…</div>
     <template v-else-if="book">
+        <!-- новый код chat: поиск по работам всей месячной книги -->
+        <div class="mt-3"><label for="work-book-search" class="form-label">Поиск работы по всей книге</label><input id="work-book-search" v-model="workSearch" :disabled="!!editor" type="search" class="form-control form-control-sm" placeholder="Наименование работы"></div>
+        <div v-if="workSearch.trim()" class="border rounded-3 mt-2 overflow-auto" style="max-height:320px">
+            <table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Цех / смена</th><th>Работа</th></tr></thead><tbody><tr v-for="result in searchResults" :key="result.task.ID" :class="{'accounted-row':result.task.accounted}"><td>{{ result.date.split('-').reverse().join('.') }}</td><td>{{ shopName(result.shift.workshop_id) }} / {{ result.shift.number }}</td><td><button type="button" class="btn btn-link btn-sm p-0 text-start" :disabled="!!editor" @click="dayID=result.shift.day_id;workSearch=''">{{ result.task.name }}</button></td></tr><tr v-if="!searchResults.length"><td colspan="3">Совпадений нет.</td></tr></tbody></table>
+        </div>
         <!-- --------- новый код chat: шаблон, выгрузка и импорт выбранного месяца -->
         <div class="d-flex flex-wrap gap-2 mt-3">
             <!-- новый код chat: просмотр работ по позициям выбранной книги -->
@@ -54,9 +59,9 @@
                             <colgroup><col style="width:30px"><col><col style="width:50px"><col style="width:85px"><col style="width:75px"><col style="width:160px"><col style="width:120px"></colgroup>
                             <thead><tr><th>№</th><th>Наименование работы</th><th class="text-center">Ед.</th><th>Объём</th><th class="text-center">Чел.-ч</th><th class="text-center">Позиция</th><th class="text-center">Блок</th></tr></thead> <!-- новый код chat: отдельная узкая колонка единиц -->
                             <tbody><template v-for="(task,index) in shift.tasks" :key="task.ID">
-                                <tr class="saved-work-row">
+                                <tr class="saved-work-row" :class="{'accounted-row':task.accounted}"> <!-- новый код chat -->
                                     <td class="text-secondary text-center">{{ index+1 }}</td>
-                                    <td class="saved-work-name">{{ task.name }}</td>
+                                    <td class="saved-work-name">{{ task.name }} <span v-if="task.accounted" class="small ms-1">· Учтён</span></td> <!-- новый код chat -->
                                     <td class="text-center">{{ task.unit_id ? unitName(task.unit_id) : '—' }}</td> <!-- новый код chat: единица отдельно от объёма -->
                                     <td>{{ task.quantity_hundredths ? quantityDisplay(task.quantity_hundredths,2) : '—' }}</td>
                                     <td class="text-center">{{ task.hours_not_specified ? '—' : quantityDisplay(task.hours_hundredths,2) }}</td> <!-- новый код chat -->
@@ -86,6 +91,16 @@ const importSaved=async warning=>{importOpen.value=false;notice.value=warning||'
 import {ref,computed,watch,onBeforeUnmount} from 'vue';import {useRoute,onBeforeRouteLeave,onBeforeRouteUpdate} from 'vue-router';import api from '../../../api';import WorkOrderBookModal from './WorkOrderBookModal.vue';import WorkOrderReferenceModal from './WorkOrderReferenceModal.vue';import WorkOrderShiftComponent from './WorkOrderShiftComponent.vue';import {emptyWorkReferences,quantityDisplay,workError} from './workOrderHelpers';
 const route=useRoute(),agreementID=computed(()=>String(route.params.id));const refs=ref(emptyWorkReferences()),books=ref([]),materials=ref([]),book=ref(null),bookID=ref(0),dayID=ref(0),editor=ref(null),error=ref(''),notice=ref(''),loading=ref(false),deleting=ref(false),createOpen=ref(false),referencesOpen=ref(false);let version=0;
 const bookLabel=b=>new Date(b.year,b.month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+// --------- новый код chat: поиск не ограничивается открытым днём
+const workSearch=ref('');
+const searchResults=computed(()=>{
+    const query=workSearch.value.trim().toLocaleLowerCase('ru-RU');
+    if(!query)return [];
+    const dates=new Map((book.value?.days||[]).map(day=>[day.ID,day.date]));
+    return (book.value?.shifts||[]).flatMap(shift=>(shift.tasks||[]).filter(task=>task.name.toLocaleLowerCase('ru-RU').includes(query)).map(task=>({task,shift,date:dates.get(shift.day_id)||''})));
+});
+watch(bookID,()=>{workSearch.value='';});
+// --------- конец нового кода chat
 const selectedDay=computed(()=>book.value?.days.find(d=>d.ID===dayID.value));const dayShifts=computed(()=>book.value?.shifts.filter(s=>s.day_id===dayID.value)||[]);
 const hasEntries=id=>book.value?.shifts.some(s=>s.day_id===id);const shopName=id=>refs.value.workshops.find(s=>s.ID===id)?.name||'Цех';const sumHours=(rows,key)=>rows.reduce((s,r)=>s+r[key],0);
 // --------- новый код chat: названия справочников для подробного просмотра смены
@@ -113,6 +128,8 @@ const canLeave=()=>!editor.value||confirm('Покинуть книгу без с
 watch(()=>route.fullPath,()=>{importOpen.value=false;editor.value=null;book.value=null;dayID.value=0;bookID.value=0;createOpen.value=false;referencesOpen.value=false;notice.value='';load();},{immediate:true});onBeforeUnmount(()=>version++); // новый код chat: закрываем импорт при смене договора
 </script>
 <style scoped>
+/* новый код chat: отметка учтённых работ в книге и поиске */
+.accounted-row>td{background:#fce8e8;}
 .work-order-page {font-size:13px;} :deep(.btn),:deep(.form-control),:deep(.form-select){font-size:13px;} :deep(label){font-weight:500;}
 /* --------- новый код chat: подробная карточка смены, без скрытых данных */
 .shift-summary { border: 1px solid #dfe5ed; border-radius: 10px; background: #fff; color: #212529; }
