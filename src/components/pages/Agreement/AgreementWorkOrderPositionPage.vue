@@ -18,12 +18,13 @@
                         <button v-for="position in group.positions" :key="position.ID" type="button" class="btn btn-sm" :class="positionID===position.ID?'btn-primary':usedPositions.has(position.ID)?'btn-outline-success':'btn-outline-secondary'" :aria-pressed="positionID===position.ID" :title="position.name" @click="positionID=position.ID">{{ position.number }} <span v-if="usedPositions.has(position.ID)" aria-label="есть работы">•</span></button>
                     </div>
                 </div>
-                <span v-if="!positions.length" class="text-secondary">Позиции пока не добавлены.</span>
+                <!-- новый код chat: самостоятельная группа для работ без блока и позиции -->
+                <button type="button" class="btn btn-sm" :class="positionID==='unassigned'?'btn-primary':usedPositions.has('unassigned')?'btn-outline-success':'btn-outline-secondary'" :aria-pressed="positionID==='unassigned'" @click="positionID='unassigned'">Без блока <span v-if="usedPositions.has('unassigned')" aria-label="есть работы">•</span></button>
             </nav>
             <p v-if="!positionID" class="border rounded-3 bg-white p-3">Выберите позицию для просмотра выполненных работ за {{ monthLabel }}.</p>
             <template v-else>
                 <div class="d-flex flex-wrap gap-3 border rounded-3 bg-white p-3 mb-3">
-                    <strong>Позиция {{ selectedPosition?.number }} · {{ selectedPosition?.name }}</strong>
+                    <strong>{{ selectionTitle }}</strong> <!-- новый код chat -->
                     <span class="ms-auto">Работ: <strong>{{ groupedRows.length }}</strong> · Записей: {{ rows.length }}</span>
                     <span>Всего человеко-часов: <strong :class="{'text-danger':groupedRows.some(group=>group.missingHours)}">{{ quantityDisplay(totalHours,2) }}</strong></span>
                 </div>
@@ -49,7 +50,7 @@
         <!-- новый код chat: расшифровка суммы с исходными датами и сменами -->
         <WorkOrderDialog v-if="selectedGroup" title="Исходные записи работы" @close="selectedGroup=null">
             <h3 class="fs-6">{{ selectedGroup.name }}</h3>
-            <p class="text-secondary">Записей: {{ selectedGroup.rows.length }} · Позиция {{ selectedPosition?.number }} · {{ monthLabel }}</p>
+            <p class="text-secondary">Записей: {{ selectedGroup.rows.length }} · {{ selectionTitle }} · {{ monthLabel }}</p> <!-- новый код chat -->
             <div class="table-responsive"><table class="table table-sm align-middle mb-0">
                 <thead><tr><th>Дата</th><th>Смена</th><th>Работа</th><th class="text-end">Объём</th><th>Ед.</th><th class="text-end">Чел.-ч</th><th>Материалы</th></tr></thead>
                 <!-- новый код chat: ссылка открывает исходную книгу на дате выбранной работы -->
@@ -91,13 +92,25 @@ const monthLabel=computed(()=>book.value?new Date(book.value.year,book.value.mon
 // --------- новый код chat: естественная сортировка блоков и номеров позиций
 const positionGroups=computed(()=>refs.value.blocks.map(block=>({
     id:block.ID,name:block.name,shop:refs.value.workshops.find(shop=>shop.ID===block.workshop_id)?.name||'Цех',
-    positions:refs.value.positions.filter(position=>position.block_id===block.ID).slice().sort((a,b)=>a.number.localeCompare(b.number,'ru',{numeric:true}))
-})).filter(group=>group.positions.length).sort((a,b)=>a.name.localeCompare(b.name,'ru',{numeric:true})||a.shop.localeCompare(b.shop,'ru',{numeric:true})||a.id-b.id));
-const positions=computed(()=>positionGroups.value.flatMap(group=>group.positions));
+    // новый код chat: «Нет» принадлежит конкретному блоку, включая блоки без позиций
+    positions:[...refs.value.positions.filter(position=>position.block_id===block.ID).slice().sort((a,b)=>a.number.localeCompare(b.number,'ru',{numeric:true})),{ID:`block:${block.ID}`,number:'Нет',name:`Без позиции · ${block.name}`,block_id:block.ID}]
+})).sort((a,b)=>a.name.localeCompare(b.name,'ru',{numeric:true})||a.shop.localeCompare(b.shop,'ru',{numeric:true})||a.id-b.id));
+const positions=computed(()=>[...positionGroups.value.flatMap(group=>group.positions),{ID:'unassigned',number:'',name:'Без блока и позиции'}]); // новый код chat
 // --------- конец нового кода chat
-const selectedPosition=computed(()=>refs.value.positions.find(position=>position.ID===positionID.value));
+const selectedPosition=computed(()=>positions.value.find(position=>position.ID===positionID.value));
+// --------- новый код chat: классификация без смешивания блоков и обычных позиций
+const taskSelection=task=>task.position_id|| (task.block_id?`block:${task.block_id}`:'unassigned');
+const selectionTitle=computed(()=>{
+    if(positionID.value==='unassigned')return 'Без блока и позиции';
+    if(String(positionID.value).startsWith('block:')){
+        const group=positionGroups.value.find(group=>`block:${group.id}`===positionID.value);
+        return `Без позиции · ${group?.name||'Блок'} · ${group?.shop||'Цех'}`;
+    }
+    return `Позиция ${selectedPosition.value?.number||''} · ${selectedPosition.value?.name||''}`;
+});
+// --------- конец нового кода chat
 // новый код chat: отмечаем позиции с работами и открываем первую доступную позицию
-const usedPositions=computed(()=>new Set((book.value?.shifts||[]).flatMap(shift=>(shift.tasks||[]).map(task=>task.position_id))));
+const usedPositions=computed(()=>new Set((book.value?.shifts||[]).flatMap(shift=>(shift.tasks||[]).map(taskSelection)))); // новый код chat
 // --------- новый код chat: последняя позиция сохраняется отдельно для договора и книги
 const positionStorageKey=()=>`work-order-position:${route.params.id}:${route.params.bookId}`;
 watch([positions,positionID],()=>{
@@ -115,7 +128,7 @@ const materialUnit=id=>unitName(materials.value.find(material=>material.ID===id)
 const dateLabel=date=>date?date.split('-').reverse().join('.'):'—';
 const rows=computed(()=>{
     const days=new Map((book.value?.days||[]).map(day=>[day.ID,day.date]));
-    return (book.value?.shifts||[]).flatMap(shift=>(shift.tasks||[]).filter(task=>positionID.value&&task.position_id===positionID.value).map(task=>({task,shift,date:days.get(shift.day_id)||''}))).sort((a,b)=>a.date.localeCompare(b.date)||a.shift.number-b.shift.number||a.task.ID-b.task.ID);
+    return (book.value?.shifts||[]).flatMap(shift=>(shift.tasks||[]).filter(task=>positionID.value&&taskSelection(task)===positionID.value).map(task=>({task,shift,date:days.get(shift.day_id)||''}))).sort((a,b)=>a.date.localeCompare(b.date)||a.shift.number-b.shift.number||a.task.ID-b.task.ID); // новый код chat
 });
 // --------- новый код chat: суммы в целых сотых/тысячных, без сложения разных единиц
 const hoursMissing=task=>task.hours_not_specified||task.hours_hundredths==null;
@@ -151,7 +164,7 @@ const load=async()=>{
         book.value=detail.data;refs.value=references.data;materials.value=stock.data;
         // новый код chat: восстанавливаем позицию после загрузки актуальных справочников
         let savedPosition=0;
-        try{savedPosition=Number(localStorage.getItem(positionStorageKey()));}catch{/* Используем первую позицию. */}
+        try{const saved=localStorage.getItem(positionStorageKey());savedPosition=positions.value.find(position=>String(position.ID)===saved)?.ID||0;}catch{/* Используем первую позицию. */} // новый код chat: сохраняем также «Нет» и «Без блока»
         positionID.value=positions.value.some(position=>position.ID===savedPosition)?savedPosition:positions.value[0]?.ID||0;
     }catch(e){if(current===version)error.value=workError(e);}finally{if(current===version)loading.value=false;}
 };
