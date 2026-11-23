@@ -59,7 +59,7 @@
                         <input id="create-daily-allowance" v-model="formDataCreateTimeSheetMonth.daily_allowance" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="0,00">
                     </div>
                     <!-- --------- конец нового кода chat -->
-                    <MultiSelect v-model="formDataCreateTimeSheetMonth.employee_card_id" :options="employees" :label-key="employee =>`${employee.surname} ${employee.name.at(0)}.${employee.middle_name.at(0)}.`" placeholder="Выбрать сотрудников"/>
+                    <MultiSelect v-model="formDataCreateTimeSheetMonth.employee_card_id" :options="eligibleEmployees" :label-key="employee => [employee.surname, employee.name?.[0] ? employee.name[0] + '.' : '', employee.middle_name?.[0] ? employee.middle_name[0] + '.' : ''].filter(Boolean).join(' ')" placeholder="Выбрать сотрудников"/> <!-- новый код chat: список с учётом месяца увольнения -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, computed, watch } from 'vue'; // новый код chat: фильтр сотрудников по месяцу
 import api from '../../../api';
 import MultiSelect from '../../MultiSelect.vue';
 import { useRoute } from 'vue-router';
@@ -81,6 +81,12 @@ const route = useRoute();
 const year = ref(new Date().getFullYear());
 
 const employees = ref([])
+// --------- новый код chat: месяц увольнения включительно доступен
+const eligibleEmployees = computed(() => {
+    const first = `${formDataCreateTimeSheetMonth.year}-${String(formDataCreateTimeSheetMonth.month).padStart(2, '0')}-01`;
+    return employees.value.filter(employee => !employee.status || (/^\d{4}-\d{2}-\d{2}$/.test(employee.dismissal_date || '') && employee.dismissal_date >= first));
+});
+// --------- конец нового кода chat
 // --------- новый код chat: проверка настроек перед отправкой
 const settingsError = ref('');
 const settingsSaving = ref(false);
@@ -112,9 +118,15 @@ const formDataCreateTimeSheetMonth = reactive({
     daily_allowance: '0', // новый код chat: суточные
 })
 
+// --------- новый код chat: снимаем недоступный выбор при смене периода
+watch(() => [formDataCreateTimeSheetMonth.year, formDataCreateTimeSheetMonth.month], () => {
+    const excluded = new Set(employees.value.filter(employee => employee.status && !eligibleEmployees.value.some(item => item.ID === employee.ID)).map(employee => employee.ID));
+    formDataCreateTimeSheetMonth.employee_card_id = formDataCreateTimeSheetMonth.employee_card_id.filter(id => !excluded.has(id));
+});
+// --------- конец нового кода chat
 const getEmployeeCardHandler = async() =>{
     try{
-        const res = await api.get(`/agreements/${route.params.id}/employee`)
+        const res = await api.get(`/agreements/${route.params.id}/employee`, {params:{timesheet_candidates:1}}) // новый код chat: включая уволенных
         employees.value = res.data
         console.log("[Employee component]", employees.value)
     }catch(err){
