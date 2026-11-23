@@ -36,7 +36,7 @@
                         <thead class="table-light"><tr><th class="text-center">№</th><th>Наименование работы</th><th class="text-center">Кол-во записей</th><th class="text-end">Объём</th><th>Ед.</th><th class="text-end">Чел.-ч</th><th>Материалы</th></tr></thead>
                         <tbody><tr v-for="(group,index) in groupedRows" :key="group.key" :class="{'accounted-row':group.accounted}"> <!-- новый код chat -->
                             <td class="text-center">{{ index+1 }}</td><td class="work-name"><button type="button" class="work-link" @click="selectedGroup=group">{{ group.name }}</button></td><td class="text-center">{{ group.rows.length }}</td>
-                            <td class="text-end" :class="{'text-danger':group.missingQuantity}" :title="group.missingQuantity?'Есть незаполненные объёмы, приняты за 0':''">{{ quantityDisplay(group.quantity,2) }}</td><td>{{ unitName(group.unitID) }}</td>
+                            <td class="text-end" :class="{'text-danger':group.missingQuantity}" :title="group.missingQuantity?'Есть незаполненные объёмы, приняты за 0':''">{{ quantityDisplay(group.quantity,3) }}</td><td>{{ unitName(group.unitID) }}</td>
                             <td class="text-end" :class="{'text-danger':group.missingHours}" :title="group.missingHours?'Есть незаполненные часы, приняты за 0':''">{{ quantityDisplay(group.hours,2) }}</td>
                             <td class="materials-cell"><div v-for="item in group.materials" :key="item.id">{{ materialName(item.id) }} — <strong>{{ quantityDisplay(item.quantity) }} {{ materialUnit(item.id) }}</strong></div><span v-if="!group.materials.length">—</span></td>
                         </tr><tr v-if="!rows.length"><td colspan="7" class="text-center text-secondary py-4">В этой книге нет работ по выбранной позиции.</td></tr></tbody>
@@ -59,7 +59,7 @@
                 <!-- новый код chat: ссылка открывает исходную книгу на дате выбранной работы -->
                 <!-- новый код chat: SVG-действия с подсказками и доступными названиями -->
                 <!-- новый код chat: действия расположены в одну строку -->
-                <tbody><tr v-for="row in selectedGroup.rows" :key="row.task.ID"><td class="text-nowrap">{{ dateLabel(row.date) }}</td><td>{{ row.shift.number }}</td><td><RouterLink :to="{name:'agreement-work-orders',params:{id:route.params.id},query:{book:route.params.bookId,date:row.date}}" title="Открыть день в книге наряд-заданий">{{ row.task.name }}</RouterLink></td><td class="text-end" :class="{'text-danger':!row.task.quantity_hundredths}">{{ row.task.quantity_hundredths?quantityDisplay(row.task.quantity_hundredths,2):'—' }}</td><td>{{ unitName(row.task.unit_id) }}</td><td class="text-end" :class="{'text-danger':hoursMissing(row.task)}">{{ hoursMissing(row.task)?'—':quantityDisplay(row.task.hours_hundredths,2) }}</td><td><div v-for="usage in row.task.materials" :key="usage.ID">{{ materialName(usage.material_id) }} — {{ quantityDisplay(usage.quantity_thousandths) }} {{ materialUnit(usage.material_id) }}</div><span v-if="!row.task.materials?.length">—</span></td><td><div class="d-flex align-items-center gap-2 flex-nowrap"><label class="d-flex gap-1 align-items-center text-nowrap m-0" title="Учтён"><input type="checkbox" class="form-check-input m-0" aria-label="Учтён" :checked="row.task.accounted" :disabled="taskBusy||!!editingRow" @change="toggleAccounted(row,$event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></label><button type="button" class="task-action flex-shrink-0" title="Изменить работу" aria-label="Изменить работу" :disabled="taskBusy||!!editingRow" @click="editingRow=row;taskError=''"><i class="bi bi-pencil" aria-hidden="true"></i></button></div></td></tr></tbody>
+                <tbody><tr v-for="row in selectedGroup.rows" :key="row.task.ID"><td class="text-nowrap">{{ dateLabel(row.date) }}</td><td>{{ row.shift.number }}</td><td><RouterLink :to="{name:'agreement-work-orders',params:{id:route.params.id},query:{book:route.params.bookId,date:row.date}}" title="Открыть день в книге наряд-заданий">{{ row.task.name }}</RouterLink></td><td class="text-end" :class="{'text-danger':!workQuantity(row.task)}">{{ workQuantity(row.task)?quantityDisplay(workQuantity(row.task),3):'—' }}</td><td>{{ unitName(row.task.unit_id) }}</td><td class="text-end" :class="{'text-danger':hoursMissing(row.task)}">{{ hoursMissing(row.task)?'—':quantityDisplay(row.task.hours_hundredths,2) }}</td><td><div v-for="usage in row.task.materials" :key="usage.ID">{{ materialName(usage.material_id) }} — {{ quantityDisplay(usage.quantity_thousandths) }} {{ materialUnit(usage.material_id) }}</div><span v-if="!row.task.materials?.length">—</span></td><td><div class="d-flex align-items-center gap-2 flex-nowrap"><label class="d-flex gap-1 align-items-center text-nowrap m-0" title="Учтён"><input type="checkbox" class="form-check-input m-0" aria-label="Учтён" :checked="row.task.accounted" :disabled="taskBusy||!!editingRow" @change="toggleAccounted(row,$event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></label><button type="button" class="task-action flex-shrink-0" title="Изменить работу" aria-label="Изменить работу" :disabled="taskBusy||!!editingRow" @click="editingRow=row;taskError=''"><i class="bi bi-pencil" aria-hidden="true"></i></button></div></td></tr></tbody>
                 <tfoot><tr><th colspan="3">Итого</th><th class="text-end" :class="{'text-danger':selectedGroup.missingQuantity}">{{ quantityDisplay(selectedGroup.quantity,2) }}</th><td>{{ unitName(selectedGroup.unitID) }}</td><th class="text-end" :class="{'text-danger':selectedGroup.missingHours}">{{ quantityDisplay(selectedGroup.hours,2) }}</th><td colspan="2"></td></tr></tfoot>
             </table></div>
             <p v-if="selectedGroup.missingQuantity||selectedGroup.missingHours" class="text-danger mt-2 mb-0">Незаполненные значения приняты за 0. Итоги с пропусками выделены красным.</p>
@@ -74,7 +74,7 @@ import { useRoute } from 'vue-router';
 import api from '../../../api';
 import WorkOrderTaskEditComponent from './WorkOrderTaskEditComponent.vue'; // новый код chat
 import WorkOrderDialog from './WorkOrderDialog.vue'; // новый код chat
-import { emptyWorkReferences, quantityDisplay, workError } from './workOrderHelpers';
+import { emptyWorkReferences, quantityDisplay, workError ,workQuantity} from './workOrderHelpers'; // новый код chat: объёмы до тысячных
 const route=useRoute();
 const book=ref(null),refs=ref(emptyWorkReferences()),materials=ref([]),loading=ref(false),error=ref('');
 const positionID=ref(0); // новый код chat: выбор только через кнопки позиций
@@ -190,9 +190,9 @@ const groupedRows=computed(()=>{
         if(!groups.has(key))groups.set(key,{key,accounted:!!task.accounted,name:task.name,unitID:task.unit_id,rows:[],quantity:0,hours:0,missingQuantity:false,missingHours:false});
         const group=groups.get(key);
         group.rows.push(row);
-        group.quantity+=task.quantity_hundredths||0;
+        group.quantity+=workQuantity(task)||0;
         group.hours+=hoursMissing(task)?0:task.hours_hundredths;
-        group.missingQuantity||=!task.quantity_hundredths;
+        group.missingQuantity||=!workQuantity(task);
         group.missingHours||=hoursMissing(task);
     }
     return [...groups.values()].map(group=>({...group,materials:sumMaterials(group.rows)})).sort((a,b)=>Number(a.accounted)-Number(b.accounted)); // новый код chat

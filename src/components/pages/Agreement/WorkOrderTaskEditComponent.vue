@@ -7,7 +7,7 @@
             <div class="row g-2">
                 <div class="col-12"><label class="form-label">Наименование работы</label><textarea v-model="form.name" required maxlength="500" class="form-control form-control-sm" rows="2"></textarea></div>
                 <div class="col-sm-4"><label class="form-label">Единица</label><select v-model="form.unit_id" class="form-select form-select-sm"><option :value="0">—</option><option v-for="unit in refs.units" :key="unit.ID" :value="unit.ID">{{ unit.name }}</option></select></div>
-                <div class="col-sm-4"><label class="form-label">Объём</label><QuantityInputComponent v-model="form.quantity" class="form-control form-control-sm" placeholder="—" /></div>
+                <div class="col-sm-4"><label class="form-label">Объём</label><QuantityInputComponent v-model="form.quantity" :precision="form.quantity_precision" class="form-control form-control-sm" placeholder="—" /></div>
                 <div class="col-sm-4"><label class="form-label">Чел.-ч</label><QuantityInputComponent v-model="form.hours" class="form-control form-control-sm" placeholder="—" /></div>
                 <div class="col-sm-6"><label class="form-label">Позиция</label><select v-model="form.position_id" class="form-select form-select-sm" @change="selectPosition"><option :value="0">—</option><option v-for="position in positions" :key="position.ID" :value="position.ID">{{ position.number }} · {{ position.name }}</option></select></div>
                 <div class="col-sm-6"><label class="form-label">Блок</label><select v-model="form.block_id" class="form-select form-select-sm" @change="form.position_id=0"><option :value="0">—</option><option v-for="block in blocks" :key="block.ID" :value="block.ID">{{ block.name }}</option></select></div>
@@ -28,12 +28,12 @@
 import {reactive,ref,computed} from 'vue';
 import api from '../../../api';
 import QuantityInputComponent from '../../QuantityInputComponent.vue';
-import {quantityText,quantityDisplay,workError} from './workOrderHelpers';
+import {quantityText,quantityDisplay,workError,workQuantity} from './workOrderHelpers'; // новый код chat: объёмы до тысячных
 const props=defineProps({agreementId:[String,Number],row:Object,refs:Object,materials:Array});
 const emit=defineEmits(['saved','cancel','busy']);
 const busy=ref(false),error=ref('');
 const task=props.row.task;
-const form=reactive({name:task.name,accounted:!!task.accounted,unit_id:task.unit_id,quantity:task.quantity_hundredths?quantityText(task.quantity_hundredths,2):'',hours:task.hours_not_specified?'':quantityText(task.hours_hundredths,2),block_id:task.block_id||props.refs.positions.find(p=>p.ID===task.position_id)?.block_id||0,position_id:task.position_id,materials:(task.materials||[]).map(m=>({material_id:m.material_id,quantity:quantityText(m.quantity_thousandths)}))});
+const form=reactive({name:task.name,accounted:!!task.accounted,unit_id:task.unit_id,quantity_precision:workQuantity(task)%10 ? 3 : 2,quantity:workQuantity(task)?quantityText(workQuantity(task),3):'',hours:task.hours_not_specified?'':quantityText(task.hours_hundredths,2),block_id:task.block_id||props.refs.positions.find(p=>p.ID===task.position_id)?.block_id||0,position_id:task.position_id,materials:(task.materials||[]).map(m=>({material_id:m.material_id,quantity:quantityText(m.quantity_thousandths)}))});
 const version=props.row.shift.version;
 const blocks=computed(()=>props.refs.blocks.filter(b=>b.workshop_id===props.row.shift.workshop_id));
 const positions=computed(()=>props.refs.positions.filter(p=>blocks.value.some(b=>b.ID===p.block_id)));

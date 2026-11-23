@@ -63,7 +63,7 @@
                                     <td class="text-secondary text-center">{{ index+1 }}</td>
                                     <td class="saved-work-name">{{ task.name }} <span v-if="task.accounted" class="small ms-1">· Учтён</span></td> <!-- новый код chat -->
                                     <td class="text-center">{{ task.unit_id ? unitName(task.unit_id) : '—' }}</td> <!-- новый код chat: единица отдельно от объёма -->
-                                    <td>{{ task.quantity_hundredths ? quantityDisplay(task.quantity_hundredths,2) : '—' }}</td>
+                                    <td>{{ workQuantity(task) ? quantityDisplay(workQuantity(task),3) : '—' }}</td>
                                     <td class="text-center">{{ task.hours_not_specified ? '—' : quantityDisplay(task.hours_hundredths,2) }}</td> <!-- новый код chat -->
                                     <td class="text-center">{{ taskPositionName(task.position_id) }}</td><td class="text-center">{{ taskBlockName(task) }}</td> <!-- новый код chat: значения позиции и блока по центру -->
                                 </tr>
@@ -88,7 +88,7 @@ import WorkOrderImportModal from './WorkOrderImportModal.vue';
 const importOpen=ref(false); // новый код chat: только загрузка журнала
 const importSaved=async warning=>{importOpen.value=false;notice.value=warning||'Данные из Excel сохранены.';await loadBook();};
 // --------- конец нового кода chat
-import {ref,computed,watch,onBeforeUnmount} from 'vue';import {useRoute,onBeforeRouteLeave,onBeforeRouteUpdate} from 'vue-router';import api from '../../../api';import WorkOrderBookModal from './WorkOrderBookModal.vue';import WorkOrderReferenceModal from './WorkOrderReferenceModal.vue';import WorkOrderShiftComponent from './WorkOrderShiftComponent.vue';import {emptyWorkReferences,quantityDisplay,workError} from './workOrderHelpers';
+import {ref,computed,watch,onBeforeUnmount} from 'vue';import {useRoute,onBeforeRouteLeave,onBeforeRouteUpdate} from 'vue-router';import api from '../../../api';import WorkOrderBookModal from './WorkOrderBookModal.vue';import WorkOrderReferenceModal from './WorkOrderReferenceModal.vue';import WorkOrderShiftComponent from './WorkOrderShiftComponent.vue';import {emptyWorkReferences,quantityDisplay,workError,workQuantity} from './workOrderHelpers'; // новый код chat: объёмы до тысячных
 const route=useRoute(),agreementID=computed(()=>String(route.params.id));const refs=ref(emptyWorkReferences()),books=ref([]),materials=ref([]),book=ref(null),bookID=ref(0),dayID=ref(0),editor=ref(null),error=ref(''),notice=ref(''),loading=ref(false),deleting=ref(false),createOpen=ref(false),referencesOpen=ref(false);let version=0;
 const bookLabel=b=>new Date(b.year,b.month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
 // --------- новый код chat: поиск не ограничивается открытым днём

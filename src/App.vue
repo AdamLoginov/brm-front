@@ -25,6 +25,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router';
 import NotificationToasts from './components/NotificationToasts.vue';
 import Sidebar from './components/Sidebar.vue';
+import { startSessionActivity, stopSessionActivity, renewSessionOnActivity } from './utils/sessionActivity'; // новый код chat
 
 const route = useRoute();
 const showSidebar = computed(() => route.name !== 'login');
@@ -54,6 +55,7 @@ const handleSidebarKeydown = event => {
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
 };
 watch(() => route.fullPath, closeMobile);
+watch(() => route.fullPath, () => { void renewSessionOnActivity(); }); // новый код chat: посещение страницы, включая вход
 watch(mobileOpen, async open => {
   if (open) {
     previousOverflow = document.body.style.overflow;
@@ -67,7 +69,9 @@ watch(mobileOpen, async open => {
   }
 });
 onMounted(() => mobileMedia.addEventListener('change', mediaChanged));
+onMounted(startSessionActivity); // новый код chat: активность на любой странице
 onBeforeUnmount(() => {
+  stopSessionActivity(); // новый код chat
   mobileMedia.removeEventListener('change', mediaChanged);
   if (previousOverflow !== null) document.body.style.overflow = previousOverflow;
 });

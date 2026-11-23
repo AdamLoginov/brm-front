@@ -1,6 +1,7 @@
 // --------- новый код chat: отображение точных величин и ответы API
 export const workError = error => typeof error.response?.data === 'string' ? error.response.data.trim() : 'Не удалось сохранить или загрузить данные';
 export const emptyWorkReferences = () => ({ units: [], workshops: [], blocks: [], positions: [], employees: [] });
+export const workQuantity = task => task.quantity_thousandths ?? (task.quantity_hundredths || 0) * 10; // новый код chat: точные объёмы и старые записи
 export const quantityText = (value, digits = 3) => {
     const number = Number(value || 0);
     return (number / (10 ** digits)).toFixed(digits).replace(/\.?0+$/, '') || '0';
