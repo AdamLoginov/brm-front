@@ -195,7 +195,7 @@ const groupedRows=computed(()=>{
         group.missingQuantity||=!workQuantity(task);
         group.missingHours||=hoursMissing(task);
     }
-    return [...groups.values()].map(group=>({...group,materials:sumMaterials(group.rows)})).sort((a,b)=>Number(a.accounted)-Number(b.accounted)); // новый код chat
+    return [...groups.values()].map(group=>({...group,materials:sumMaterials(group.rows)})).sort((a,b)=>Number(a.accounted)-Number(b.accounted)||a.name.trim().localeCompare(b.name.trim(),'ru',{sensitivity:'base',numeric:true})); // новый код chat: работы по алфавиту, учтённые остаются внизу
 });
 const totalHours=computed(()=>groupedRows.value.filter(group=>!group.accounted).reduce((sum,group)=>sum+group.hours,0)); // новый код chat
 const materialTotals=computed(()=>sumMaterials(rows.value.filter(row=>!row.task.accounted))); // новый код chat: списания склада остаются неизменными

@@ -5,7 +5,7 @@
         <td class="text-center text-secondary">{{ index+1 }}</td>
         <td><textarea ref="nameInput" v-model="task.name" rows="1" required maxlength="500" class="form-control form-control-sm work-task-name-input" :aria-label="`Наименование работы ${index+1}`" placeholder="Наименование работы"></textarea></td>
         <td><select v-model="task.unit_id" class="form-select form-select-sm" :aria-label="`Единица работы ${index+1}`"><option :value="0">—</option><option v-for="unit in refs.units" :key="unit.ID" :value="unit.ID">{{ unit.name }}</option></select></td>
-        <td><QuantityInputComponent v-model="task.quantity" :precision="task.quantity_precision || 2" placeholder="—" class="form-control form-control-sm" :aria-label="`Объём работы ${index+1}`" /></td>
+        <td><QuantityInputComponent v-model="task.quantity" :precision="3" placeholder="—" class="form-control form-control-sm" :aria-label="`Объём работы ${index+1}`" /></td> <!-- новый код chat: до трёх знаков для любого объёма -->
         <!-- новый код chat: часы работы, блок и позицию можно не указывать или очистить -->
         <td class="text-center"><QuantityInputComponent v-model="task.hours" placeholder="—" class="form-control form-control-sm text-center" :aria-label="`Человеко-часы работы ${index+1}`" /></td> <!-- новый код chat: часы по центру -->
         <td><select v-model="task.position_id" class="form-select form-select-sm" :aria-label="`Позиция работы ${index+1}`"><option :value="0">—</option><option v-for="p in positions" :key="p.ID" :value="p.ID">{{ p.number }} — {{ p.name }}</option></select><small v-if="workshopId&&!positions.length" class="text-secondary">В цехе нет позиций.</small></td> <!-- новый код chat: позиция выбирается независимо от блока -->
