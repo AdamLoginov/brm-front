@@ -9,8 +9,6 @@
             </router-link>
             <!-- новый код chat: табель в общей оболочке -->
             <router-link :to="{name:'agreement-timesheet-detail', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Табель</router-link>
-            <router-link :to="{name:'agreement-work-orders', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Книга наряд-заданий</router-link> <!-- новый код chat -->
-            <router-link :to="{name:'agreement-warehouse', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Склад</router-link> <!-- новый код chat -->
             <router-link :to="{name:'agreement-daily-allowance', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Суточные</router-link> <!-- новый код chat: после табеля -->
             <router-link :to="{name:'agreement-salary-accruals', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Начисления</router-link>
             <router-link :to="{name:'agreement-salary-advances', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Авансы</router-link>
@@ -18,6 +16,9 @@
             <router-link :to="{name:'expenses', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Расходы</router-link> <!-- новый код chat -->
             <router-link :to="{name:'agreement-salary-bonuses', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Премии</router-link> <!-- новый код chat -->
             <router-link :to="{name:'agreement-salary-debts', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Долги</router-link> <!-- новый код chat -->
+            <!-- новый код chat: книга наряд-заданий и склад в конце панели -->
+            <router-link :to="{name:'agreement-work-orders', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Книга наряд-заданий</router-link>
+            <router-link :to="{name:'agreement-warehouse', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Склад</router-link>
         </nav>
         <!-- новый код chat: премии подключены к общей навигации -->
         <div class="salary-content">

@@ -76,10 +76,17 @@
                                         <div class="employee-field-hint">При увольнении закрепление за договором снимается</div>
                                     </div>
                                     <div class="form-check form-switch mb-0">
-                                        <input id="update-employee-dismissed" v-model="formData.status" class="form-check-input" type="checkbox" role="switch">
+                                        <!-- новый код chat: дата при ручном включении увольнения -->
+                                        <input id="update-employee-dismissed" v-model="formData.status" class="form-check-input" type="checkbox" role="switch" @change="setDismissalDate">
                                     </div>
                                 </div>
                             </div>
+                            <!-- --------- новый код chat: дата увольнения -->
+                            <div v-if="formData.status" class="employee-work-group">
+                                <label for="update-employee-dismissal-date" class="form-label">Дата увольнения</label>
+                                <input id="update-employee-dismissal-date" v-model="formData.dismissal_date" type="date" class="form-control form-control-sm" required>
+                            </div>
+                            <!-- --------- конец нового кода chat -->
                         </section>
                         <!-- --------- конец нового кода chat -->
                     </div>
@@ -145,13 +152,22 @@ const formData = reactive({
     email: "",
     profession: "",
     agreement_id: 0,
-    status: false
+    status: false,
+    dismissal_date: "", // новый код chat: дата увольнения
 });
 
 // --------- новый код chat: увольнение сбрасывает договор сразу в форме
 watch(() => formData.status, dismissed => {
     if (dismissed) formData.agreement_id = 0;
+    else formData.dismissal_date = ''; // новый код chat: работающему дата не нужна
 }, {flush: 'sync'});
+// --------- новый код chat: локальная сегодняшняя дата только при включении переключателя
+function setDismissalDate() {
+    if (!formData.status || formData.dismissal_date) return;
+    const today = new Date();
+    formData.dismissal_date = [today.getFullYear(), String(today.getMonth() + 1).padStart(2, '0'), String(today.getDate()).padStart(2, '0')].join('-');
+}
+// --------- конец нового кода chat
 watch(formData, () => { successMessage.value = ''; });
 // --------- конец нового кода chat
 const agreements = ref(null);
@@ -197,6 +213,7 @@ const getEmployeeCardDetailHandler = async() =>{
     formData.profession = res.data.profession;
     formData.agreement_id = res.data.status ? 0 : res.data.agreement_id; // новый код chat
     formData.status = res.data.status;
+    formData.dismissal_date = res.data.dismissal_date || ""; // новый код chat: сохраняем исходную дату
 
     loaded.value = true; // новый код chat: сохранение только загруженной карточки
   }catch(err){

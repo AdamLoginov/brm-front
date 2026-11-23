@@ -92,19 +92,21 @@
             </div>
             <div @copy="copySelectedCells" @paste="pasteSelectedCells">
             <div v-for="(employee, index) in timesheetMonth_select.employees" :key="employee.ID" class="list-group-item d-flex p-0">
-                <div class="work-timesheet-name-column px-2 d-flex" :class="{'work-timesheet-itr-cell': employee.is_itr, 'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: ИТР подсвечивает весь блок сотрудника -->
+                <div class="work-timesheet-name-column px-2 d-flex" :class="{'work-timesheet-itr-cell': employee.is_itr, 'work-timesheet-dismissed-name': dismissedInCurrentMonth(employee), 'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: увольнение в месяце табеля выделяет всю ячейку сотрудника -->
                     <div class="col-1 border-end d-flex justify-content-center me-1 fw-semibold">{{ index + 1 }}</div>
                     <div class="col-11"><router-link :to="{ name: 'employee-card-detail', params: { id: employee.ID } }" class="timesheet-employee-link" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ [employee.surname, employee.name?.trim()?.[0] ? employee.name.trim()[0] + '.' : '', employee.middle_name?.trim()?.[0] ? employee.middle_name.trim()[0] + '.' : ''].filter(Boolean).join(' ') }}</router-link></div> <!-- новый код chat: фон перенесён на ячейку -->
                 </div>
                 <div class="work-timesheet-days-column days-grid" :style="{ '--days-count': daysInMonth }">
                     <!-- ????? ??? chat: ?????? ?????? ????? ?????? ???? ?????????? ????? ??? -->
-                    <div v-for="day in daysInMonth" :key="day" class="day-cell timesheet-value-cell d-flex justify-content-center align-items-center fw-semibold" :class="selectionClasses(index, day - 1)" :tabindex="isChange ? -1 : 0" :id="`view-cell-${employee.ID}-${getDate(day, month, year)}`" :aria-label="`${employee.surname || employee.name}, ${day}: ${timesheet[employee.ID][getDate(day, month, year)].status || 'пусто'}`" @mousedown="startCellSelection($event, index, day - 1)" @mouseenter="extendCellSelection($event, index, day - 1)" @focus.self="inputFocus(index, day)" @blur.self="inputBlur(index, day)" @keydown="handleCellKeydown($event, employee.ID, day)" style="font-size: 12px;" :style="{ backgroundColor: timesheet_color[timesheet[employee.ID][getDate(day, month, year)].status ?? ''] ?? '#fff' }">
+                    <div v-for="day in editableDays(employee)" :key="day" class="day-cell timesheet-value-cell d-flex justify-content-center align-items-center fw-semibold" :class="selectionClasses(index, day - 1)" :tabindex="isChange ? -1 : 0" :id="`view-cell-${employee.ID}-${getDate(day, month, year)}`" :aria-label="`${employee.surname || employee.name}, ${day}: ${timesheet[employee.ID][getDate(day, month, year)].status || 'пусто'}`" @mousedown="startCellSelection($event, index, day - 1)" @mouseenter="extendCellSelection($event, index, day - 1)" @focus.self="inputFocus(index, day)" @blur.self="inputBlur(index, day)" @keydown="handleCellKeydown($event, employee.ID, day)" style="font-size: 12px;" :style="{ backgroundColor: timesheet_color[timesheet[employee.ID][getDate(day, month, year)].status ?? ''] ?? '#fff' }">
                         <input v-if="isChange" class="text-center" :value="timesheet[employee.ID][getDate(day, month, year)]['status']" type="text" maxlength="2"
                         @input="validateTimesheetInput(employee.ID, getDate(day, month, year), $event)" @focus="inputFocus(index, day)" @blur="inputBlur(index, day)"
                         :aria-label="`${employee.surname || employee.name}, ${day}`" :id="`cell-${employee.ID}-${getDate(day, month, year)}`">
                         <div v-else class="text-center">{{ timesheet[employee.ID][getDate(day, month, year)]['status'] }}</div>
                         <span v-if="isChange && !savingTimesheet && selectedRange && index === selectedRange.bottom && day - 1 === selectedRange.right" class="timesheet-fill-handle" title="Потяните для повторения выделенного шаблона" aria-label="Протянуть шаблон" @mousedown.stop.prevent="startPatternFill($event)"></span> <!-- новый код chat: маркер протягивания -->
                     </div>
+                    <!-- новый код chat: объединённый блок с даты увольнения -->
+                    <div v-if="editableDays(employee) < daysInMonth" class="day-cell timesheet-dismissed-cell" :style="{ gridColumn: (editableDays(employee) + 1) + ' / -1' }" :title="'Уволен с ' + employee.dismissal_date">Уволен</div>
                 </div>
             </div>
             </div>
@@ -330,12 +332,26 @@ const startPatternFill = event => {
 // --------- конец нового кода chat
 let draggingCells = false, movingCellFocus = false;
 const clearCellSelection = () => { cancelPatternFill(); selectionAnchor.value = null; selectionEnd.value = null; draggingCells = false; clipboardError.value = ''; }; // новый код chat: сброс протягивания
+// --------- новый код chat: дни до даты увольнения
+const editableDays = employee => {
+    if (!employee?.status || !/^\d{4}-\d{2}-\d{2}$/.test(employee.dismissal_date || '')) return daysInMonth.value;
+    const first = getDate(1, month.value, year.value);
+    const last = getDate(daysInMonth.value, month.value, year.value);
+    if (employee.dismissal_date <= first) return 0;
+    if (employee.dismissal_date > last) return daysInMonth.value;
+    return Number(employee.dismissal_date.slice(8, 10)) - 1;
+};
+const isDismissedCell = (row, col) => col >= editableDays(timesheetMonth_select.value.employees?.[row]);
+// новый код chat: подсветка ФИО только в месяце увольнения
+const dismissedInCurrentMonth = employee => employee.status && employee.dismissal_date?.slice(0, 7) === getDate(1, month.value, year.value).slice(0, 7);
+// --------- конец нового кода chat
 const selectionClasses = (row, col) => {
     const area = displayRange.value; // новый код chat: рамка показывает область будущего заполнения
     if (!area || row < area.top || row > area.bottom || col < area.left || col > area.right) return {};
     return {'sheet-selected':true, 'sheet-top':row === area.top, 'sheet-bottom':row === area.bottom, 'sheet-left':col === area.left, 'sheet-right':col === area.right};
 };
 const focusSheetCell = (row, col) => {
+    if (isDismissedCell(row, col)) return; // новый код chat
     const employee = timesheetMonth_select.value.employees?.[row];
     if (!employee) return;
     const prefix = isChange.value ? 'cell' : 'view-cell';
@@ -381,6 +397,7 @@ const cellAt = (row,col) => {
 };
 // --------- новый код chat: применение и отмена операций с сохранением состояний БД
 const applyCellChanges = changes => {
+    changes = changes.filter(change => !isDismissedCell(change.row, change.col)); // новый код chat: пропускаем закрытые дни при любых операциях
     const operation = planTimesheetEdit(changes,(row,col) => cellAt(row,col).item);
     if (!operation.length) return;
     undoHistory.push({cells:operation,anchor:selectionAnchor.value ? {...selectionAnchor.value} : null,end:selectionEnd.value ? {...selectionEnd.value} : null});
@@ -457,6 +474,7 @@ const handleCellKeydown = (event, employeeId, day) => {
     if (event.key === 'ArrowDown') row++;
     if (event.key === 'Enter') row += event.shiftKey ? -1 : 1;
     if (row < 0 || row >= timesheetMonth_select.value.employees.length || col < 0 || col >= daysInMonth.value) return;
+    if (isDismissedCell(row, col)) return; // новый код chat: стрелки не переводят выбор в закрытые дни
     if (!event.shiftKey || event.key === 'Enter') selectionAnchor.value = {row,col};
     selectionEnd.value = {row,col};
     focusSheetCell(row,col);
@@ -667,6 +685,8 @@ onMounted(getTimeSheetMonthHandler);
 .timesheet-sticky-header > .list-group-item { border-radius: 0; } /* новый код chat: единая рамка без скруглений между строками */
 .timesheet-sticky-header > .list-group-item:first-child { border-top: 0; } /* новый код chat: не дублируем нижнюю границу предыдущей строки */
 .timesheet-sticky-header > .list-group-item:last-child { border-bottom: 0; } /* новый код chat: нижнюю границу задаёт первая строка сотрудников */
+/* новый код chat: объединённые закрытые дни */
+.day-cell.timesheet-dismissed-cell { display: flex; align-items: center; justify-content: center; background: #f8d7da; color: #842029; font-size: 12px; overflow: hidden; } /* новый код chat: размер как у остальных значений, выше приоритет общего .day-cell */
 .days-grid {
     display: grid;
     grid-template-columns: repeat(var(--days-count), 1fr);
@@ -703,6 +723,7 @@ onMounted(getTimeSheetMonthHandler);
 /* --------- конец нового кода chat */
 /* новый код chat: единая жёлтая подсветка ФИО ИТР в обоих табелях */
 .work-timesheet-itr-cell { background: #fff3cd; color: #000; } /* новый код chat: фон всей ячейки, выделение диапазона остаётся приоритетным */
+.work-timesheet-name-column.work-timesheet-dismissed-name { background-color: #f8d7da !important; } /* новый код chat: тот же фон, что у блока «Уволен», приоритет над ИТР и выделением */
 /* новый код chat: ссылка ФИО с сохранением оформления табеля */
 .timesheet-employee-link { color: inherit; text-decoration: none; }
 .timesheet-employee-link:hover { text-decoration: underline; }

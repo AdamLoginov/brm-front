@@ -35,10 +35,11 @@
                 <tbody>
                     <tr v-for="(employee, index) in table.employees" :key="employee.employee_card_id">
                         <td class="daily-number">{{ index + 1 }}</td> <!-- новый код chat: номер строки -->
-                        <td class="daily-name" :class="{'daily-transferred':!employee.is_assigned, 'daily-itr-cell':employee.is_itr}" :title="employee.employee_name + (employee.is_assigned ? '' : ' — больше не закреплён за договором')"> <!-- новый код chat: ИТР — фон всей ячейки -->
+                        <td class="daily-name" :class="{'daily-transferred':!employee.is_assigned, 'daily-itr-cell':employee.is_itr, 'daily-dismissed-name':dismissedInCurrentMonth(employee)}" :title="employee.employee_name + (employee.is_assigned ? '' : ' — больше не закреплён за договором')"> <!-- новый код chat: фон увольнения в выбранном месяце -->
                             <router-link :to="{ name: 'employee-card-detail', params: { id: employee.employee_card_id } }" class="timesheet-employee-link" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ shortName(employee) }}</router-link> <!-- новый код chat: фон перенесён на ячейку -->
                         </td>
-                        <td v-for="cell in employee.cells" :key="cell.date" class="daily-day" :class="isPreviewCovered(employee, cell) ? (cell.state === 'unpaid' ? 'daily-preview-worked' : 'daily-preview') : `daily-${cell.state}`" :title="isPreviewCovered(employee, cell) ? `${cell.date}: будет оплачен после фиксации выдачи` : cellTitle(cell)">{{ cell.mark }}</td> <!-- новый код chat: покрытие отработанного дня выделено сиреневым без дополнительной отметки -->
+                        <td v-for="cell in employee.cells.filter(cell => cell.state !== 'dismissed')" :key="cell.date" class="daily-day" :class="isPreviewCovered(employee, cell) ? (cell.state === 'unpaid' ? 'daily-preview-worked' : 'daily-preview') : `daily-${cell.state}`" :title="isPreviewCovered(employee, cell) ? `${cell.date}: будет оплачен после фиксации выдачи` : cellTitle(cell)">{{ cell.mark }}</td> <!-- новый код chat: закрытые дни вынесены в объединённую ячейку -->
+                        <td v-if="employee.cells.some(cell => cell.state === 'dismissed')" :colspan="employee.cells.filter(cell => cell.state === 'dismissed').length" class="daily-dismissed-days" :title="'Уволен с ' + employee.dismissal_date">Уволен</td> <!-- новый код chat: блок как в рабочем табеле -->
                         <td class="text-end daily-balance" :class="employee.balance_kopecks < 0 ? 'text-danger' : 'text-success'">{{ money(employee.balance_kopecks) }}</td>
                         <td class="daily-issue"><input v-if="employee.is_assigned" v-model="amounts[employee.employee_card_id]" inputmode="decimal" class="form-control form-control-sm" :disabled="busy || !table.rate_kopecks" :aria-label="`К выдаче: ${employee.employee_name}`" placeholder="0,00"></td>
                     </tr>
@@ -110,6 +111,8 @@ const parseAmount = value => {
     return result <= maximum ? result : null;
 };
 const monthLabel = month => new Date(month.year,month.month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+// новый код chat: подсветка только в месяце увольнения
+const dismissedInCurrentMonth = employee => employee.status && employee.dismissal_date?.slice(0, 7) === `${table.value.year}-${String(table.value.month).padStart(2, '0')}`;
 const shortName = employee => { const parts = (employee.employee_name || '').trim().split(/\s+/).filter(Boolean); return parts.length ? [parts[0], ...parts.slice(1).map(part => `${part[0]}.`)].join(' ') : `Сотрудник №${employee.employee_card_id}`; };
 const errorText = err => typeof err.response?.data === 'string' ? err.response.data.trim() : 'Не удалось выполнить запрос. Повторите попытку.';
 const days = computed(() => {
@@ -239,6 +242,8 @@ onBeforeUnmount(() => { version++; });
 /* --------- конец нового кода chat */
 /* новый код chat: жёлтая отметка ФИО не скрывает статус перевода и выбор строки */
 .daily-name.daily-itr-cell { background: #fff3cd; color: #000; } /* новый код chat: перевод и фокус сохраняют приоритет */
+.daily-table td.daily-dismissed-days { background: #f8d7da; color: #842029; text-align: center; vertical-align: middle; font-size: 12px; } /* новый код chat: закрытые дни */
+.daily-table tbody tr .daily-name.daily-dismissed-name { background-color: #f8d7da !important; } /* новый код chat: цвет увольнения приоритетнее ИТР и фокуса */
 /* новый код chat: ссылка ФИО с сохранением оформления табеля */
 .timesheet-employee-link { color: inherit; text-decoration: none; }
 .timesheet-employee-link:hover { text-decoration: underline; }
