@@ -43,10 +43,10 @@
                 </div>
                 <div class="d-flex gap-2">
                    
-                    <select v-model="table_select" class="form-select form-select-sm" aria-label=".form-select-sm example" style="width: 250px;">
+                    <!-- новый код chat: загрузка табеля сразу после выбора -->
+                    <select v-model="table_select" class="form-select form-select-sm" aria-label="Выбрать табель" style="width: 250px;" @change="changeMonth()">
                         <option v-for="table in timesheetMonth" :key="table.ID" :value="table.ID">{{ `${monthValue[table.month]} ${table.year}` }}</option>
                     </select>
-                    <button type="button" class="btn btn-primary btn-sm" @click="changeMonth()">Применить</button>
                 </div>
                 <div class="">
                     <button v-if="nextTable" type="button" class="btn btn-outline-secondary btn-sm" @click="nextMonth()"> <!-- новый код chat: месяц и год соседнего табеля -->
