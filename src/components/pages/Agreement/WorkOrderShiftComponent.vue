@@ -123,7 +123,17 @@ const shortEmployeeName=id=>{
 };
 // --------- конец нового кода chat
 const removeEmployee=i=>{if(confirm('Убрать сотрудника из смены?'))form.employees.splice(i,1);};
-const save=async()=>{if(busy.value)return;busy.value=true;error.value='';try{const url=`/agreements/${props.agreementId}/work-orders/shifts`;const res=props.shift?await api.patch(`${url}/${props.shift.ID}`,form):await api.post(`${url}/create`,form);emit('saved',res.data.warning);}catch(e){error.value=workError(e);}finally{busy.value=false;}};
+// --------- новый код chat: служебная точность остаётся в форме, но не передаётся API
+const save=async()=>{
+    if(busy.value)return;busy.value=true;error.value='';
+    try{
+        const payload={...form,tasks:form.tasks.map(({quantity_precision,...task})=>task)};
+        const url=`/agreements/${props.agreementId}/work-orders/shifts`;
+        const res=props.shift?await api.patch(`${url}/${props.shift.ID}`,payload):await api.post(`${url}/create`,payload);
+        emit('saved',res.data.warning);
+    }catch(e){error.value=workError(e);}finally{busy.value=false;}
+};
+// --------- конец нового кода chat
 </script>
 <style scoped>
 /* --------- новый код chat: плотная таблица ввода и закреплённое сохранение */

@@ -43,7 +43,13 @@ const availableMaterials=computed(()=>props.materials.filter(m=>m.workshop_id===
 const removeMaterial=index=>{if(confirm('Убрать материал из работы? Изменение применится после сохранения.'))form.materials.splice(index,1);};
 const save=async()=>{
     if(busy.value)return;busy.value=true;emit('busy',true);error.value='';
-    try{const {data}=await api.patch(`/agreements/${props.agreementId}/work-orders/tasks/${task.ID}`,{version,task:form});emit('saved',data);}
+    // --------- новый код chat: исключаем служебную точность без изменения формы и объёма
+    try{
+        const {quantity_precision,...payload}=form;
+        const {data}=await api.patch(`/agreements/${props.agreementId}/work-orders/tasks/${task.ID}`,{version,task:payload});
+        emit('saved',data);
+    }
+    // --------- конец нового кода chat
     catch(e){error.value=workError(e);}finally{busy.value=false;emit('busy',false);}
 };
 </script>
