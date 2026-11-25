@@ -3,8 +3,8 @@
     <div>
         <!-- новый код chat: компактный выбор табеля и история выдач рядом -->
         <div class="d-flex gap-2 align-items-end flex-wrap mb-3">
-            <div><label for="daily-month" class="form-label">Месячный табель</label><select id="daily-month" v-model="monthID" class="form-select form-select-sm daily-month" :disabled="busy || !months.length" @change="changeMonth"><option v-for="month in months" :key="month.ID" :value="month.ID">{{ monthLabel(month) }} · №{{ month.ID }}</option></select></div>
-            <div><button class="btn btn-sm btn-outline-primary" :disabled="busy" @click="historyOpen = true">История выдач</button></div>
+            <div><label for="daily-month" class="form-label">Месячный табель</label><select id="daily-month" v-model="monthID" class="form-select form-select-sm daily-month" :disabled="busy || editingList || !months.length" @change="changeMonth"><option v-for="month in months" :key="month.ID" :value="month.ID">{{ monthLabel(month) }} · №{{ month.ID }}</option></select></div>
+            <div><button class="btn btn-sm btn-outline-primary" :disabled="busy || editingList" @click="historyOpen = true">История выдач</button></div>
         </div>
         <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div>
         <div v-if="successMessage" class="alert alert-success" role="status">{{ successMessage }}</div>
@@ -21,19 +21,29 @@
         <div class="d-flex align-items-center gap-3 flex-wrap mb-2"> <!-- новый код chat: ставка и дата обеспечения в одной строке -->
             <span>Суточные: <strong>{{ money(table.rate_kopecks || 0) }}</strong></span>
             <!-- новый код chat: компактное поле даты справа от ставки суточных -->
-            <div class="d-flex align-items-center gap-2 flex-wrap"><label for="daily-through" class="form-label mb-0 small">Обеспечить по дату включительно</label><input id="daily-through" v-model="through" type="date" class="form-control form-control-sm daily-through" :disabled="busy || !monthID || !table.rate_kopecks" @change="loadTable"></div>
+            <div class="d-flex align-items-center gap-2 flex-wrap"><label for="daily-through" class="form-label mb-0 small">Обеспечить по дату включительно</label><input id="daily-through" v-model="through" type="date" class="form-control form-control-sm daily-through" :disabled="busy || editingList || !monthID || !table.rate_kopecks" @change="loadTable"></div>
+            <!-- новый код chat: кнопки справа в общей строке ставки и даты -->
+            <div class="d-flex gap-2 ms-auto flex-wrap justify-content-end">
+                <button v-if="!editingList" class="btn btn-sm btn-outline-primary" :disabled="busy || !monthID" @click="editList">Править список</button> <!-- новый код chat: короткая подпись -->
+                <template v-else>
+                    <button class="btn btn-sm btn-outline-primary" :disabled="busy || !table.employees?.length" @click="toggleAllEmployees">Выбрать все</button>
+                    <button class="btn btn-sm btn-success" :disabled="busy" @click="saveList">Сохранить список</button> <!-- новый код chat: зелёное сохранение после общего выбора -->
+                    <button class="btn btn-sm btn-outline-secondary" :disabled="busy" @click="editingList=false">Отмена</button>
+                </template>
+            </div>
         </div>
         <div v-if="busy" class="text-secondary py-2" role="status">Обрабатываем суточные…</div>
         <div v-if="!months.length && !busy" class="alert alert-info">Сначала создайте месячный табель.</div>
-        <div v-if="monthID" class="table-responsive daily-scroll">
+        <div v-if="monthID" class="table-responsive daily-scroll" :class="{'daily-editing-list':editingList}">
             <table ref="dailyTableElement" class="table table-sm table-bordered align-middle daily-table">
                 <thead ref="dailyHeaderElement" class="daily-sticky-header" :style="{transform: `translateY(${dailyHeaderOffset}px)`}"> <!-- новый код chat: закреплённый белый заголовок -->
                     <!-- новый код chat: выбранная дата подсвечивает число и день недели голубым, остальные выходные сохраняют свой фон -->
-                    <tr><th rowspan="2" class="daily-number">№</th><th rowspan="2" class="daily-name">Сотрудник</th><th v-for="day in days" :key="day.date" class="daily-day" :class="{'daily-weekend':day.weekend && day.date !== through, 'daily-selected-date':day.date === through}">{{ day.weekday }}</th><th rowspan="2" class="daily-balance">Баланс, ₽</th><th rowspan="2" class="daily-issue">К выдаче, ₽</th></tr> <!-- новый код chat: светло-жёлтый фон только названий выходных -->
+                    <tr><th v-if="editingList" rowspan="2" class="daily-check" aria-label="Отображать сотрудника"></th><th rowspan="2" class="daily-number">№</th><th rowspan="2" class="daily-name">Сотрудник</th><th v-for="day in days" :key="day.date" class="daily-day" :class="{'daily-weekend':day.weekend && day.date !== through, 'daily-selected-date':day.date === through}">{{ day.weekday }}</th><th rowspan="2" class="daily-balance">Баланс, ₽</th><th rowspan="2" class="daily-issue">К выдаче, ₽</th></tr> <!-- новый код chat: светло-жёлтый фон только названий выходных -->
                     <tr><th v-for="day in days" :key="day.date" class="daily-day" :class="{'daily-selected-date':day.date === through}">{{ day.number }}</th></tr>
                 </thead>
                 <tbody>
-                    <tr v-for="(employee, index) in table.employees" :key="employee.employee_card_id">
+                    <tr v-for="(employee, index) in displayedEmployees" :key="employee.employee_card_id">
+                        <td v-if="editingList" class="daily-check"><input v-model="enabledDraft[employee.employee_card_id]" type="checkbox" class="form-check-input" :disabled="busy" :aria-label="'Суточные: ' + employee.employee_name"></td>
                         <td class="daily-number">{{ index + 1 }}</td> <!-- новый код chat: номер строки -->
                         <td class="daily-name" :class="{'daily-transferred':!employee.is_assigned, 'daily-itr-cell':employee.is_itr, 'daily-dismissed-name':dismissedInCurrentMonth(employee)}" :title="employee.employee_name + (employee.is_assigned ? '' : ' — больше не закреплён за договором')"> <!-- новый код chat: фон увольнения в выбранном месяце -->
                             <router-link :to="{ name: 'employee-card-detail', params: { id: employee.employee_card_id } }" class="timesheet-employee-link" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ shortName(employee) }}</router-link> <!-- новый код chat: фон перенесён на ячейку -->
@@ -41,17 +51,17 @@
                         <td v-for="cell in employee.cells.filter(cell => cell.state !== 'dismissed')" :key="cell.date" class="daily-day" :class="isPreviewCovered(employee, cell) ? (cell.state === 'unpaid' ? 'daily-preview-worked' : 'daily-preview') : `daily-${cell.state}`" :title="isPreviewCovered(employee, cell) ? `${cell.date}: будет оплачен после фиксации выдачи` : cellTitle(cell)">{{ cell.mark }}</td> <!-- новый код chat: закрытые дни вынесены в объединённую ячейку -->
                         <td v-if="employee.cells.some(cell => cell.state === 'dismissed')" :colspan="employee.cells.filter(cell => cell.state === 'dismissed').length" class="daily-dismissed-days" :title="'Уволен с ' + employee.dismissal_date">Уволен</td> <!-- новый код chat: блок как в рабочем табеле -->
                         <td class="text-end daily-balance" :class="employee.balance_kopecks < 0 ? 'text-danger' : 'text-success'">{{ money(employee.balance_kopecks) }}</td>
-                        <td class="daily-issue"><input v-if="employee.is_assigned" v-model="amounts[employee.employee_card_id]" inputmode="decimal" class="form-control form-control-sm" :disabled="busy || !table.rate_kopecks" :aria-label="`К выдаче: ${employee.employee_name}`" placeholder="0,00"></td>
+                        <td class="daily-issue"><input v-if="employee.is_assigned && employee.enabled !== false" v-model="amounts[employee.employee_card_id]" inputmode="decimal" class="form-control form-control-sm" :disabled="busy || editingList || !table.rate_kopecks" :aria-label="`К выдаче: ${employee.employee_name}`" placeholder="0,00"></td>
                     </tr>
-                    <tr v-if="!table.employees?.length && !busy"><td :colspan="days.length + 4" class="text-secondary">Сотрудников пока нет.</td></tr>
+                    <tr v-if="!displayedEmployees.length && !busy"><td :colspan="days.length + 4 + (editingList ? 1 : 0)" class="text-secondary">Сотрудников пока нет.</td></tr>
                 </tbody>
             </table>
         </div>
         <div class="d-flex gap-3 align-items-center flex-wrap my-3">
             <span>Получателей: <strong>{{ totals.count }}</strong></span><span>Итого к выдаче: <strong>{{ totals.valid ? money(totals.amount) : 'Проверьте суммы' }}</strong></span>
             <!-- новый код chat: дата выплаты непосредственно перед фиксацией выдачи -->
-            <div class="d-flex align-items-center gap-2"><label for="daily-payment-date" class="form-label mb-0 text-nowrap">Дата выплаты</label><input id="daily-payment-date" v-model="paymentDate" type="date" class="form-control form-control-sm" :disabled="busy"></div>
-            <button class="btn btn-primary btn-sm" :disabled="busy || !table.rate_kopecks || !totals.count || !totals.valid || !paymentDate" @click="pay">Зафиксировать выдачу</button>
+            <div class="d-flex align-items-center gap-2"><label for="daily-payment-date" class="form-label mb-0 text-nowrap">Дата выплаты</label><input id="daily-payment-date" v-model="paymentDate" type="date" class="form-control form-control-sm" :disabled="busy || editingList"></div>
+            <button class="btn btn-primary btn-sm" :disabled="busy || editingList || !table.rate_kopecks || !totals.count || !totals.valid || !paymentDate" @click="pay">Зафиксировать выдачу</button>
         </div>
         <!-- новый код chat: передаём месяцы табелей для истории выдач -->
         <DailyAllowanceHistoryComponent v-if="historyOpen" :agreement-id="route.params.id" :months="months" @close="historyOpen = false" @changed="historyChanged" />
@@ -123,7 +133,7 @@ const days = computed(() => {
         return {date:`${table.value.year}-${String(table.value.month).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`,number:i+1,weekday:date.toLocaleDateString('ru-RU',{weekday:'short'}),weekend:[0,6].includes(date.getDay())};
     });
 });
-const eligible = computed(() => (table.value.employees || []).filter(row => row.is_assigned));
+const eligible = computed(() => (table.value.employees || []).filter(row => row.is_assigned && row.enabled !== false)); // новый код chat
 const totals = computed(() => {
     let total = 0n, count = 0; const rate = BigInt(table.value.rate_kopecks || 0);
     for (const employee of eligible.value) {
@@ -135,7 +145,7 @@ const totals = computed(() => {
 });
 // --------- новый код chat: мгновенный прогноз по введённой сумме, без запросов и записи в БД
 const isPreviewCovered = (employee, cell) => {
-    if (!employee.is_assigned || cell.state === 'letter' || !cell.preview_required_kopecks) return false;
+    if (editingList.value || employee.enabled === false || !employee.is_assigned || cell.state === 'letter' || !cell.preview_required_kopecks) return false;
     const amount = parseAmount(amounts.value[employee.employee_card_id]);
     const rate = BigInt(table.value.rate_kopecks || 0);
     return amount !== null && amount > 0n && rate > 0n && amount % rate === 0n && amount >= BigInt(cell.preview_required_kopecks);
@@ -155,12 +165,13 @@ const loadTable = async() => {
         if (current !== version) return;
         table.value = res.data;
         if (!paymentDate.value) paymentDate.value = res.data.today;
-        amounts.value = Object.fromEntries(res.data.employees.filter(row => row.is_assigned).map(row => [row.employee_card_id,through.value ? amountText(row.suggested_kopecks) : '']));
+        amounts.value = Object.fromEntries(res.data.employees.filter(row => row.is_assigned && row.enabled !== false).map(row => [row.employee_card_id,through.value ? amountText(row.suggested_kopecks) : '']));
     } catch (err) { if (current === version) errorMessage.value = errorText(err); }
     finally { if (current === version) busy.value = false; }
 };
 const changeMonth = () => { through.value = ''; table.value = {employees:[]}; successMessage.value = ''; loadTable(); };
 const loadMonths = async() => {
+    editingList.value = false; // новый код chat
     const current = ++version; busy.value = true; errorMessage.value = ''; successMessage.value = ''; historyOpen.value = false; through.value = ''; paymentDate.value = ''; table.value = {employees:[]}; months.value = []; monthID.value = null; amounts.value = {}; pendingRequest = null;
     try {
         const res = await api.get(`/agreements/${route.params.id}/timesheetmonth`);
@@ -172,7 +183,7 @@ const loadMonths = async() => {
     finally { if (current === version) busy.value = false; }
 };
 const pay = async() => {
-    if (busy.value || !totals.value.valid || !totals.value.count) return;
+    if (editingList.value || busy.value || !totals.value.valid || !totals.value.count) return;
     if (!window.confirm(`Зафиксировать выдачу ${money(totals.value.amount)} ₽ для ${totals.value.count} сотрудников?`)) return;
     const payload = {month_id:monthID.value,date:paymentDate.value,payments:eligible.value.filter(row => parseAmount(amounts.value[row.employee_card_id]) > 0n).map(row => ({employee_card_id:row.employee_card_id,amount:amountText(parseAmount(amounts.value[row.employee_card_id]))}))};
     const signature = JSON.stringify(payload);
@@ -186,6 +197,41 @@ const pay = async() => {
     } catch (err) { if (current === version) errorMessage.value = errorText(err); }
     finally { if (current === version) busy.value = false; }
 };
+// --------- новый код chat: состав суточных по выбранному табелю
+const editingList = ref(false), enabledDraft = ref({});
+// --------- новый код chat: общий выбор и перенос неотмеченных вниз
+const allEmployeesSelected = computed(() => !!table.value.employees?.length && table.value.employees.every(row => enabledDraft.value[row.employee_card_id]));
+const toggleAllEmployees = () => {
+    if (busy.value || !editingList.value) return;
+    const selected = !allEmployeesSelected.value;
+    enabledDraft.value = Object.fromEntries((table.value.employees || []).map(row => [row.employee_card_id, selected]));
+};
+const displayedEmployees = computed(() => {
+    const employees = (table.value.employees || []).filter(row => editingList.value || row.enabled !== false);
+    if (editingList.value) employees.sort((a, b) => Number(!!enabledDraft.value[b.employee_card_id]) - Number(!!enabledDraft.value[a.employee_card_id]));
+    return employees;
+});
+// --------- конец нового кода chat
+const editList = () => {
+    enabledDraft.value = Object.fromEntries((table.value.employees || []).map(row => [row.employee_card_id, row.enabled !== false]));
+    historyOpen.value = false;
+    editingList.value = true;
+};
+const saveList = async() => {
+    if (busy.value) return;
+    busy.value = true; errorMessage.value = '';
+    const current = version, selectedMonth = monthID.value;
+    try {
+        const enabled_ids = (table.value.employees || []).filter(row => enabledDraft.value[row.employee_card_id]).map(row => row.employee_card_id);
+        await api.put(`/agreements/${route.params.id}/daily-allowance/list`, {month_id:selectedMonth, enabled_ids});
+        if (current !== version) return;
+        editingList.value = false; amounts.value = {}; through.value = ''; pendingRequest = null;
+        successMessage.value = 'Список суточных сохранён.';
+        await loadTable();
+    } catch (err) { if (current === version) errorMessage.value = errorText(err); }
+    finally { if (current === version) busy.value = false; }
+};
+// --------- конец нового кода chat
 const historyChanged = () => { successMessage.value = ''; loadTable(); };
 watch(() => route.params.id, loadMonths, {immediate:true});
 onBeforeUnmount(() => { version++; });
@@ -248,4 +294,8 @@ onBeforeUnmount(() => { version++; });
 .timesheet-employee-link { color: inherit; text-decoration: none; }
 .timesheet-employee-link:hover { text-decoration: underline; }
 .timesheet-employee-link:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
+/* новый код chat: колонка выбора рядом с номером, ФИО сохраняет закрепление */
+.daily-check { width: 28px; min-width: 28px; position: sticky; left: 0; background: #fff; z-index: 2; text-align: center; }
+.daily-editing-list .daily-number { left: 28px; }
+.daily-editing-list .daily-name { left: 60px; }
 </style>
