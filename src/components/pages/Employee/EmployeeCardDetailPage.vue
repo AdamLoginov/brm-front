@@ -85,6 +85,8 @@
               <div><dt>Семейное положение</dt><dd>{{ employeeCard.marital_status || '—' }}</dd></div>
               <div><dt>Образование</dt><dd>{{ employeeCard.education || '—' }}</dd></div>
               <div><dt>Опыт работы</dt><dd>{{ employeeCard.experience || '—' }}</dd></div>
+              <!-- новый код chat: алименты в одном ряду с образованием и опытом -->
+              <div><dt>Алименты</dt><dd>{{ employeeCard.has_alimony ? 'Да' : 'Нет' }}</dd></div>
             </dl>
           </section>
 <!-- новый код chat: контакты в группе личных данных -->

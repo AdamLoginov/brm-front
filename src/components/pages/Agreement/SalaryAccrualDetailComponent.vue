@@ -3,79 +3,107 @@
     <Teleport to="body">
     <!-- новый код chat: стандартное модальное окно Bootstrap -->
     <div ref="dialog" class="modal salary-detail" tabindex="-1" aria-labelledby="salary-detail-title" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
-        <div class="modal-body p-3 p-md-4">
-            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                <div><h5 id="salary-detail-title" class="mb-1"><router-link :to="{ name: 'employee-card-detail', params: { id: accrual.employee_card_id } }" class="salary-employee-link">{{ accrual.employee_name }}</router-link></h5><!-- новый код chat: переход из начисления в карточку сотрудника --><div class="text-secondary">{{ monthLabel }}</div></div>
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable salary-dialog"><div class="modal-content">
+        <!-- новый код chat: постоянная шапка с сотрудником и состоянием расчёта -->
+            <div class="modal-header salary-header align-items-start">
+                <div><h5 id="salary-detail-title" class="mb-1"><router-link :to="{ name: 'employee-card-detail', params: { id: accrual.employee_card_id } }" class="salary-employee-link">{{ accrual.employee_name }}</router-link></h5><!-- новый код chat: переход из начисления в карточку сотрудника --><div class="salary-header-meta"><span>{{ monthLabel }}</span><span class="salary-state" :class="approved ? 'salary-state-approved' : 'salary-state-draft'">{{ approved ? 'Согласовано' : 'Расчёт' }}</span></div></div>
                 <button class="btn-close" aria-label="Закрыть" @click="close"></button>
             </div>
+        <div class="modal-body p-3 p-md-4">
             <!-- --------- новый код chat: финансовые данные слева, справочные справа -->
             <div class="row g-3 mb-3 salary-summary">
-                <div class="col-md-6">
-                    <div v-for="item in financialRows" :key="item.label" class="d-flex justify-content-between gap-2 mb-1"><span>{{ item.label }}</span><strong>{{ money(item.value) }}</strong></div>
-                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Премии</span><strong>{{ money(accrual.bonuses_kopecks || 0) }} <span v-if="paymentPreview?.bonus" class="text-success">+ {{ money(paymentPreview.bonus) }}</span></strong></div>
-                    <div v-if="paymentPreview?.companyDebt" class="d-flex justify-content-between gap-2 text-danger"><span>Новый долг К.</span><strong>+ {{ money(paymentPreview.companyDebt) }}</strong></div>
-                    <div v-if="paymentPreview?.employeeDebt" class="d-flex justify-content-between gap-2 text-danger"><span>Новый долг С.</span><strong>+ {{ money(paymentPreview.employeeDebt) }}</strong></div>
-                </div>
-                <div class="col-md-6">
+                <!-- новый код chat: работа и ставка слева, расчёт зарплаты справа -->
+                <div class="col-md-6"><section class="salary-info-panel salary-reference-panel">
+                    <h6 class="salary-section-title"><i class="bi bi-person-badge" aria-hidden="true"></i> Работа и ставка</h6>
                     <div class="d-flex justify-content-between gap-2 mb-1"><span>Ставка за смену</span><strong>{{ money(accrual.salary_rate_kopecks) }}</strong></div>
                     <div class="d-flex justify-content-between gap-2 mb-1"><span>Устроен официально</span><strong>{{ accrual.officially_employed ? 'Да' : 'Нет' }}</strong></div>
+                    <!-- новый код chat: отметка об алиментах из профиля сотрудника -->
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Алименты</span><strong>{{ accrual.has_alimony ? 'Да' : 'Нет' }}</strong></div>
                     <div class="d-flex justify-content-between gap-2 mb-1"><span>Оф. зарплата в месяц</span><strong>{{ accrual.officially_employed ? money(accrual.monthly_salary_kopecks || 0) : '—' }}</strong></div>
                     <div class="d-flex justify-content-between gap-2 mb-1"><span>Отработано часов</span><strong>{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</strong></div>
                     <div class="d-flex justify-content-between gap-2 mb-1"><span>Часов в смене</span><strong>{{ accrual.shift_hours }}</strong></div>
                     <div class="d-flex justify-content-between gap-2"><span>Отработано смен</span><strong>{{ totalShifts }}</strong></div>
-                </div>
+                </section></div>
+                <div class="col-md-6"><section class="salary-info-panel">
+                    <h6 class="salary-section-title"><i class="bi bi-calculator" aria-hidden="true"></i> Расчёт зарплаты</h6>
+                    <div v-for="item in financialRows" :key="item.label" class="d-flex justify-content-between gap-2 mb-1"><span>{{ item.label }}</span><strong>{{ money(item.value) }}</strong></div>
+                    <div class="d-flex justify-content-between gap-2 mb-1"><span>Премии</span><strong>{{ money(accrual.bonuses_kopecks || 0) }} <span v-if="paymentPreview?.bonus" class="text-success">+ {{ money(paymentPreview.bonus) }}</span></strong></div>
+                    <div v-if="paymentPreview?.companyDebt" class="d-flex justify-content-between gap-2 text-danger"><span>Новый долг К.</span><strong>+ {{ money(paymentPreview.companyDebt) }}</strong></div>
+                    <div v-if="paymentPreview?.employeeDebt" class="d-flex justify-content-between gap-2 text-danger"><span>Новый долг С.</span><strong>+ {{ money(paymentPreview.employeeDebt) }}</strong></div>
+                </section></div>
             </div>
-            <div class="border rounded p-3 mb-3">
-                <div class="mb-2"><strong class="d-block">К выдаче</strong><strong class="d-block" style="font-size: 16px;">{{ money(Math.max(0, accrual.payable_kopecks)) }}</strong></div> <!-- новый код chat: сумма под надписью, 16 px -->
-                <div v-if="accrual.payable_kopecks < 0" class="text-secondary small mb-2">Расчётный остаток: {{ money(accrual.payable_kopecks) }}</div>
+            <!-- новый код chat: итог и поля ввода в едином блоке выплаты -->
+            <section class="salary-payment-panel mb-4">
+              <div class="salary-payment-grid">
+               <div class="salary-payable">
+                <div class="mb-2"><strong class="d-block">К выдаче</strong><strong class="d-block salary-payable-amount">{{ money(Math.max(0, previewPayable)) }}</strong></div> <!-- новый код chat: сумма под надписью, 16 px -->
+                <div v-if="previewPayable < 0" class="text-secondary small mb-2">Расчётный остаток: {{ money(previewPayable) }}</div>
+               </div>
+                <!-- новый код chat: сумма алиментов сохраняется вместе с выплатой -->
+                <div v-if="accrual.has_alimony" class="salary-input-group">
+                    <label for="salary-detail-alimony" class="form-label">Алименты, ₽</label>
+                    <MoneyInputComponent id="salary-detail-alimony" v-model="editedAlimony" class="form-control form-control-sm" :disabled="approved || busy" :class="{'is-invalid': alimonyCents === null}" />
+                    <div v-if="alimonyCents === null" class="text-danger small">Введите сумму от нуля до копеек.</div>
+                </div>
+                <div class="salary-input-group">
                 <label for="salary-detail-payment" class="form-label">Выплата, ₽</label>
-                <MoneyInputComponent id="salary-detail-payment" v-model="editedPayment" class="form-control form-control-sm" :disabled="approved || busy" :class="{'is-invalid': !paymentPreview}" style="max-width: 220px;" /> <!-- новый код chat: денежное поле с разделением разрядов -->
+                <MoneyInputComponent id="salary-detail-payment" v-model="editedPayment" class="form-control form-control-sm" :disabled="approved || busy" :class="{'is-invalid': !paymentPreview}" /> <!-- новый код chat: денежное поле с разделением разрядов -->
                 <div v-if="!paymentPreview" class="text-danger small mt-1">Введите неотрицательную сумму до копеек.</div>
+                </div>
+              </div>
                 <div v-if="accrual.draft_reset" class="text-warning-emphasis small mt-2">Исходные данные изменились, сохранённая выплата сброшена.</div>
                 <div v-if="actionError" class="alert alert-danger mt-2 mb-0" role="alert">{{ actionError }} <button class="btn btn-sm btn-outline-danger" :disabled="busy || saving" @click="emit('changed')">Обновить расчёт</button></div> <!-- новый код chat: восстановление после конфликта версии -->
-                <div class="d-flex gap-2 flex-wrap align-items-center mt-3">
+                <div class="salary-actions d-flex gap-2 flex-wrap align-items-center">
                     <template v-if="!approved">
-                        <button v-if="differsFromCalculation" class="btn btn-primary btn-sm" :disabled="busy || saving || !paymentPreview || savedPayment" @click="emit('save-payment',{amount:editedPayment,reset:false})">{{ savedPayment ? 'Сохранено' : 'Сохранить' }}</button>
+                        <button v-if="differsFromCalculation || alimonyChanged" class="btn btn-success btn-sm" :disabled="busy || saving || !paymentPreview || alimonyCents === null || savedPayment" @click="emit('save-payment',{amount:editedPayment,alimony_amount:editedAlimony,reset:false})">{{ savedPayment ? 'Сохранено' : 'Сохранить' }}</button>
                         <button v-if="accrual.has_draft" class="btn btn-outline-secondary btn-sm" :disabled="busy || saving" @click="emit('save-payment',{amount:'',reset:true})">Сбросить к расчётной</button>
-                        <button class="btn btn-primary btn-sm" :disabled="busy || saving || !paymentPreview || !approvalDate" @click="emit('approve',editedPayment)">Согласовать</button> <!-- новый код chat: синяя кнопка -->
+                        <button class="btn btn-primary btn-sm" :disabled="busy || saving || !paymentPreview || alimonyChanged || alimonyCents === null || !approvalDate" @click="emit('approve',editedPayment)">Согласовать</button> <!-- новый код chat: синяя кнопка -->
+                        <!-- новый код chat: согласование использует сохранённые алименты -->
+                        <span v-if="alimonyChanged" class="text-secondary small">Сначала сохраните сумму алиментов.</span>
                         <span class="text-secondary small">Дата согласования: {{ dateLabel(approvalDate) }}</span>
                     </template>
                     <template v-else><span class="text-success">Согласовано {{ dateLabel(approvalDate) }}</span><button class="btn btn-outline-secondary btn-sm" :disabled="busy || saving" @click="emit('cancel-approval')">Отменить согласование</button></template>
                 </div>
-            </div>
+            </section>
             <!-- --------- конец нового кода chat -->
             <div v-if="loading" class="text-secondary" role="status">Загружаем табель и удержания…</div>
             <div v-else-if="error" class="alert alert-danger" role="alert">{{ error }} <button class="btn btn-sm btn-outline-danger" @click="load">Повторить</button></div>
             <template v-else>
-                <h6>Табель за {{ monthLabel }}</h6>
+                <section class="salary-calendar-panel"><h6 class="salary-section-title"><i class="bi bi-calendar3" aria-hidden="true"></i> Табель за {{ monthLabel }}</h6>
                 <div class="salary-calendar mb-2">
                     <div v-for="weekday in weekdays" :key="weekday" class="calendar-heading">{{ weekday }}</div>
                     <div v-for="(day, index) in calendar" :key="index" class="calendar-day" :class="{'calendar-blank': !day}" :style="{backgroundColor: day ? timesheetColors[day.mark] || '#fff' : undefined}">
                         <template v-if="day"><span class="calendar-number">{{ day.number }}</span><strong :title="day.worked ? `${day.mark} ч.` : day.mark">{{ day.mark }}<small v-if="day.worked"> ч.</small></strong></template>
                     </div>
                 </div>
-                <section v-for="group in groups" :key="group.title" class="mt-3">
-                    <h6>{{ group.title }} — {{ money(group.rows.reduce((sum, row) => sum + ((group.isPenalty && row.status !== 'active') || (group.isBonus && row.is_paid) ? 0 : Number(row.amount_kopecks)), 0)) }}</h6> <!-- новый код chat: в сумму удержаний входят только актуальные штрафы -->
-                    <p class="small text-secondary">{{ group.description }}</p>
-                    <div v-if="group.rows.length" class="table-responsive detail-table">
-                        <table class="table table-sm table-bordered align-middle mb-0">
-                            <!-- новый код chat: статус штрафа и прощение прогула -->
-                            <thead class="table-light"><tr><th>{{ group.dateLabel }}</th><th v-if="group.isPenalty || group.isBonus">Статус</th><th class="text-end">Сумма</th><th>Комментарий</th><th v-if="group.isPenalty">Действия</th></tr></thead>
-                            <tbody><tr v-for="row in group.rows" :key="row.ID">
-                                <td class="text-nowrap">{{ group.isBonus ? monthLabel : dateLabel(row.date) }}</td>
-                                <td v-if="group.isBonus"><span class="badge rounded-5 border bg-white fw-normal" :class="approved || row.is_paid ? 'text-secondary border-secondary' : 'text-success border-success'">{{ approved || row.is_paid ? 'Выплачена' : 'Не выплачена' }}</span></td> <!-- новый код chat: учтённые премии закрыты при согласовании -->
-                                <td v-if="group.isPenalty"><span class="badge rounded-5 border bg-white fw-normal" :class="statusClass(approved && row.status === 'active' ? 'closed' : row.status)">{{ statusLabel(approved && row.status === 'active' ? 'closed' : row.status) }}</span></td> <!-- новый код chat: статус в момент согласования -->
-                                <td class="text-end text-nowrap">{{ money(row.amount_kopecks) }}</td><td class="detail-comment">{{ row.comment || '—' }}</td>
-                                <td v-if="group.isPenalty"><button v-if="canForgive(row)" class="btn btn-sm btn-outline-primary" :disabled="saving || busy" @click="forgive(row)">Простить</button></td>
-                            </tr></tbody>
-                        </table>
-                    </div>
-                    <p v-else class="text-secondary">{{ group.empty }}</p>
+                </section>
+                <section v-for="group in groups" :key="group.title" class="salary-record-panel">
+                    <h6 class="salary-record-heading"><span>{{ group.title }}</span><strong>{{ money(group.rows.reduce((sum, row) => sum + ((group.isPenalty && row.status !== 'active') || (group.isBonus && row.is_paid) ? 0 : Number(row.amount_kopecks)), 0)) }}</strong></h6> <!-- новый код chat: в сумму удержаний входят только актуальные штрафы -->
+                    <p class="salary-record-description">{{ group.description }}</p>
+                    <!-- --------- новый код chat: компактные списки вместо таблиц -->
+                    <ul v-if="group.rows.length" class="salary-entry-list">
+                        <li v-for="row in group.rows" :key="row.ID" class="salary-entry">
+                            <div class="salary-entry-content">
+                                <div class="salary-entry-date"><i class="bi bi-calendar3" aria-hidden="true"></i><span>{{ group.dateLabel }}: {{ group.isBonus ? monthLabel : dateLabel(row.date) }}</span></div>
+                                <p class="salary-entry-comment" :class="{'salary-entry-empty': !row.comment}">{{ row.comment || 'Без комментария' }}</p>
+                            </div>
+                            <div class="salary-entry-summary">
+                                <strong class="salary-entry-amount">{{ money(row.amount_kopecks) }}</strong>
+                                <div v-if="group.isBonus || group.isPenalty" class="salary-entry-actions">
+                                    <span v-if="group.isBonus" class="badge rounded-5 border bg-white fw-normal" :class="approved || row.is_paid ? 'text-secondary border-secondary' : 'text-success border-success'">{{ approved || row.is_paid ? 'Выплачена' : 'Не выплачена' }}</span>
+                                    <span v-if="group.isPenalty" class="badge rounded-5 border bg-white fw-normal" :class="statusClass(approved && row.status === 'active' ? 'closed' : row.status)">{{ statusLabel(approved && row.status === 'active' ? 'closed' : row.status) }}</span>
+                                    <button v-if="group.isPenalty && canForgive(row)" class="btn btn-sm btn-link salary-forgive-button" :disabled="saving || busy" @click="forgive(row)">Простить</button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                    <!-- --------- конец нового кода chat -->
+                    <p v-else class="salary-empty">{{ group.empty }}</p>
                 </section>
             </template>
-            <div class="text-end mt-3"><button class="btn btn-sm btn-secondary" @click="close">Закрыть</button></div>
         </div>
+        <!-- новый код chat: кнопка закрытия доступна при прокрутке -->
+        <div class="modal-footer salary-footer"><button class="btn btn-sm btn-outline-secondary" @click="close">Закрыть</button></div>
     </div></div></div>
     </Teleport>
 </template>
@@ -91,7 +119,25 @@ const props = defineProps({agreementId: {type: [String, Number], required: true}
 // --------- новый код chat: параметры согласованной выплаты
 // новый код chat: локальный ввод меняет только предварительное отображение до сохранения
 const editedPayment = ref(props.paymentAmount ?? '0');
-watch(() => [props.accrual,props.paymentAmount], () => { editedPayment.value = props.paymentAmount ?? '0'; });
+// --------- новый код chat: предварительный расчёт алиментов в копейках
+const editedAlimony = ref((Number(props.accrual.alimony_kopecks || 0)/100).toFixed(2));
+const alimonyCents = computed(() => {
+    const text = String(editedAlimony.value ?? '').replace(',', '.').trim();
+    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
+    const [whole, fraction = ''] = text.split('.');
+    const cents = BigInt(whole)*100n + BigInt(fraction.padEnd(2,'0'));
+    return cents <= 9007199254740991n ? Number(cents) : null;
+});
+const alimonyChanged = computed(() => alimonyCents.value !== Number(props.accrual.alimony_kopecks || 0));
+const previewPayable = computed(() => Number(props.accrual.payable_kopecks) + Number(props.accrual.alimony_kopecks || 0) - (alimonyCents.value ?? Number(props.accrual.alimony_kopecks || 0)));
+watch(previewPayable, (value, previous) => {
+    if (!props.approved && Number(editedPayment.value) === Math.max(0,previous)/100) editedPayment.value = (Math.max(0,value)/100).toFixed(2);
+});
+watch(() => [props.accrual,props.paymentAmount], () => {
+    editedAlimony.value = (Number(props.accrual.alimony_kopecks || 0)/100).toFixed(2);
+    editedPayment.value = props.paymentAmount ?? '0';
+});
+// --------- конец нового кода chat
 const paymentPreview = computed(() => {
     const text = String(editedPayment.value ?? '').replace(',', '.').trim();
     if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
@@ -99,20 +145,21 @@ const paymentPreview = computed(() => {
     const cents = BigInt(whole)*100n + BigInt(fraction.padEnd(2,'0'));
     if (cents > 9007199254740991n) return null;
     const value = Number(cents);
-    const base = Math.max(0, Number(props.accrual.payable_kopecks));
-    return {amount:value,bonus:Math.max(0,value-base),companyDebt:Math.max(0,base-value),employeeDebt:Math.max(0,-Number(props.accrual.payable_kopecks))};
+    const base = Math.max(0, Number(previewPayable.value));
+    return {amount:value,bonus:Math.max(0,value-base),companyDebt:Math.max(0,base-value),employeeDebt:Math.max(0,-Number(previewPayable.value))};
 });
 // --------- конец нового кода chat
 const emit = defineEmits(['close', 'changed', 'save-payment', 'approve', 'cancel-approval']); // новый код chat: обновление начислений после прощения
 // --------- новый код chat: сохранение отличающейся суммы и финансовая сводка
-const differsFromCalculation = computed(() => !!paymentPreview.value && paymentPreview.value.amount !== Math.max(0,Number(props.accrual.payable_kopecks)));
-const savedPayment = computed(() => props.accrual.has_draft && paymentPreview.value?.amount === Math.round(Number(props.paymentAmount)*100));
+const differsFromCalculation = computed(() => !!paymentPreview.value && paymentPreview.value.amount !== Math.max(0,Number(previewPayable.value)));
+const savedPayment = computed(() => !alimonyChanged.value && props.accrual.has_draft && paymentPreview.value?.amount === Math.round(Number(props.paymentAmount)*100));
 const financialRows = computed(() => [
     {label:'Начислено',value:props.accrual.amount_kopecks},
     {label:'Расходы',value:props.accrual.expenses_kopecks || 0},
     {label:'Авансы',value:props.accrual.advances_kopecks || 0},
     {label:'Штрафы',value:props.accrual.penalties_kopecks || 0},
     {label:'Вычет 13%',value:props.accrual.deduction_kopecks || 0},
+    {label:'Алименты',value:alimonyCents.value ?? props.accrual.alimony_kopecks ?? 0}, // новый код chat
     {label:'Долг К.',value:props.accrual.company_debt_kopecks || 0},
     {label:'Долг С.',value:props.accrual.employee_debt_kopecks || 0},
 ]);
@@ -195,12 +242,12 @@ const groups = computed(() => [
     {title:'Авансы', description:'Актуальные авансы по договору, учитываемые в начислении.', dateLabel:'Дата выплаты', rows:advances.value, empty:'Актуальных авансов нет.'},
     {title:'Штрафы', isPenalty:true, description:'Штрафы за месяц выбранного табеля. В сумму удержаний входят только актуальные.', dateLabel:'Дата назначения', rows:penalties.value, empty:'Штрафов за этот месяц нет.'}, // новый код chat: сохраняем видимость прощённых штрафов
 ]);
-// --------- новый код chat: прощение штрафа за прогул через существующее API
+// --------- новый код chat: прощение любого актуального штрафа через существующее API
 const statusLabel = status => ({active:'Актуален', closed:'Закрыт', forgiven:'Прощён'}[status] || status);
 const statusClass = status => ({active:'text-success border-success', closed:'text-secondary border-secondary', forgiven:'text-primary border-primary'}[status] || 'text-secondary border-secondary');
-const canForgive = row => !props.approved && row.status === 'active' && (row.source_time_sheet_id || (row.comment || '').trim().toLocaleLowerCase('ru-RU') === 'прогул');
+const canForgive = row => !props.approved && row.status === 'active'; // новый код chat: не только прогул
 const forgive = async(row) => {
-    if (saving.value || !canForgive(row) || !window.confirm('Простить штраф за прогул? Он больше не будет вычитаться из начисления.')) return;
+    if (saving.value || props.busy || !canForgive(row) || !window.confirm(`Простить штраф на сумму ${money(row.amount_kopecks)}? Он останется в списке, но больше не будет вычитаться из начисления.`)) return; // новый код chat
     const current = version; saving.value = true;
     try {
         const res = await api.patch(`/agreements/${props.agreementId}/penalties/${row.ID}/status`, {status:'forgiven'});
@@ -209,7 +256,7 @@ const forgive = async(row) => {
         penalties.value = penalties.value.map(item => item.ID === row.ID ? res.data : item);
     } catch (err) {
         if (current === version) error.value = typeof err.response?.data === 'string' ? err.response.data.trim() : 'Не удалось простить штраф.';
-    } finally { if (current === version) saving.value = false; }
+    } finally { saving.value = false; } // новый код chat: снимаем блокировку и после обновления расчёта
 };
 // --------- конец нового кода chat
 const load = async() => {
@@ -277,18 +324,89 @@ onBeforeUnmount(() => {
 .calendar-day strong { text-align: center; overflow-wrap: anywhere; }
 .calendar-number { font-size: 12px; }
 .calendar-blank { visibility: hidden; }
-.detail-table { border-radius: 6px; border: 1px solid var(--bs-border-color); overflow: auto; }
-/* --------- новый код chat: внешняя граница 1 px без дублирующих границ таблицы */
-.detail-table .table > thead > tr:first-child { border-top: 0; }
-.detail-table .table > tbody > tr:last-child { border-bottom: 0; }
-.detail-table .table > :not(caption) > tr > :first-child { border-left: 0; }
-.detail-table .table > :not(caption) > tr > :last-child { border-right: 0; }
 /* --------- конец нового кода chat */
-.detail-table th { font-weight: 600; }
-.detail-comment { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 120px; }
 /* --------- конец нового кода chat */
 /* новый код chat: оформление ссылок ФИО */
 .salary-employee-link { color: inherit; text-decoration: none; }
 .salary-employee-link:hover { color: #0d6efd; text-decoration: underline; }
 .salary-employee-link:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
+
+/* --------- новый код chat: современная компоновка в стилистике карточек сайта */
+.salary-dialog { max-width: 960px; }
+.salary-detail .modal-content { border: 1px solid var(--bs-border-color); border-radius: 16px; overflow: hidden; box-shadow: 0 18px 60px #14213926; color: #111827; }
+.salary-header { padding: 20px 24px; background: #fff; gap: 16px; }
+.salary-header h5 { font-size: 19px; font-weight: 600; line-height: 1.4; }
+.salary-header-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 7px; font-size: 13px; }
+.salary-state { border-radius: 50rem; padding: 3px 10px; font-size: 11px; font-weight: 500; border: 1px solid; }
+.salary-state-approved { color: #146c43; background: #edf8f1; border-color: #b9dfc9; }
+.salary-state-draft { color: #084298; background: #eff5ff; border-color: #cfe2ff; }
+.salary-detail .modal-body { background: #f7f8fa; }
+.salary-info-panel, .salary-calendar-panel, .salary-record-panel { padding: 18px; border: 1px solid #dee3e9; border-radius: 12px; background: #fff; }
+.salary-info-panel { height: 100%; }
+.salary-section-title { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+.salary-section-title i { color: #0d6efd; font-size: 16px; }
+.salary-info-panel > .d-flex { padding: 6px 0; margin-bottom: 0 !important; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+.salary-info-panel > .d-flex:last-child { border-bottom: 0; }
+.salary-info-panel strong { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.salary-reference-panel { background: #fcfdff; }
+.salary-payment-panel { border: 1px solid #ccdcef; border-radius: 12px; background: #fff; padding: 18px; }
+.salary-payment-grid { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 18px 24px; }
+.salary-payable { flex: 1 1 210px; }
+.salary-payable > .mb-2 > strong:first-child { font-size: 12px; font-weight: 500; color: #41536c; margin-bottom: 6px; }
+.salary-payable-amount { font-size: 26px; font-weight: 600; line-height: 1.25; color: #084298; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.salary-input-group { flex: 1 1 180px; min-width: 0; }
+.salary-input-group .form-label { font-size: 12px; font-weight: 600; margin-bottom: 7px; }
+.salary-input-group :deep(input) { font-size: 15px; min-height: 38px; border-radius: 7px; font-variant-numeric: tabular-nums; }
+.salary-actions { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e6ebf2; }
+.salary-actions .btn, .salary-footer .btn { font-size: 13px; border-radius: 7px; padding: 6px 12px; }
+.salary-calendar-panel { margin-bottom: 16px; }
+.salary-calendar { gap: 6px; }
+.calendar-heading { font-weight: 600; color: #344054; }
+.calendar-day { min-height: 59px; border-color: #e2e6ec; border-radius: 8px; }
+.calendar-number { line-height: 1.2; }
+.calendar-day strong { font-size: 14px; margin-top: 4px; color: #111; }
+.salary-record-panel { margin-top: 14px; }
+.salary-record-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.salary-record-heading strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+/* новый код chat: разделитель между шапкой и списком во всех блоках */
+.salary-record-description { font-size: 12px; color: #526174; margin-bottom: 0; padding-bottom: 14px; border-bottom: 1px solid #dee3e9; line-height: 1.5; }
+.salary-empty { margin: 0; font-size: 13px; color: #526174; padding: 8px 0 2px; }
+.salary-footer { background: #fff; padding: 10px 24px; }
+@media (max-width: 575px) {
+    .salary-dialog { margin: 8px; }
+    .salary-header { padding: 16px; }
+    .salary-header h5 { font-size: 16px; }
+    .salary-info-panel, .salary-payment-panel, .salary-calendar-panel, .salary-record-panel { padding: 12px; }
+    .salary-payable { flex-basis: 100%; }
+    .salary-input-group { flex-basis: 100%; }
+    .salary-calendar { gap: 3px; }
+    .calendar-day { min-height: 52px; padding: 4px 2px; }
+    .calendar-day strong { font-size: 12px; }
+    .salary-actions .small { flex-basis: 100%; }
+}
+/* --------- конец нового кода chat */
+
+/* --------- новый код chat: лёгкие разделители и адаптивные строки списков */
+.salary-entry-list { list-style: none; padding: 0; margin: 0; }
+.salary-entry { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px 24px; padding: 14px 0; }
+.salary-entry + .salary-entry { border-top: 1px solid #edf0f4; }
+.salary-entry:last-child { padding-bottom: 0; }
+.salary-entry-content { flex: 1; min-width: 0; }
+.salary-entry-date { display: flex; align-items: baseline; gap: 7px; color: #526174; font-size: 12px; line-height: 1.5; }
+.salary-entry-date i { color: #6b7d93; }
+.salary-entry-comment { margin: 5px 0 0; font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; color: #111827; }
+.salary-entry-empty { color: #667085; }
+.salary-entry-summary { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex-shrink: 0; max-width: 50%; }
+.salary-entry-amount { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
+.salary-entry-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+.salary-entry-actions .badge { font-size: 11px; padding: 4px 8px; }
+.salary-forgive-button { padding: 2px 0; font-size: 12px; text-decoration: none; }
+.salary-forgive-button:hover { text-decoration: underline; }
+@media (max-width: 575px) {
+    .salary-entry { flex-wrap: wrap; gap: 8px; padding-top: 12px; padding-bottom: 12px; }
+    .salary-entry-content { flex-basis: 100%; }
+    .salary-entry-summary { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; max-width: none; gap: 12px; }
+    .salary-entry-amount { text-align: left; }
+}
+/* --------- конец нового кода chat */
 </style>

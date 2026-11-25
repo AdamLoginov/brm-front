@@ -47,6 +47,7 @@
                         <th scope="col" class="text-end">Авансы</th>
                         <th scope="col" class="text-end">Штрафы</th> <!-- новый код chat -->
                         <th scope="col" class="text-end">Вычет 13%</th> <!-- новый код chat: от официальной месячной зарплаты -->
+                        <th scope="col" class="text-end">Алименты</th> <!-- новый код chat: справочная колонка -->
                         <th scope="col" class="text-end">Премии</th> <!-- новый код chat -->
                         <th scope="col" class="text-end" title="Долг компании">Долг К.</th><th scope="col" class="text-end" title="Долг сотрудника">Долг С.</th> <!-- новый код chat: сокращённые заголовки долгов -->
                         <th scope="col" class="text-end">К выплате</th><th scope="col">Выплата, ₽</th> <!-- новый код chat -->
@@ -61,12 +62,15 @@
 <td :title="accrual.employee_name"><router-link :to="{ name: 'employee-card-detail', params: { id: accrual.employee_card_id } }" class="salary-employee-link" @click.stop @keydown.stop>{{ formatEmployeeName(accrual) }}</router-link></td> <!-- новый код chat: ссылка на сотрудника без открытия модального окна строки -->
                         <td class="text-end">{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</td> <!-- новый код chat: часы сотрудника из начисления без округления -->
                         <td class="text-end">{{ formatShifts(accrual.total_hours, accrual.shift_hours) }}</td> <!-- новый код chat: норма смены из табеля -->
-                        <td class="text-end text-nowrap">{{ formatMoney(accrual.salary_rate_kopecks) }}</td>
+                        <!-- новый код chat: красная ячейка при нулевой ставке -->
+                        <td class="text-end text-nowrap" :class="{'salary-zero-rate': Number(accrual.salary_rate_kopecks) === 0}">{{ formatMoney(accrual.salary_rate_kopecks) }}</td>
                         <td class="text-end text-nowrap fw-semibold">{{ formatMoney(accrual.amount_kopecks) }}</td>
                         <td class="text-end text-nowrap">{{ formatMoney(accrual.expenses_kopecks || 0) }}</td> <!-- новый код chat: прибавляем личные расходы -->
                         <td class="text-end text-nowrap">{{ formatMoney(accrual.advances_kopecks) }}</td>
                         <td class="text-end text-nowrap">{{ formatMoney(accrual.penalties_kopecks) }}</td> <!-- новый код chat -->
                         <td class="text-end text-nowrap">{{ formatMoney(accrual.deduction_kopecks || 0) }}</td> <!-- новый код chat -->
+                        <!-- новый код chat: нулевое значение с подсветкой по отметке сотрудника -->
+                        <td class="text-end text-nowrap" :class="{'salary-alimony-cell': accrual.has_alimony && !accrual.alimony_kopecks}" :title="accrual.has_alimony ? 'Сотрудник выплачивает алименты' : undefined">{{ formatMoney(accrual.alimony_kopecks || 0) }}</td> <!-- новый код chat: сохранённая сумма -->
                         <!-- --------- новый код chat: предварительная премия и долг с Bootstrap-подсказками -->
                         <td class="text-end text-nowrap"><span v-payment-tooltip="paymentPreview(accrual).bonusTooltip" :class="{'text-success':paymentPreview(accrual).extra > 0}" :tabindex="paymentPreview(accrual).extra > 0 ? 0 : undefined">{{ formatMoney(paymentPreview(accrual).bonus) }}</span></td>
                         <td class="text-end"><span v-payment-tooltip="paymentPreview(accrual).debtTooltip" :class="{'text-danger':paymentPreview(accrual).shortfall > 0}" :tabindex="paymentPreview(accrual).shortfall > 0 ? 0 : undefined">{{ formatMoney(paymentPreview(accrual).debt) }}</span></td><td class="text-end">{{ formatMoney(accrual.employee_debt_kopecks || 0) }}</td>
@@ -75,7 +79,8 @@
                         <td class="text-end text-nowrap salary-payment-cell">{{ formatMoney(paymentCents(paymentAmounts[accrual.employee_card_id]) ?? 0) }}<span v-if="accrual.has_draft && !accrual.approved" class="salary-draft-dot" role="img" aria-label="Сохранён черновик выплаты" title="Сохранён черновик выплаты"></span></td> <!-- новый код chat: зелёная отметка сохранённого черновика -->
                     </tr>
                 </tbody>
-                <tfoot class="table-light">
+                <!-- новый код chat: жирное начертание всей строки итогов, включая долги -->
+                <tfoot class="table-light fw-bold">
                     <tr>
                         <th scope="row" :colspan="selectionMode ? 6 : 5">Итого по выбранному табелю</th> <!-- новый код chat: учтено удаление колонки официальной ставки -->
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalKopecks) }}</td>
@@ -83,6 +88,7 @@
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalAdvancesKopecks) }}</td>
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalPenaltiesKopecks) }}</td> <!-- новый код chat -->
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalDeductionKopecks) }}</td> <!-- новый код chat: сумма вычетов -->
+                        <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalAlimonyKopecks) }}</td> <!-- новый код chat: итог алиментов -->
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalBonusesKopecks) }}</td> <!-- новый код chat -->
                         <td class="text-end">{{ formatMoney(totalCompanyDebtKopecks) }}</td><td class="text-end">{{ formatMoney(totalEmployeeDebtKopecks) }}</td> <!-- новый код chat -->
                         <td class="text-end text-nowrap fw-bold" :class="{'text-danger': totalPayableKopecks < 0}">{{ formatMoney(totalPayableKopecks) }}</td><td class="text-end fw-bold">{{ paymentTotal.valid ? formatMoney(paymentTotal.amount) : 'Проверьте суммы' }}</td> <!-- новый код chat -->
@@ -165,6 +171,7 @@ const totalKopecks = ref(0);
 const totalBonusesKopecks = ref(0); // новый код chat
 const totalExpensesKopecks = ref(0); // новый код chat
 const totalDeductionKopecks = ref(0); // новый код chat: общий вычет 13%
+const totalAlimonyKopecks = computed(() => accruals.value.reduce((sum,row) => sum + Number(row.alimony_kopecks || 0),0)); // новый код chat
 const totalPenaltiesKopecks = ref(0); // новый код chat: штрафы за месяц
 const totalAdvancesKopecks = ref(0); // новый код chat: сумма авансов
 const totalPayableKopecks = ref(0); // новый код chat: остаток к выплате
@@ -309,10 +316,10 @@ const runSalaryAction = async(path,body,message) => {
     } catch (err) { if (version === requestVersion) errorMessage.value = requestError(err); }
     finally { if (version === requestVersion) loading.value = false; }
 };
-const savePayment = ({amount,reset}) => {
+const savePayment = ({amount,reset,alimony_amount}) => { // новый код chat: совместное сохранение
     const row = selectedAccrual.value;
     if (!row) return;
-    return runSalaryAction('payment-draft',{employee_card_id:row.employee_card_id,revision:row.revision,amount,reset},reset ? 'Выплата возвращена к расчётной сумме.' : 'Выплата сохранена.');
+    return runSalaryAction('payment-draft',{employee_card_id:row.employee_card_id,revision:row.revision,amount,reset,alimony_amount},reset ? 'Выплата возвращена к расчётной сумме.' : 'Выплата и алименты сохранены.'); // новый код chat
 };
 const selectionEntry = (row,approved,amount) => ({employee_card_id:row.employee_card_id,approved,approval_id:row.approval_id || 0,revision:row.revision || '',amount:amount ?? paymentAmounts.value[row.employee_card_id]});
 // новый код chat: одинаковый повтор после сетевой ошибки использует прежний ключ
@@ -336,6 +343,10 @@ onBeforeUnmount(() => { requestVersion++; });
 /* --------- новый код chat: доступные для открытия строки начислений */
 .salary-accrual-row { cursor: pointer; }
 .salary-approved-row { --bs-table-bg: #e7f4e8; --bs-table-hover-bg: #dceedd; } /* новый код chat: согласованные строки */
+/* новый код chat: нулевая ставка выделена и в согласованных строках, и при наведении */
+.salary-table td.salary-zero-rate { --bs-table-bg: #f8d7da; --bs-table-hover-bg: #f1c5c9; }
+/* новый код chat: подсветка алиментов сохраняется в согласованных строках */
+.salary-table td.salary-alimony-cell { --bs-table-bg: #f8d7da; --bs-table-hover-bg: #f1c5c9; }
 .salary-accrual-row:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
 /* --------- конец нового кода chat */
 /* --------- новый код chat: компактная таблица с округлённой рамкой */
