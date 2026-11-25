@@ -70,6 +70,7 @@ const groups = [
     { name: 'home', label: 'Главная', icon: 'bi-house-door' },
     { name: 'agreements', label: 'Договоры', icon: 'bi-building' },
     { name: 'employee-cards', label: 'Сотрудники', icon: 'bi-people' },
+    { name: 'mtr', label: 'МТР', icon: 'bi-tools' }, // новый код chat: общий список инструментов
     { name: 'suplers', label: 'Поставщики', icon: 'bi-box-seam', disabled: true }, // новый код chat: временная блокировка
   ] },
   { label: 'Общение', items: [
@@ -80,6 +81,7 @@ const groups = [
 const activeSection = computed(() => {
   const path = route.path;
   if (path === '/') return 'home';
+  if (path === '/mtr' || path.startsWith('/mtr/')) return 'mtr'; // новый код chat: все вкладки МТР
   if (/^\/(agreements?|estimate)(\/|$)/.test(path)) return 'agreements';
   if (/^\/employeecards(\/|$)/.test(path)) return 'employee-cards';
   if (/^\/(suplers|suppliers)(\/|$)/.test(path)) return 'suplers';

@@ -42,6 +42,9 @@ import EmailsPage from '../components/pages/EmailsPage.vue'
 
 //tools
 import ToolsAgreementpage from '../components/pages/ToolsAgreementpage.vue'
+import MtrPage from '../components/pages/MTR/MtrPage.vue' // новый код chat
+import PpePage from '../components/pages/MTR/PpePage.vue' // новый код chat: учёт СИЗ вместо заглушки
+import ConsumablesPage from '../components/pages/MTR/ConsumablesPage.vue' // новый код chat: учёт расходников
 // EmployeeCards
 import EmployeeCardsPage from '../components/pages/Employee/EmployeeCardsPage.vue'
 import EmployeeCardCreatePage from '../components/pages/Employee/EmployeeCardCreatePage.vue'
@@ -159,7 +162,18 @@ const routes = [
   { path: '/suplers/create', name: 'suplerCreate', component: SuplerCreatePage, meta:{requiresAuth: true} },
   
   //Инструменты
-  { path: '/agreement/:id/tools', name: 'agreement-tools', component: ToolsAgreementpage, meta:{requiresAuth: true} },
+  // --------- новый код chat: общие оболочки с постоянной панелью переключения
+  { path: '/agreement/:id/tools', component: MtrPage, meta:{requiresAuth:true, mtrGlobal:false}, children:[
+    {path:'', name:'agreement-tools', component:ToolsAgreementpage},
+    {path:'ppe', name:'agreement-ppe', component:PpePage}, // новый код chat
+    {path:'consumables', name:'agreement-consumables', component:ConsumablesPage}, // новый код chat
+  ] },
+  { path: '/mtr', component: MtrPage, meta:{requiresAuth:true, mtrGlobal:true}, children:[
+    {path:'', name:'mtr', component:ToolsAgreementpage},
+    {path:'ppe', name:'mtr-ppe', component:PpePage}, // новый код chat
+    {path:'consumables', name:'mtr-consumables', component:ConsumablesPage}, // новый код chat
+  ] },
+  // --------- конец нового кода chat
   
   // Диалоги
 
