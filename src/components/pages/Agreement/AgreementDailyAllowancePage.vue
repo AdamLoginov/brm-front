@@ -1,39 +1,51 @@
 <!-- --------- новый код chat: календарь суточных и массовая выдача -->
 <template>
-    <div>
-        <!-- новый код chat: компактный выбор табеля и история выдач рядом -->
-        <div class="d-flex gap-2 align-items-end flex-wrap mb-3">
-            <div><label for="daily-month" class="form-label">Месячный табель</label><select id="daily-month" v-model="monthID" class="form-select form-select-sm daily-month" :disabled="busy || editingList || !months.length" @change="changeMonth"><option v-for="month in months" :key="month.ID" :value="month.ID">{{ monthLabel(month) }} · №{{ month.ID }}</option></select></div>
-            <div><button class="btn btn-sm btn-outline-primary" :disabled="busy || editingList" @click="historyOpen = true">История выдач</button></div>
-        </div>
+    <div class="daily-page">
+        <!-- --------- новый код chat: единая панель управления суточными -->
+        <section class="daily-controls">
+            <div class="daily-controls-top">
+                <div class="daily-heading"><h2>Суточные</h2><span>Учёт дней и выдача сотрудникам</span></div>
+                <div class="daily-month-tools">
+                    <div><label for="daily-month" class="form-label">Месячный табель</label><select id="daily-month" v-model="monthID" class="form-select form-select-sm daily-month" :disabled="busy || editingList || !months.length" @change="changeMonth"><option v-for="month in months" :key="month.ID" :value="month.ID">{{ monthLabel(month) }}</option></select></div>
+                    <button class="btn btn-sm btn-outline-primary" :disabled="busy || editingList" @click="historyOpen = true"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>История выдач</button>
+                </div>
+            </div>
+        </section>
         <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div>
         <div v-if="successMessage" class="alert alert-success" role="status">{{ successMessage }}</div>
         <div v-if="!busy && months.length && !table.rate_kopecks" class="alert alert-info">Укажите суточные в настройках табеля. Выдача и автозаполнение пока недоступны.</div>
         <div v-if="table.forecast_warning" class="alert alert-warning">{{ table.forecast_warning }}. Прогноз оплаты будущих дней неполный.</div>
-        <!-- новый код chat: пояснение перенесено над обозначениями цветов -->
-        <p class="small text-secondary">Суммы должны быть кратны суточным выбранного табеля. Прогноз округляется вверх, остаток сохраняется. Красное ФИО — сотрудник переведён; новые выдачи здесь недоступны.</p>
+
+        <div v-if="editingList" class="daily-edit-notice" role="status"><i class="bi bi-people" aria-hidden="true"></i><span><strong>Редактирование списка.</strong> Отметьте сотрудников, которым начисляются суточные. Для исключённых начисления отменяются в выбранном месяце. Выдача денег временно недоступна.</span></div>
+        <!-- новый код chat: правила постоянно открыты, без сворачивания -->
+        <section class="daily-help" aria-labelledby="daily-help-title">
+            <h3 id="daily-help-title" class="daily-help-title">Обозначения и правила заполнения</h3>
+            <div class="daily-help-content">
         <div class="d-flex gap-3 flex-wrap small mb-3 daily-legend">
             <!-- новый код chat: формулировки оплаты дней -->
             <span><i class="daily-paid"></i>С — отработан и оплачен</span><span><i class="daily-unpaid"></i>Отработан, не оплачен полностью</span><span><i class="daily-letter"></i>Буквенная отметка</span><span><i class="daily-reserved"></i>День обеспечен вперёд</span>
             <span><i class="daily-preview"></i>Будущий день будет оплачен</span><span><i class="daily-preview-worked"></i>Отработанный день будет оплачен</span> <!-- новый код chat: отдельные цвета прогноза и погашения долга -->
         </div>
-        <!-- новый код chat: одинаковая сумма и выбор сотрудников удалены; ставка сохранена -->
-        <div class="d-flex align-items-center gap-3 flex-wrap mb-2"> <!-- новый код chat: ставка и дата обеспечения в одной строке -->
-            <span>Суточные: <strong>{{ money(table.rate_kopecks || 0) }}</strong></span>
-            <!-- новый код chat: компактное поле даты справа от ставки суточных -->
-            <div class="d-flex align-items-center gap-2 flex-wrap"><label for="daily-through" class="form-label mb-0 small">Обеспечить по дату включительно</label><input id="daily-through" v-model="through" type="date" class="form-control form-control-sm daily-through" :disabled="busy || editingList || !monthID || !table.rate_kopecks" @change="loadTable"></div>
-            <!-- новый код chat: кнопки справа в общей строке ставки и даты -->
-            <div class="d-flex gap-2 ms-auto flex-wrap justify-content-end">
-                <button v-if="!editingList" class="btn btn-sm btn-outline-primary" :disabled="busy || !monthID" @click="editList">Править список</button> <!-- новый код chat: короткая подпись -->
-                <template v-else>
-                    <button class="btn btn-sm btn-outline-primary" :disabled="busy || !table.employees?.length" @click="toggleAllEmployees">Выбрать все</button>
-                    <button class="btn btn-sm btn-success" :disabled="busy" @click="saveList">Сохранить список</button> <!-- новый код chat: зелёное сохранение после общего выбора -->
-                    <button class="btn btn-sm btn-outline-secondary" :disabled="busy" @click="editingList=false">Отмена</button>
-                </template>
+
+                <p class="small mb-0">Суммы должны быть кратны суточным выбранного табеля. Прогноз округляется вверх, остаток сохраняется. Красное ФИО — сотрудник переведён; новые выдачи здесь недоступны. Выбор даты заполняет суммы, но не фиксирует выдачу.</p>
             </div>
-        </div>
+        </section>
+        <!-- --------- конец нового кода chat -->
         <div v-if="busy" class="text-secondary py-2" role="status">Обрабатываем суточные…</div>
         <div v-if="!months.length && !busy" class="alert alert-info">Сначала создайте месячный табель.</div>
+        <!-- новый код chat: ставка и дата обеспечения непосредственно у таблицы -->
+            <div v-if="monthID" class="daily-controls-bottom daily-table-toolbar">
+                <div class="daily-rate"><span>Суточные за день</span><strong>{{ money(table.rate_kopecks || 0) }} ₽</strong></div>
+                <div class="daily-forecast"><label for="daily-through" class="form-label">Обеспечить по дату включительно</label><input id="daily-through" v-model="through" type="date" class="form-control form-control-sm daily-through" :disabled="busy || editingList || !monthID || !table.rate_kopecks" @change="loadTable"></div>
+                <div class="daily-list-actions">
+                    <button v-if="!editingList" class="btn btn-sm btn-outline-primary" :disabled="busy || !monthID" @click="editList"><i class="bi bi-people me-1" aria-hidden="true"></i>Править список</button>
+                    <template v-else>
+                        <button class="btn btn-sm btn-outline-primary" :disabled="busy || !table.employees?.length" @click="toggleAllEmployees">Выбрать все</button>
+                        <button class="btn btn-sm btn-success" :disabled="busy" @click="saveList">Сохранить список</button>
+                        <button class="btn btn-sm btn-outline-secondary" :disabled="busy" @click="editingList=false">Отмена</button>
+                    </template>
+                </div>
+            </div>
         <div v-if="monthID" class="table-responsive daily-scroll" :class="{'daily-editing-list':editingList}">
             <table ref="dailyTableElement" class="table table-sm table-bordered align-middle daily-table">
                 <thead ref="dailyHeaderElement" class="daily-sticky-header" :style="{transform: `translateY(${dailyHeaderOffset}px)`}"> <!-- новый код chat: закреплённый белый заголовок -->
@@ -51,18 +63,25 @@
                         <td v-for="cell in employee.cells.filter(cell => cell.state !== 'dismissed')" :key="cell.date" class="daily-day" :class="isPreviewCovered(employee, cell) ? (cell.state === 'unpaid' ? 'daily-preview-worked' : 'daily-preview') : `daily-${cell.state}`" :title="isPreviewCovered(employee, cell) ? `${cell.date}: будет оплачен после фиксации выдачи` : cellTitle(cell)">{{ cell.mark }}</td> <!-- новый код chat: закрытые дни вынесены в объединённую ячейку -->
                         <td v-if="employee.cells.some(cell => cell.state === 'dismissed')" :colspan="employee.cells.filter(cell => cell.state === 'dismissed').length" class="daily-dismissed-days" :title="'Уволен с ' + employee.dismissal_date">Уволен</td> <!-- новый код chat: блок как в рабочем табеле -->
                         <td class="text-end daily-balance" :class="employee.balance_kopecks < 0 ? 'text-danger' : 'text-success'">{{ money(employee.balance_kopecks) }}</td>
-                        <td class="daily-issue"><input v-if="employee.is_assigned && employee.enabled !== false" v-model="amounts[employee.employee_card_id]" inputmode="decimal" class="form-control form-control-sm" :disabled="busy || editingList || !table.rate_kopecks" :aria-label="`К выдаче: ${employee.employee_name}`" placeholder="0,00"></td>
+                        <td class="daily-issue"><!-- новый код chat: проверка суммы непосредственно в строке -->
+                            <template v-if="employee.is_assigned && employee.enabled !== false">
+                                <input v-model="amounts[employee.employee_card_id]" inputmode="decimal" class="form-control form-control-sm" :class="{'is-invalid':!editingList && amountError(employee)}" :disabled="busy || editingList || !table.rate_kopecks" :aria-label="`К выдаче: ${employee.employee_name}`" :aria-invalid="!editingList && !!amountError(employee)" :aria-describedby="!editingList && amountError(employee) ? `daily-amount-error-${employee.employee_card_id}` : undefined" placeholder="0,00">
+                                <small v-if="!editingList && amountError(employee)" :id="`daily-amount-error-${employee.employee_card_id}`" class="daily-amount-error">{{ amountError(employee) }}</small>
+                            </template></td>
                     </tr>
                     <tr v-if="!displayedEmployees.length && !busy"><td :colspan="days.length + 4 + (editingList ? 1 : 0)" class="text-secondary">Сотрудников пока нет.</td></tr>
                 </tbody>
             </table>
         </div>
-        <div class="d-flex gap-3 align-items-center flex-wrap my-3">
-            <span>Получателей: <strong>{{ totals.count }}</strong></span><span>Итого к выдаче: <strong>{{ totals.valid ? money(totals.amount) : 'Проверьте суммы' }}</strong></span>
-            <!-- новый код chat: дата выплаты непосредственно перед фиксацией выдачи -->
-            <div class="d-flex align-items-center gap-2"><label for="daily-payment-date" class="form-label mb-0 text-nowrap">Дата выплаты</label><input id="daily-payment-date" v-model="paymentDate" type="date" class="form-control form-control-sm" :disabled="busy || editingList"></div>
-            <button class="btn btn-primary btn-sm" :disabled="busy || editingList || !table.rate_kopecks || !totals.count || !totals.valid || !paymentDate" @click="pay">Зафиксировать выдачу</button>
+        <!-- --------- новый код chat: итоги и фиксация доступны при прокрутке длинной таблицы -->
+        <div v-if="monthID && !editingList" class="daily-payment-bar">
+            <div class="daily-payment-summary"><span>Получателей <strong>{{ totals.count }}</strong></span><div><span>Итого к выдаче</span><strong class="daily-payment-total" :class="{'text-danger':!totals.valid}">{{ totals.valid ? money(totals.amount) + ' ₽' : 'Проверьте суммы' }}</strong></div></div>
+            <div class="daily-payment-actions">
+                <div><label for="daily-payment-date" class="form-label">Дата выплаты</label><input id="daily-payment-date" v-model="paymentDate" type="date" class="form-control form-control-sm" :disabled="busy"></div>
+                <button class="btn btn-primary btn-sm" :disabled="busy || !table.rate_kopecks || !totals.count || !totals.valid || !paymentDate" @click="pay">Зафиксировать выдачу</button>
+            </div>
         </div>
+        <!-- --------- конец нового кода chat -->
         <!-- новый код chat: передаём месяцы табелей для истории выдач -->
         <DailyAllowanceHistoryComponent v-if="historyOpen" :agreement-id="route.params.id" :months="months" @close="historyOpen = false" @changed="historyChanged" />
     </div>
@@ -120,6 +139,15 @@ const parseAmount = value => {
     const result = BigInt(rubles) * 100n + BigInt(cents.padEnd(2,'0'));
     return result <= maximum ? result : null;
 };
+// --------- новый код chat: локальные пояснения без изменения расчёта и отправки
+const amountError = employee => {
+    const amount = parseAmount(amounts.value[employee.employee_card_id]);
+    if (amount === null) return 'Введите положительную сумму до копеек.';
+    const rate = BigInt(table.value.rate_kopecks || 0);
+    if (amount > 0n && rate > 0n && amount % rate !== 0n) return `Сумма кратна ${money(table.value.rate_kopecks)} ₽`;
+    return '';
+};
+// --------- конец нового кода chat
 const monthLabel = month => new Date(month.year,month.month-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
 // новый код chat: подсветка только в месяце увольнения
 const dismissedInCurrentMonth = employee => employee.status && employee.dismissal_date?.slice(0, 7) === `${table.value.year}-${String(table.value.month).padStart(2, '0')}`;
@@ -298,4 +326,55 @@ onBeforeUnmount(() => { version++; });
 .daily-check { width: 28px; min-width: 28px; position: sticky; left: 0; background: #fff; z-index: 2; text-align: center; }
 .daily-editing-list .daily-number { left: 28px; }
 .daily-editing-list .daily-name { left: 60px; }
+/* --------- новый код chat: компактные панели и закреплённые денежные колонки */
+.daily-page { color: #000; font-size: 14px; }
+.daily-controls { border: 1px solid var(--bs-border-color); border-radius: 12px; background: #fff; margin-bottom: 12px; overflow: hidden; }
+.daily-controls-top, .daily-controls-bottom { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 14px 16px; }
+.daily-controls-top { justify-content: space-between; }
+.daily-controls-bottom { background: #f8f9fa; border-top: 1px solid var(--bs-border-color); }
+/* --------- новый код chat: панель ввода связана с таблицей, правила расположены выше */
+.daily-table-toolbar { border: 1px solid var(--bs-border-color); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 12px 14px; }
+.daily-table-toolbar + .daily-scroll { border-radius: 0 0 10px 10px; }
+.daily-table-toolbar .daily-rate { flex-direction: row; align-items: center; gap: 8px; min-width: 0; padding-right: 16px; border-right: 1px solid var(--bs-border-color); }
+.daily-table-toolbar .daily-rate strong { font-size: 15px; white-space: nowrap; }
+/* --------- конец нового кода chat */
+.daily-heading h2 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+.daily-heading > span { font-size: 12px; color: #495057; }
+.daily-month-tools, .daily-payment-actions { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+.daily-page .form-label { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.daily-rate { min-width: 150px; display: flex; flex-direction: column; gap: 4px; }
+.daily-rate > span { font-size: 12px; }
+.daily-rate strong { font-size: 16px; }
+.daily-forecast { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.daily-forecast .form-label { margin-bottom: 0; }
+.daily-list-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.daily-edit-notice { display: flex; gap: 10px; padding: 12px 16px; background: #eaf4ff; border: 1px solid #b6d4fe; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+.daily-help { margin: 0 0 12px; border: 1px solid var(--bs-border-color); border-radius: 8px; background: #fff; }
+.daily-help-title { padding: 9px 12px; margin: 0; font-size: 13px; font-weight: 500; } /* новый код chat: заголовок постоянного блока правил */
+.daily-help-content { padding: 4px 12px 12px; }
+.daily-help-content p { color: #495057; }
+.daily-scroll { border-radius: 10px; }
+.daily-balance { position: sticky; right: 145px; z-index: 2; background: #fff !important; }
+.daily-issue { position: sticky; right: 0; z-index: 2; width: 145px; min-width: 145px; max-width: 145px; }
+.daily-table thead .daily-balance, .daily-table thead .daily-issue { z-index: 3; }
+.daily-table .daily-issue input.is-invalid { background-image: none; border-color: var(--bs-danger); padding-right: 4px; }
+.daily-amount-error { display: block; color: #b02a37; font-size: 11px; line-height: 1.2; white-space: normal; padding: 3px 0; }
+.daily-payment-bar { position: sticky; bottom: 0; z-index: 7; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: #fff; border: 1px solid var(--bs-border-color); border-radius: 10px; padding: 12px 16px; margin-top: 12px; box-shadow: 0 -3px 12px #0000000a; }
+.daily-payment-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; }
+.daily-payment-summary > span, .daily-payment-summary > div > span { font-size: 12px; }
+.daily-payment-summary > div { display: flex; flex-direction: column; gap: 2px; }
+.daily-payment-total { font-size: 18px; font-weight: 600; }
+.daily-payment-actions input { width: 150px; }
+@media (max-width: 767px) {
+    .daily-controls-top, .daily-controls-bottom { padding: 12px; gap: 12px; }
+    .daily-list-actions { margin-left: 0; width: 100%; }
+    .daily-month-tools { width: 100%; }
+    .daily-payment-bar { padding: 10px; }
+    .daily-payment-summary { gap: 12px; }
+    .daily-name { width: 160px; min-width: 160px; max-width: 160px; }
+}
+@media (max-width: 575px) {
+    .daily-balance, .daily-issue { position: static; }
+}
+/* --------- конец нового кода chat */
 </style>
