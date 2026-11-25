@@ -49,7 +49,7 @@
                                     <label for="update-employee-agreement" class="form-label">Договор</label>
                                     <select id="update-employee-agreement" v-model="formData.agreement_id" :disabled="formData.status" class="form-select form-select-sm">
                                         <option :value="0">Не закреплён за договором</option>
-                                        <option v-for="agreement in agreements" :key="agreement.ID" :value="agreement.ID">{{ agreement.name }}</option>
+                                        <option v-for="agreement in agreements" :key="agreement.ID" :value="agreement.ID">{{ agreement.short_name || agreement.name }}</option> <!-- новый код chat: краткое название договора, полное — если краткое не задано -->
                                     </select>
                                 </div>
                                 <div>

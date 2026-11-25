@@ -32,14 +32,17 @@
                 </dl>
             </section>
 
-            <section class="detail-panel mt-3 p-3">
-                <h2 class="section-title mb-3">Работа и расчёты</h2>
-                <nav class="quick-navigation" aria-label="Разделы договора">
-                    <router-link v-for="item in navigation" :key="item.route" :to="{name: item.route, params: {id: agreement.ID}}" class="quick-link">
+            <!-- новый код chat: общий блок с внутренним разделением групп -->
+            <div class="detail-panel mt-3">
+            <section v-for="group in navigationGroups" :key="group.title" class="navigation-group p-3">
+                <h2 class="section-title mb-3">{{ group.title }}</h2>
+                <nav class="quick-navigation" :aria-label="group.title">
+                    <router-link v-for="item in group.items" :key="item.route" :to="{name: item.route, params: {id: agreement.ID}}" class="quick-link">
                         <i :class="['bi', item.icon]"></i><span>{{ item.label }}</span><i class="bi bi-chevron-right quick-arrow"></i>
                     </router-link>
                 </nav>
             </section>
+            </div>
 
             <div class="row g-3 mt-0">
                 <div class="col-12">
@@ -124,6 +127,14 @@
         {label: 'Долги', route: 'agreement-salary-debts', icon: 'bi-arrow-left-right'},
         {label: 'Расходы', route: 'expenses', icon: 'bi-receipt'},
     ];
+    // --------- новый код chat: работа, контакты и расчёты разделены по назначению
+    const workRoutes = ['agreement-work-orders', 'agreement-warehouse'];
+    const navigationGroups = [
+        {title: 'Работы и склад', items: navigation.filter(item => workRoutes.includes(item.route))},
+        {title: 'Контакты', items: navigation.filter(item => item.route === 'agreement-contacts')},
+        {title: 'Табель и расчёты', items: navigation.filter(item => !workRoutes.includes(item.route) && item.route !== 'agreement-contacts')},
+    ];
+    // --------- конец нового кода chat
     const recent = (items) => [...items].reverse().slice(0, 5);
     const money = (value) => Number(value || 0).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const employeeName = (employee) => employee
@@ -194,6 +205,7 @@
 .agreement-facts dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 .section-title, .section-heading h2 { font-size: 14px; font-weight: 600; margin: 0; }
 .quick-navigation { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.navigation-group + .navigation-group { border-top: 1px solid var(--bs-border-color); } /* новый код chat: внутренние разделители общего блока */
 .quick-link { display: flex; align-items: center; gap: 9px; padding: 11px 12px; border: 1px solid var(--bs-border-color); border-radius: 7px; color: var(--bs-body-color); text-decoration: none; transition: background .15s, border-color .15s; }
 .quick-link > .bi:first-child { color: var(--bs-primary); font-size: 16px; }
 .quick-arrow { margin-left: auto; font-size: 10px; color: var(--bs-secondary-color); }

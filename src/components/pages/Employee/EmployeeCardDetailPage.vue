@@ -55,7 +55,7 @@
               </div>
             </dl>
             <dl class="employee-work-group">
-              <div><dt>Договор</dt><dd><router-link v-if="employeeCard.agreement_id" :to="{name: 'agreement', params: {id: employeeCard.agreement_id}}">{{ employeeCard.agreement?.name || 'Договор № ' + employeeCard.agreement_id }}<i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i></router-link><span v-else class="text-secondary">Не закреплён за договором</span></dd></div>
+              <div><dt>Договор</dt><dd><router-link v-if="employeeCard.agreement_id" :to="{name: 'agreement', params: {id: employeeCard.agreement_id}}">{{ employeeCard.agreement?.short_name || employeeCard.agreement?.name || 'Договор № ' + employeeCard.agreement_id }}<i class="bi bi-arrow-up-right ms-1" aria-hidden="true"></i></router-link><span v-else class="text-secondary">Не закреплён за договором</span></dd></div> <!-- новый код chat: краткое название договора с резервным полным названием -->
               <div><dt>Начало работы</dt><dd>{{ displayDate(employeeCard.start_date) }}</dd></div>
               <!-- новый код chat: дата увольнения рядом с началом работы -->
               <div v-if="employeeCard.status"><dt>Уволен</dt><dd>{{ employeeCard.dismissal_date ? displayDate(employeeCard.dismissal_date) : 'Дата увольнения не указана' }}</dd></div>
