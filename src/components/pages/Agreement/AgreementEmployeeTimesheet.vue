@@ -29,7 +29,7 @@
             <div>Ctrl+C — копировать, Ctrl+V — вставить, Delete — очистить выделение. Одно скопированное значение заполняет всю выбранную область. Можно копировать данные из Excel и обратно.</div>
             <div>В режиме «Изменить» тяните квадрат в правом нижнем углу выделения: значение или шаблон повторится в соседних ячейках. Отпустите мышь для заполнения; Escape отменяет протягивание.</div> <!-- новый код chat: правило протягивания -->
             <div>Ctrl+Z или Ctrl+Я — отменить последнее изменение. Вставка, очистка и протягивание области отменяются целиком. История действует до сохранения или смены табеля.</div> <!-- новый код chat: отмена операций -->
-            <div>Для вставки и очистки нажмите «Изменить», затем «Сохранить». Допустимы 0–24, П, Б, Д, В, О и пустые ячейки. Блок с ошибками или за границами табеля не вставляется.</div> <!-- новый код chat: отпуск -->
+            <div>Для вставки и очистки нажмите «Изменить», затем «Сохранить». Допустимы 0–24, П, Б, Д, В, Н и пустые ячейки. Блок с ошибками или за границами табеля не вставляется.</div> <!-- новый код chat: не работает на объекте -->
         </div>
         <!-- --------- конец нового кода chat -->
         <fieldset :disabled="savingTimesheet" class="border-0 p-0 m-0">
@@ -63,7 +63,7 @@
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #e97c17;">Б</span> - Болен;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #fff200;">В</span> - Выходной;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #c07ff1;">Д</span> - В дороге;</div>
-                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #EAF044;">О</span> - Отпуск;</div> <!-- новый код chat -->
+                    <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #CED4DA;">Н</span> - Не работает на объекте;</div> <!-- новый код chat -->
                 </div>
                 <div class="ms-auto ps-2 d-flex justify-content-end"> <!-- новый код chat: кнопка справа без пустых колонок -->
                     <button type="button" class="btn  btn-sm" :class="isChange ? 'btn-success' : 'btn-primary'" @click="isChange ? postTimesheetHandler() : changeTimesheet()">{{ isChange ? 'Сохранить' : 'Изменить' }}</button>
@@ -191,7 +191,7 @@ const monthValue = {
 }
 
 const timesheet_color = {
-    'О': '#EAF044', // новый код chat: отпуск
+    'Н': '#CED4DA', // новый код chat: не работает на объекте
     '':   '#fff',
     'Д':  '#c07ff1',
     'В':  '#fff200',

@@ -1,7 +1,8 @@
 // --------- новый код chat: диапазоны и буфер обмена табеля
 export const normalizeTimesheetValue = raw => {
-    const value = String(raw ?? '').trim().toUpperCase();
-    if (value === '' || ['П', 'Б', 'Д', 'В', 'О'].includes(value)) return value; // новый код chat: О — отпуск
+    const text = String(raw ?? '').trim().toUpperCase();
+    const value = text === 'О' ? 'Н' : text; // новый код chat: совместимость со старыми табелями
+    if (value === '' || ['П', 'Б', 'Д', 'В', 'Н'].includes(value)) return value; // новый код chat: Н — не работает на объекте
     if (/^\d{1,2}$/.test(value) && Number(value) <= 24) return String(Number(value));
     return null;
 };
@@ -19,7 +20,7 @@ export const parseTimesheetClipboard = text => {
     if (rows.some(row => row.length !== width)) throw new Error('Скопированная область должна быть прямоугольной.');
     return rows.map((row, rowIndex) => row.map((cell, colIndex) => {
         const value = normalizeTimesheetValue(cell);
-        if (value === null) throw new Error(`Недопустимое значение в строке ${rowIndex + 1}, столбце ${colIndex + 1}: «${cell.slice(0, 30)}». Допустимы 0–24, П, Б, Д, В, О и пустые ячейки.`); // новый код chat
+        if (value === null) throw new Error(`Недопустимое значение в строке ${rowIndex + 1}, столбце ${colIndex + 1}: «${cell.slice(0, 30)}». Допустимы 0–24, П, Б, Д, В, Н и пустые ячейки.`); // новый код chat
         return value;
     }));
 };

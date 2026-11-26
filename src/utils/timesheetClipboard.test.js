@@ -34,13 +34,13 @@ test('снимок операции восстанавливает сохран�
 });
 // --------- конец нового кода chat
 import {normalizeTimesheetValue, timesheetRange, parseTimesheetClipboard, planTimesheetPaste, copyTimesheetRange, updateTimesheetCell, planTimesheetFill} from './timesheetClipboard.js'; // новый код chat: проверка протягивания
-// --------- новый код chat: отпуск доступен при вводе, вставке и протягивании
-test('отметка отпуска нормализуется и заполняет область', () => {
-    assert.equal(normalizeTimesheetValue(' о '), 'О');
-    assert.deepEqual(parseTimesheetClipboard('О\t12\nп\tо'), [['О', '12'], ['П', 'О']]);
-    const plan = planTimesheetFill({top:0,bottom:0,left:0,right:0}, {row:1,col:1}, 2, 2, () => 'О');
+// --------- новый код chat: не работает на объекте доступен при вводе, вставке и протягивании
+test('отметка отсутствия на объекте нормализуется и заполняет область', () => {
+    assert.equal(normalizeTimesheetValue(' н '), 'Н');
+    assert.deepEqual(parseTimesheetClipboard('Н\t12\nп\tн'), [['Н', '12'], ['П', 'Н']]);
+    const plan = planTimesheetFill({top:0,bottom:0,left:0,right:0}, {row:1,col:1}, 2, 2, () => 'Н');
     assert.equal(plan.changes.length, 3);
-    assert.ok(plan.changes.every(cell => cell.value === 'О'));
+    assert.ok(plan.changes.every(cell => cell.value === 'Н'));
 });
 // --------- конец нового кода chat
 

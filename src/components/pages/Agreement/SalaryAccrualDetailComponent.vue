@@ -173,7 +173,7 @@ const bonuses = ref([]); // новый код chat: премии выбранн�
 let version = 0;
 // --------- новый код chat: палитра отметок из табеля
 const timesheetColors = {
-    'О': '#EAF044', // новый код chat: отпуск, цвет из табеля
+    'Н': '#CED4DA', // новый код chat: не работает на объекте, цвет из табеля
     '':   '#fff',
     'Д':  '#c07ff1',
     'В':  '#fff200',
@@ -222,7 +222,7 @@ const monthLabel = computed(() => new Date(props.month.year, props.month.month -
 const monthPrefix = computed(() => `${props.month.year}-${String(props.month.month).padStart(2, '0')}`);
 const calendar = computed(() => {
     const marks = new Map();
-    for (const entry of [...entries.value].sort((a,b) => a.ID - b.ID)) marks.set(entry.date, entry.status);
+    for (const entry of [...entries.value].sort((a,b) => a.ID - b.ID)) marks.set(entry.date, entry.status === 'О' ? 'Н' : entry.status); // новый код chat: старые согласованные снимки
     const offset = (new Date(props.month.year, props.month.month - 1, 1).getDay() + 6) % 7;
     const count = new Date(props.month.year, props.month.month, 0).getDate();
     const days = Array(offset).fill(null);
