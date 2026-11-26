@@ -59,7 +59,6 @@
                         <input id="update-daily-allowance" v-model="formDataCreateTimeSheetMonth.daily_allowance" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="0,00">
                     </div>
                     <!-- --------- конец нового кода chat -->
-                    <MultiSelect v-model="formDataCreateTimeSheetMonth.employee_card_id" :options="eligibleEmployees" :label-key="employee => [employee.surname, employee.name?.[0] ? employee.name[0] + '.' : '', employee.middle_name?.[0] ? employee.middle_name[0] + '.' : ''].filter(Boolean).join(' ')" placeholder="Выбрать сотрудников"/> <!-- новый код chat: список с учётом месяца увольнения -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
@@ -72,21 +71,10 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch, watchEffect, computed } from 'vue'; // новый код chat: фильтр сотрудников по месяцу
+import { reactive, ref, watch } from 'vue'; // новый код chat: форма меняет только настройки табеля
 import api from '../../../api.js';
-import MultiSelect from '../../MultiSelect.vue';
-import { useRoute, useRouter } from 'vue-router';
 
-const route = useRoute();
-const router = useRouter();
 
-const employees = ref([])
-// --------- новый код chat: месяц увольнения включительно доступен
-const eligibleEmployees = computed(() => {
-    const first = `${formDataCreateTimeSheetMonth.year}-${String(formDataCreateTimeSheetMonth.month).padStart(2, '0')}-01`;
-    return employees.value.filter(employee => !employee.status || (/^\d{4}-\d{2}-\d{2}$/.test(employee.dismissal_date || '') && employee.dismissal_date >= first));
-});
-// --------- конец нового кода chat
 // --------- новый код chat: проверка настроек перед отправкой
 const settingsError = ref('');
 const settingsSaving = ref(false);
@@ -112,7 +100,6 @@ const formDataCreateTimeSheetMonth = reactive({
     month: 1,
     year: 2026,
     timesheet_month_id: 0,
-    employee_card_id: [],
     shift_hours: '12', // новый код chat
     absence_penalty: '0', // новый код chat
     daily_allowance: '0', // новый код chat: суточные
@@ -142,22 +129,7 @@ const props = defineProps({
     }
 })
 
-// --------- новый код chat: снимаем недоступный выбор при смене периода
-watch(() => [formDataCreateTimeSheetMonth.year, formDataCreateTimeSheetMonth.month], () => {
-    const excluded = new Set(employees.value.filter(employee => employee.status && !eligibleEmployees.value.some(item => item.ID === employee.ID)).map(employee => employee.ID));
-    formDataCreateTimeSheetMonth.employee_card_id = formDataCreateTimeSheetMonth.employee_card_id.filter(id => !excluded.has(id));
-});
-// --------- конец нового кода chat
-const getEmployeeCardHandler = async() =>{
-    try{
-        const res = await api.get(`/agreements/${route.params.id}/employee`, {params:{timesheet_candidates:1}}) // новый код chat: включая уволенных
-        employees.value = res.data
-        console.log("[Employee component]", employees.value)
-    }catch(err){
-        console.log(err)
-    }
-}
-
+// новый код chat: состав сотрудников редактируется кнопкой «Править список» в табеле
 const updateTimeSheetMonthHandler = async() => {
     if (settingsSaving.value || !validateSettings()) return; // новый код chat
     settingsSaving.value = true; // новый код chat
@@ -171,9 +143,6 @@ const updateTimeSheetMonthHandler = async() => {
     } finally { settingsSaving.value = false; } // новый код chat
 }
 
-watch(() => props.employees_id, (employees_id) => {
-    formDataCreateTimeSheetMonth.employee_card_id = employees_id.map(item => item.ID)
-}, {immediate:true})
 
 watch(() => props.month, (month) => {
     formDataCreateTimeSheetMonth.month = month
@@ -200,7 +169,6 @@ watch(() => props.daily_allowance_kopecks, value => {
     formDataCreateTimeSheetMonth.daily_allowance = `${cents / 100n}.${String(cents % 100n).padStart(2,'0')}`;
 }, {immediate:true});
 // --------- конец нового кода chat
-onMounted(getEmployeeCardHandler);
 </script>
 
 <style>

@@ -4,7 +4,7 @@
         <!-- новый код chat: действия табеля выровнены справа -->
         <div class="d-flex justify-content-end border-bottom pb-2"> <!-- новый код chat: отступ под кнопками -->
             <!-- <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link> -->
-            <div class="d-flex gap-2 align-items-center">
+            <fieldset :disabled="editingList || listBusy" :inert="editingList || listBusy" class="d-flex gap-2 align-items-center border-0 p-0 m-0"> <!-- новый код chat: настройки и меню недоступны при правке списка -->
                 <time-sheet-create-update-component/>
                 <!-- новый код chat: передача настроек смены, штрафа и суточных -->
                 <TimeSheetUpdateComponent :daily_allowance_kopecks="timesheetMonth_select.daily_allowance_kopecks" :shift_hours="timesheetMonth_select.shift_hours" :absence_penalty_kopecks="timesheetMonth_select.absence_penalty_kopecks" :month="timesheetMonth_select.month" :year="timesheetMonth_select.year" :employees_id="timesheetMonth_select.employees" :timesheetMonth_id="timesheetMonth_select.ID"/>
@@ -16,7 +16,7 @@
                         <li><a class="dropdown-item text-danger" type="button" @click="deleteTimesheetMonthHandler()">Удалить</a></li>
                     </ul>
                 </div>
-            </div>
+            </fieldset>
         </div>
 
 
@@ -32,11 +32,11 @@
             <div>Для вставки и очистки нажмите «Изменить», затем «Сохранить». Допустимы 0–24, П, Б, Д, В, Н и пустые ячейки. Блок с ошибками или за границами табеля не вставляется.</div> <!-- новый код chat: не работает на объекте -->
         </div>
         <!-- --------- конец нового кода chat -->
-        <fieldset :disabled="savingTimesheet" class="border-0 p-0 m-0">
+        <fieldset :disabled="savingTimesheet || listBusy" class="border-0 p-0 m-0">
         <div class="list-group pt-3 ">
             <div class="list-group-item d-grid timesheet-month-navigation"> <!-- новый код chat: Bootstrap d-grid сохраняет расположение в одну строку -->
                 <div class="">
-                    <button v-if="previousTable" type="button" class="btn btn-outline-secondary btn-sm" @click="previousMonth()"> <!-- новый код chat: только существующий соседний табель -->
+                    <button v-if="previousTable" type="button" class="btn btn-outline-secondary btn-sm" :disabled="editingList" @click="previousMonth()"> <!-- новый код chat: только существующий соседний табель -->
                         <i class="bi bi-caret-left-fill"></i>
                         {{ monthValue[previousTable.month] }} {{ previousTable.year }}
                     </button>
@@ -44,12 +44,12 @@
                 <div class="d-flex gap-2">
                    
                     <!-- новый код chat: загрузка табеля сразу после выбора -->
-                    <select v-model="table_select" class="form-select form-select-sm" aria-label="Выбрать табель" style="width: 250px;" @change="changeMonth()">
+                    <select v-model="table_select" :disabled="editingList" class="form-select form-select-sm" aria-label="Выбрать табель" style="width: 250px;" @change="changeMonth()">
                         <option v-for="table in timesheetMonth" :key="table.ID" :value="table.ID">{{ `${monthValue[table.month]} ${table.year}` }}</option>
                     </select>
                 </div>
                 <div class="">
-                    <button v-if="nextTable" type="button" class="btn btn-outline-secondary btn-sm" @click="nextMonth()"> <!-- новый код chat: месяц и год соседнего табеля -->
+                    <button v-if="nextTable" type="button" class="btn btn-outline-secondary btn-sm" :disabled="editingList" @click="nextMonth()"> <!-- новый код chat: месяц и год соседнего табеля -->
                         {{ monthValue[nextTable.month] }} {{ nextTable.year }}
                         <i class="bi bi-caret-right-fill"></i>
                     </button>
@@ -65,8 +65,15 @@
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #c07ff1;">Д</span> - В дороге;</div>
                     <div class="ms-1"> <span class="fw-semibold px-1 rounded-1" style="background: #CED4DA;">Н</span> - Не работает на объекте;</div> <!-- новый код chat -->
                 </div>
-                <div class="ms-auto ps-2 d-flex justify-content-end"> <!-- новый код chat: кнопка справа без пустых колонок -->
-                    <button type="button" class="btn  btn-sm" :class="isChange ? 'btn-success' : 'btn-primary'" @click="isChange ? postTimesheetHandler() : changeTimesheet()">{{ isChange ? 'Сохранить' : 'Изменить' }}</button>
+                <div class="ms-auto ps-2 d-flex justify-content-end gap-2"> <!-- новый код chat: кнопка справа без пустых колонок -->
+                    <!-- новый код chat: состав редактируется прямо в табеле -->
+                    <button v-if="!editingList" class="btn btn-outline-primary btn-sm" :disabled="isChange || !timesheetMonth_select.ID" @click="editEmployeeList">Править список</button>
+                    <template v-else>
+                        <button class="btn btn-outline-primary btn-sm" @click="toggleEmployeeList">Выбрать все</button>
+                        <button class="btn btn-success btn-sm" @click="saveEmployeeList">Сохранить</button>
+                        <button class="btn btn-outline-secondary btn-sm" @click="cancelEmployeeList">Отмена</button>
+                    </template>
+                    <button v-if="!editingList" type="button" class="btn  btn-sm" :class="isChange ? 'btn-success' : 'btn-primary'" @click="isChange ? postTimesheetHandler() : changeTimesheet()">{{ isChange ? 'Сохранить' : 'Изменить' }}</button>
                 </div>
             </div>
             <!-- --------- новый код chat: шапка закрепляется в пределах строк табеля -->
@@ -91,14 +98,14 @@
             <!-- --------- новый код chat: выделение и буфер обмена только в области ячеек -->
             </div>
             <div @copy="copySelectedCells" @paste="pasteSelectedCells">
-            <div v-for="(employee, index) in timesheetMonth_select.employees" :key="employee.ID" class="list-group-item d-flex p-0">
+            <div v-for="(employee, index) in tableEmployees" :key="employee.ID" class="list-group-item d-flex p-0">
                 <div class="work-timesheet-name-column px-2 d-flex" :class="{'work-timesheet-itr-cell': employee.is_itr, 'work-timesheet-dismissed-name': dismissedInCurrentMonth(employee), 'bg-primary-subtle': displayRange && index >= displayRange.top && index <= displayRange.bottom}" style="font-size: 14px;"> <!-- новый код chat: увольнение в месяце табеля выделяет всю ячейку сотрудника -->
-                    <div class="col-1 border-end d-flex justify-content-center me-1 fw-semibold">{{ index + 1 }}</div>
+                    <div class="col-1 border-end d-flex justify-content-center me-1 fw-semibold"><input v-if="editingList" v-model="enabledEmployees[employee.ID]" class="form-check-input" type="checkbox" :aria-label="'Показывать: ' + employee.surname + ' ' + employee.name"><span v-else>{{ index + 1 }}</span></div> <!-- новый код chat: чекбоксы списка -->
                     <div class="col-11"><router-link :to="{ name: 'employee-card-detail', params: { id: employee.ID } }" class="timesheet-employee-link" :title="employee.is_itr ? 'Открыть карточку сотрудника ИТР' : 'Открыть карточку сотрудника'">{{ [employee.surname, employee.name?.trim()?.[0] ? employee.name.trim()[0] + '.' : '', employee.middle_name?.trim()?.[0] ? employee.middle_name.trim()[0] + '.' : ''].filter(Boolean).join(' ') }}</router-link></div> <!-- новый код chat: фон перенесён на ячейку -->
                 </div>
                 <div class="work-timesheet-days-column days-grid" :style="{ '--days-count': daysInMonth }">
                     <!-- ????? ??? chat: ?????? ?????? ????? ?????? ???? ?????????? ????? ??? -->
-                    <div v-for="day in editableDays(employee)" :key="day" class="day-cell timesheet-value-cell d-flex justify-content-center align-items-center fw-semibold" :class="selectionClasses(index, day - 1)" :tabindex="isChange ? -1 : 0" :id="`view-cell-${employee.ID}-${getDate(day, month, year)}`" :aria-label="`${employee.surname || employee.name}, ${day}: ${timesheet[employee.ID][getDate(day, month, year)].status || 'пусто'}`" @mousedown="startCellSelection($event, index, day - 1)" @mouseenter="extendCellSelection($event, index, day - 1)" @focus.self="inputFocus(index, day)" @blur.self="inputBlur(index, day)" @keydown="handleCellKeydown($event, employee.ID, day)" style="font-size: 12px;" :style="{ backgroundColor: timesheet_color[timesheet[employee.ID][getDate(day, month, year)].status ?? ''] ?? '#fff' }">
+                    <div v-for="day in editableDays(employee)" :key="day" class="day-cell timesheet-value-cell d-flex justify-content-center align-items-center fw-semibold" :class="selectionClasses(index, day - 1)" :tabindex="isChange || editingList ? -1 : 0" :id="`view-cell-${employee.ID}-${getDate(day, month, year)}`" :aria-label="`${employee.surname || employee.name}, ${day}: ${timesheet[employee.ID][getDate(day, month, year)].status || 'пусто'}`" @mousedown="startCellSelection($event, index, day - 1)" @mouseenter="extendCellSelection($event, index, day - 1)" @focus.self="inputFocus(index, day)" @blur.self="inputBlur(index, day)" @keydown="handleCellKeydown($event, employee.ID, day)" style="font-size: 12px;" :style="{ backgroundColor: timesheet_color[timesheet[employee.ID][getDate(day, month, year)].status ?? ''] ?? '#fff' }">
                         <input v-if="isChange" class="text-center" :value="timesheet[employee.ID][getDate(day, month, year)]['status']" type="text" maxlength="2"
                         @input="validateTimesheetInput(employee.ID, getDate(day, month, year), $event)" @focus="inputFocus(index, day)" @blur="inputBlur(index, day)"
                         :aria-label="`${employee.surname || employee.name}, ${day}`" :id="`cell-${employee.ID}-${getDate(day, month, year)}`">
@@ -145,6 +152,47 @@ const previousTable = computed(() => selectedTableIndex.value < 0 ? null : times
 const nextTable = computed(() => selectedTableIndex.value < 0 ? null : timesheetMonth.value[selectedTableIndex.value - 1] || null);
 // --------- конец нового кода chat
 const timesheetMonth_select = ref({});
+
+// --------- новый код chat: видимость строк без удаления сохранённых отметок
+const editingList = ref(false), listBusy = ref(false), listCandidates = ref([]), enabledEmployees = ref({});
+const tableEmployees = computed(() => {
+    if (editingList.value) return [...listCandidates.value].sort((a,b) => Number(!!enabledEmployees.value[b.ID]) - Number(!!enabledEmployees.value[a.ID]) || (a.surname || a.name).localeCompare(b.surname || b.name,'ru'));
+    const hidden = new Set(timesheetMonth_select.value.hidden_employee_ids || []);
+    return (timesheetMonth_select.value.employees || []).filter(employee => !hidden.has(employee.ID));
+});
+const editEmployeeList = async() => {
+    if (isChange.value || listBusy.value || savingTimesheet.value) return;
+    listBusy.value = true; saveTimesheetError.value = '';
+    try {
+        const response = await api.get(`/agreements/${route.params.id}/timesheetmonth/${timesheetMonth_select.value.ID}/employees`);
+        listCandidates.value = response.data || [];
+        enabledEmployees.value = Object.fromEntries(tableEmployees.value.map(employee => [employee.ID,true]));
+        for (const employee of listCandidates.value) {
+            timesheet.value[employee.ID] ||= {};
+            for (let day = 1; day <= daysInMonth.value; day++) timesheet.value[employee.ID][getDate(day,month.value,year.value)] ||= {};
+        }
+        clearCellSelection(); editingList.value = true;
+    } catch(err) { saveTimesheetError.value = typeof err.response?.data === 'string' ? err.response.data : 'Не удалось загрузить список сотрудников.'; }
+    finally { listBusy.value = false; }
+};
+const toggleEmployeeList = () => {
+    const enabled = !listCandidates.value.every(employee => enabledEmployees.value[employee.ID]);
+    enabledEmployees.value = Object.fromEntries(listCandidates.value.map(employee => [employee.ID,enabled]));
+};
+const cancelEmployeeList = () => { editingList.value = false; clearCellSelection(); };
+const saveEmployeeList = async() => {
+    if (listBusy.value) return;
+    listBusy.value = true; saveTimesheetError.value = '';
+    try {
+        const enabled_ids = listCandidates.value.filter(employee => enabledEmployees.value[employee.ID]).map(employee => employee.ID);
+        await api.put(`/agreements/${route.params.id}/timesheetmonth/${timesheetMonth_select.value.ID}/employees`,{enabled_ids});
+        editingList.value = false;
+        await getDetailTimeSheetMonthHandler();
+    } catch(err) { saveTimesheetError.value = typeof err.response?.data === 'string' ? err.response.data : 'Не удалось сохранить список сотрудников.'; }
+    finally { listBusy.value = false; }
+};
+// --------- конец нового кода chat
+
 
 // --------- новый код chat: закрепление шапки при прокрутке окна и вложенных контейнеров
 const timesheetTableArea = ref(null), timesheetStickyHeader = ref(null), headerOffset = ref(0);
@@ -341,7 +389,7 @@ const editableDays = employee => {
     if (employee.dismissal_date > last) return daysInMonth.value;
     return Number(employee.dismissal_date.slice(8, 10)) - 1;
 };
-const isDismissedCell = (row, col) => col >= editableDays(timesheetMonth_select.value.employees?.[row]);
+const isDismissedCell = (row, col) => col >= editableDays(tableEmployees.value?.[row]);
 // новый код chat: подсветка ФИО только в месяце увольнения
 const dismissedInCurrentMonth = employee => employee.status && employee.dismissal_date?.slice(0, 7) === getDate(1, month.value, year.value).slice(0, 7);
 // --------- конец нового кода chat
@@ -352,7 +400,7 @@ const selectionClasses = (row, col) => {
 };
 const focusSheetCell = (row, col) => {
     if (isDismissedCell(row, col)) return; // новый код chat
-    const employee = timesheetMonth_select.value.employees?.[row];
+    const employee = tableEmployees.value?.[row];
     if (!employee) return;
     const prefix = isChange.value ? 'cell' : 'view-cell';
     const element = document.getElementById(`${prefix}-${employee.ID}-${getDate(col + 1, month.value, year.value)}`);
@@ -362,7 +410,7 @@ const focusSheetCell = (row, col) => {
     movingCellFocus = false;
 };
 const startCellSelection = (event, row, col) => {
-    if (event.button !== 0 || savingTimesheet.value) return;
+    if (event.button !== 0 || savingTimesheet.value || editingList.value || listBusy.value) return;
     event.preventDefault();
     clipboardError.value = '';
     if (!event.shiftKey || !selectionAnchor.value) selectionAnchor.value = {row,col};
@@ -372,16 +420,16 @@ const startCellSelection = (event, row, col) => {
 };
 const extendCellSelection = (event,row,col) => {
     if (fillSource.value && (event.buttons & 1) && !savingTimesheet.value) { fillTarget.value = {row,col}; return; } // новый код chat: предварительное протягивание
-    if (!draggingCells || !(event.buttons & 1) || savingTimesheet.value) return;
+    if (!draggingCells || !(event.buttons & 1) || savingTimesheet.value || editingList.value || listBusy.value) return;
     selectionEnd.value = {row,col};
 };
 // --------- новый код chat: шаблон записывается только после отпускания мыши
 const stopCellSelection = event => {
     draggingCells = false;
     if (!fillSource.value) return;
-    if (event?.type !== 'mouseup' || event.button !== 0 || !isChange.value || savingTimesheet.value) { cancelPatternFill(); return; }
+    if (event?.type !== 'mouseup' || event.button !== 0 || !isChange.value || savingTimesheet.value || editingList.value || listBusy.value) { cancelPatternFill(); return; }
     try {
-        const plan = planTimesheetFill(fillSource.value,fillTarget.value,timesheetMonth_select.value.employees.length,daysInMonth.value,(row,col) => cellAt(row,col).item?.status);
+        const plan = planTimesheetFill(fillSource.value,fillTarget.value,tableEmployees.value.length,daysInMonth.value,(row,col) => cellAt(row,col).item?.status);
         applyCellChanges(plan.changes); // новый код chat: одно протягивание — одна отмена
         selectionAnchor.value = {row:plan.range.top,col:plan.range.left};
         selectionEnd.value = {row:plan.range.bottom,col:plan.range.right};
@@ -391,7 +439,7 @@ const stopCellSelection = event => {
 };
 // --------- конец нового кода chat
 const cellAt = (row,col) => {
-    const employee = timesheetMonth_select.value.employees[row];
+    const employee = tableEmployees.value[row];
     const date = getDate(col + 1, month.value, year.value);
     return {employeeID:employee.ID,date,item:timesheet.value[employee.ID][date]};
 };
@@ -408,7 +456,7 @@ const applyCellChanges = changes => {
     }
 };
 const undoCellChanges = () => {
-    if (!isChange.value || savingTimesheet.value) return;
+    if (!isChange.value || savingTimesheet.value || editingList.value || listBusy.value) return;
     if (fillSource.value) { cancelPatternFill(); return; }
     const operation = undoHistory.pop();
     if (!operation) return;
@@ -433,11 +481,11 @@ const copySelectedCells = event => {
 const pasteSelectedCells = event => {
     if (!event.target.closest('.timesheet-value-cell')) return;
     event.preventDefault();
-    if (savingTimesheet.value) return;
+    if (savingTimesheet.value || editingList.value || listBusy.value) return;
     if (!isChange.value) { clipboardError.value = 'Для вставки нажмите «Изменить».'; return; }
     if (!event.clipboardData) { clipboardError.value = 'Браузер не предоставил доступ к буферу обмена.'; return; }
     try {
-        const plan = planTimesheetPaste(event.clipboardData.getData('text/plain'),selectedRange.value,timesheetMonth_select.value.employees.length,daysInMonth.value);
+        const plan = planTimesheetPaste(event.clipboardData.getData('text/plain'),selectedRange.value,tableEmployees.value.length,daysInMonth.value);
         applyCellChanges(plan.changes); // новый код chat: вставка отменяется целым блоком
         selectionAnchor.value = {row:plan.range.top,col:plan.range.left};
         selectionEnd.value = {row:plan.range.bottom,col:plan.range.right};
@@ -447,7 +495,7 @@ const pasteSelectedCells = event => {
 };
 const clearSelectedCells = () => {
     const area = selectedRange.value;
-    if (!area || !isChange.value || savingTimesheet.value) return;
+    if (!area || !isChange.value || savingTimesheet.value || editingList.value || listBusy.value) return;
     const changes = []; // новый код chat: единая операция очистки
     for (let row = area.top; row <= area.bottom; row++) {
         for (let col = area.left; col <= area.right; col++) changes.push({row,col,value:''});
@@ -458,9 +506,9 @@ const clearSelectedCells = () => {
 const handleCellKeydown = (event, employeeId, day) => {
     // новый код chat: физическая клавиша Z и обе раскладки, без нативной отмены input
     if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.code === 'KeyZ' || ['z','я'].includes(event.key.toLowerCase()))) { event.preventDefault(); if (!event.isComposing) undoCellChanges(); return; }
-    if (event.isComposing || savingTimesheet.value) return;
+    if (event.isComposing || savingTimesheet.value || editingList.value || listBusy.value) return;
     if (fillSource.value) { event.preventDefault(); if (event.key === 'Escape') cancelPatternFill(); return; } // новый код chat: Escape отменяет только протягивание
-    const employeeIndex = timesheetMonth_select.value.employees.findIndex(employee => employee.ID === employeeId);
+    const employeeIndex = tableEmployees.value.findIndex(employee => employee.ID === employeeId);
     if (employeeIndex < 0) return;
     if (event.key === 'Escape') { clearCellSelection(); return; }
     if (!selectionAnchor.value) selectionAnchor.value = selectionEnd.value = {row:employeeIndex,col:day - 1};
@@ -473,25 +521,25 @@ const handleCellKeydown = (event, employeeId, day) => {
     if (event.key === 'ArrowUp') row--;
     if (event.key === 'ArrowDown') row++;
     if (event.key === 'Enter') row += event.shiftKey ? -1 : 1;
-    if (row < 0 || row >= timesheetMonth_select.value.employees.length || col < 0 || col >= daysInMonth.value) return;
+    if (row < 0 || row >= tableEmployees.value.length || col < 0 || col >= daysInMonth.value) return;
     if (isDismissedCell(row, col)) return; // новый код chat: стрелки не переводят выбор в закрытые дни
     if (!event.shiftKey || event.key === 'Enter') selectionAnchor.value = {row,col};
     selectionEnd.value = {row,col};
     focusSheetCell(row,col);
-    document.getElementById(`${isChange.value ? 'cell' : 'view-cell'}-${timesheetMonth_select.value.employees[row].ID}-${getDate(col + 1, month.value, year.value)}`)?.scrollIntoView({block:'nearest',inline:'nearest'});
+    document.getElementById(`${isChange.value ? 'cell' : 'view-cell'}-${tableEmployees.value[row].ID}-${getDate(col + 1, month.value, year.value)}`)?.scrollIntoView({block:'nearest',inline:'nearest'});
 };
 // --------- конец нового кода chat
 const inputFocus = (index, day) =>{
     if (!movingCellFocus) { selectionAnchor.value = {row:index,col:day - 1}; selectionEnd.value = {row:index,col:day - 1}; } // новый код chat: выбор при переходе Tab
     // console.log("[Открытие input]", index)
     activeDay.value = day
-    timesheetMonth_select.value.employees[index]['input_active'] = true
+    tableEmployees.value[index]['input_active'] = true
 }
 
 const inputBlur = (index, day) =>{
     // console.log("[Закрытие input]", index)
     activeDay.value = 0
-    timesheetMonth_select.value.employees[index]['input_active'] = false
+    tableEmployees.value[index]['input_active'] = false
 }
 
 const createTimesheetHandler = async(timesheet) => {
@@ -534,6 +582,7 @@ const deleteTimesheetHandler = async(timesheet) => {
 }
 
 const deleteTimesheetMonthHandler = async(id) => {
+    if (editingList.value || listBusy.value) return; // новый код chat: список нужно сначала сохранить или отменить
     if (!window.confirm('Удалить выбранный месячный табель?')) return; // новый код chat: подтверждение удаления
     try{
         const res = await api.delete(`/agreements/timesheetmonth/delete/${timesheetMonth_select.value.ID}` )
@@ -554,7 +603,7 @@ const savingTimesheet = ref(false);
 const saveTimesheetError = ref('');
 // --------- конец нового кода chat
 const postTimesheetHandler = async()=>{
-    if (savingTimesheet.value) return; // новый код chat
+    if (savingTimesheet.value || editingList.value || listBusy.value) return; // новый код chat
     undoHistory.length = 0; // новый код chat: после начала записи нельзя восстановить устаревшие ID и состояния
     savingTimesheet.value = true;
     saveTimesheetError.value = '';
@@ -587,10 +636,10 @@ const postTimesheetHandler = async()=>{
 
 // --------- новый код chat: сначала проверяем значение, затем назначаем состояние сохранения
 const validateTimesheetInput = (employeeId, date, event) => {
-    if (!isChange.value || savingTimesheet.value) return;
+    if (!isChange.value || savingTimesheet.value || editingList.value || listBusy.value) return;
     const value = normalizeTimesheetValue(event.target.value) ?? '';
     event.target.value = value;
-    const row = timesheetMonth_select.value.employees.findIndex(employee => employee.ID === employeeId);
+    const row = tableEmployees.value.findIndex(employee => employee.ID === employeeId);
     const col = Number(date.slice(-2)) - 1;
     applyCellChanges([{row,col,value}]); // новый код chat: ручной ввод тоже попадает в историю
     selectionAnchor.value = {row,col}; selectionEnd.value = {row,col};
@@ -634,7 +683,7 @@ return new Date(
 
 // Обновление / закрытие вкладки
 const handleBeforeUnload = (event) => {
-    if (!isChange.value) return;
+    if (!isChange.value && !editingList.value) return;
 
     event.preventDefault();
     event.returnValue = '';
@@ -653,7 +702,7 @@ onBeforeUnmount(() => {
 });
 
 onBeforeRouteLeave(() => {
-    if (isChange.value) {
+    if (isChange.value || editingList.value) {
         const answer = window.confirm(
             'Есть несохранённые изменения. Вы действительно хотите покинуть страницу?'
         );

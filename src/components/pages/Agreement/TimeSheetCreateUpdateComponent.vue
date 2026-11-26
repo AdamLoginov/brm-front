@@ -59,11 +59,16 @@
                         <input id="create-daily-allowance" v-model="formDataCreateTimeSheetMonth.daily_allowance" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="0,00">
                     </div>
                     <!-- --------- конец нового кода chat -->
+                    <!-- новый код chat: копирование только видимых сотрудников предыдущего календарного месяца -->
+                    <button type="button" class="btn btn-outline-primary btn-sm mb-2" :disabled="copyingEmployees || settingsSaving || !formDataCreateTimeSheetMonth.month" @click="copyPreviousEmployees">{{ copyingEmployees ? 'Копируем…' : 'Сотрудники с предыдущего месяца' }}</button>
+                    <div v-if="copyMessage" class="small text-secondary mb-2" role="status">{{ copyMessage }}</div>
+                    <fieldset :disabled="copyingEmployees || settingsSaving" :inert="copyingEmployees || settingsSaving" class="border-0 p-0 m-0">
                     <MultiSelect v-model="formDataCreateTimeSheetMonth.employee_card_id" :options="eligibleEmployees" :label-key="employee => [employee.surname, employee.name?.[0] ? employee.name[0] + '.' : '', employee.middle_name?.[0] ? employee.middle_name[0] + '.' : ''].filter(Boolean).join(' ')" placeholder="Выбрать сотрудников"/> <!-- новый код chat: список с учётом месяца увольнения -->
+                    </fieldset>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
-                    <button type="button" class="btn btn-primary btn-sm"  :disabled="settingsSaving" @click="createTimeSheetMonthHandler()">Сохранить</button>
+                    <button type="button" class="btn btn-primary btn-sm"  :disabled="settingsSaving || copyingEmployees" @click="createTimeSheetMonthHandler()">Сохранить</button> <!-- новый код chat: ждём завершения копирования -->
                 </div>
                 </div>
             </div>
@@ -90,6 +95,40 @@ const eligibleEmployees = computed(() => {
 // --------- новый код chat: проверка настроек перед отправкой
 const settingsError = ref('');
 const settingsSaving = ref(false);
+// --------- новый код chat: предыдущий календарный месяц, включая переход между годами
+const copyingEmployees = ref(false), copyMessage = ref('');
+const copyPreviousEmployees = async() => {
+    if (copyingEmployees.value || settingsSaving.value) return;
+    const targetMonth = Number(formDataCreateTimeSheetMonth.month), targetYear = Number(formDataCreateTimeSheetMonth.year);
+    if (!targetMonth || !Number.isInteger(targetYear)) return;
+    const previousMonth = targetMonth === 1 ? 12 : targetMonth - 1;
+    const previousYear = targetMonth === 1 ? targetYear - 1 : targetYear;
+    const agreementID = route.params.id;
+    const stillCurrent = () => route.params.id === agreementID && Number(formDataCreateTimeSheetMonth.month) === targetMonth && Number(formDataCreateTimeSheetMonth.year) === targetYear;
+    copyingEmployees.value = true; copyMessage.value = ''; settingsError.value = '';
+    try {
+        const [monthsResponse, employeesResponse] = await Promise.all([
+            api.get(`/agreements/${agreementID}/timesheetmonth`),
+            api.get(`/agreements/${agreementID}/employee`, {params:{timesheet_candidates:1}}),
+        ]);
+        if (!stillCurrent()) return;
+        const previous = (monthsResponse.data || []).find(item => Number(item.month) === previousMonth && Number(item.year) === previousYear);
+        if (!previous) { copyMessage.value = 'За предыдущий месяц табель не создан.'; return; }
+        const {data} = await api.get(`/agreements/timesheetmonth/detail/${previous.ID}`);
+        if (!stillCurrent()) return;
+        employees.value = employeesResponse.data || [];
+        const hidden = new Set(data.hidden_employee_ids || []);
+        const active = (data.employees || []).filter(employee => !hidden.has(employee.ID));
+        const allowed = new Set(eligibleEmployees.value.map(employee => employee.ID));
+        const copied = active.filter(employee => allowed.has(employee.ID)).map(employee => employee.ID);
+        formDataCreateTimeSheetMonth.employee_card_id = [...new Set(copied)];
+        const skipped = active.length - copied.length;
+        copyMessage.value = `Выбрано сотрудников: ${copied.length}.` + (skipped ? ` Недоступны для выбранного месяца или договора: ${skipped}.` : '') + ' Список можно изменить перед сохранением.';
+    } catch(err) {
+        if (stillCurrent()) settingsError.value = typeof err.response?.data === 'string' ? err.response.data : 'Не удалось скопировать сотрудников.';
+    } finally { copyingEmployees.value = false; }
+};
+// --------- конец нового кода chat
 const validateSettings = () => {
     settingsError.value = '';
     const hours = String(formDataCreateTimeSheetMonth.shift_hours).trim().replace(',', '.');
@@ -120,6 +159,7 @@ const formDataCreateTimeSheetMonth = reactive({
 
 // --------- новый код chat: снимаем недоступный выбор при смене периода
 watch(() => [formDataCreateTimeSheetMonth.year, formDataCreateTimeSheetMonth.month], () => {
+    copyMessage.value = ''; // новый код chat: сообщение относится только к выбранному периоду
     const excluded = new Set(employees.value.filter(employee => employee.status && !eligibleEmployees.value.some(item => item.ID === employee.ID)).map(employee => employee.ID));
     formDataCreateTimeSheetMonth.employee_card_id = formDataCreateTimeSheetMonth.employee_card_id.filter(id => !excluded.has(id));
 });
@@ -135,7 +175,7 @@ const getEmployeeCardHandler = async() =>{
 }
 
 const createTimeSheetMonthHandler = async() => {
-    if (settingsSaving.value || !validateSettings()) return; // новый код chat
+    if (settingsSaving.value || copyingEmployees.value || !validateSettings()) return; // новый код chat: не сохраняем незавершённый выбор
     settingsSaving.value = true; // новый код chat
     try{
         console.log("[Form Data ]", formDataCreateTimeSheetMonth)

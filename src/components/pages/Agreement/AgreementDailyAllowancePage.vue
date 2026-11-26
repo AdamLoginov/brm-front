@@ -285,7 +285,8 @@ onBeforeUnmount(() => { version++; });
 .daily-table th, .daily-table td { height: 24px; padding: 1px 3px; } /* новый код chat: компактные строки */
 /* --------- новый код chat: узкие закреплённые колонки номера и ФИО */
 .daily-number { width: 32px; min-width: 32px; max-width: 32px; position: sticky; left: 0; z-index: 2; background: white; text-align: center; }
-.daily-name { width: 225px; min-width: 225px; max-width: 225px; position: sticky; left: 32px; z-index: 1; background: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* новый код chat: ширина увеличена на 50% */
+.daily-name { width: 140px; min-width: 140px; max-width: 140px; position: sticky; left: 32px; z-index: 1; background: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* новый код chat: компактная колонка освобождает место для дней месяца */
+.daily-name .timesheet-employee-link { display: block; max-width: 132px; overflow: hidden; text-overflow: ellipsis; } /* новый код chat: длинное ФИО не расширяет колонку */
 /* --------- конец нового кода chat */
 .daily-day { min-width: 26px; width: 26px; text-align: center; }
 .daily-through { width: 145px; font-size: 12px; } /* новый код chat: компактное поле даты обеспечения */
@@ -372,7 +373,7 @@ onBeforeUnmount(() => { version++; });
     .daily-month-tools { width: 100%; }
     .daily-payment-bar { padding: 10px; }
     .daily-payment-summary { gap: 12px; }
-    .daily-name { width: 160px; min-width: 160px; max-width: 160px; }
+    .daily-name { width: 140px; min-width: 140px; max-width: 140px; } /* новый код chat: компактная ширина также на узком экране */
 }
 @media (max-width: 575px) {
     .daily-balance, .daily-issue { position: static; }

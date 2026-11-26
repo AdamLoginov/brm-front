@@ -78,22 +78,6 @@
                         <div v-if="!agreement.estimate.length" class="empty-state">Сметы не добавлены</div>
                     </section>
                 </div>
-                <div class="col-12">
-                    <section class="detail-panel">
-                        <header class="section-heading"><h2>Расходы <span class="count">{{ agreement.expenses.length }}</span></h2><router-link :to="{name: 'expenses', params: {id: agreement.ID}}">Все расходы <i class="bi bi-arrow-right"></i></router-link></header>
-                        <div v-if="agreement.expenses.length" class="table-responsive">
-                            <table class="table detail-table mb-0">
-                                <thead><tr><th>№</th><th>Дата</th><th>Счёт</th><th class="text-end">Сумма, ₽</th><th>Сотрудник</th><th>Описание</th></tr></thead>
-                                <tbody><tr v-for="(expense, index) in recent(agreement.expenses)" :key="expense.ID">
-                                    <td class="text-secondary">{{ index + 1 }}</td><td class="text-nowrap">{{ getOnlyDate(expense.CreatedAt) }}</td>
-                                    <td><span class="record-status" :class="expense.account === 'company' ? 'border-success text-success' : expense.account === 'employee' ? 'border-primary text-primary' : 'border-secondary text-secondary'">{{ expense.account === 'company' ? 'Компании' : expense.account === 'employee' ? 'Личный' : 'Не указан' }}</span></td>
-                                    <td class="text-end text-nowrap fw-medium">{{ money(expense.price) }}</td><td class="text-nowrap">{{ employeeName(expense.employee_card) }}</td><td>{{ expense.name }}</td>
-                                </tr></tbody>
-                            </table>
-                        </div>
-                        <div v-else class="empty-state">Расходов пока нет</div>
-                    </section>
-                </div>
             </div>
             <p class="small text-secondary mt-2 mb-0">В списках показаны последние пять записей.</p>
         </template>
@@ -138,10 +122,6 @@
     ];
     // --------- конец нового кода chat
     const recent = (items) => [...items].reverse().slice(0, 5);
-    const money = (value) => Number(value || 0).toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    const employeeName = (employee) => employee
-        ? [employee.surname, employee.name?.[0] ? employee.name[0] + '.' : '', employee.middle_name?.[0] ? employee.middle_name[0] + '.' : ''].filter(Boolean).join(' ') || '—'
-        : '—';
 
     const GetAgreementHandler = async () => {
         loading.value = true;
@@ -150,7 +130,6 @@
             const res = await api.get(`/agreements/${route.params.id}`);
             agreement.value = {
                 ...res.data,
-                expenses: res.data.expenses || [],
                 tools: res.data.tools || [],
                 estimate: res.data.estimate || [],
                 orders: res.data.orders || [],
