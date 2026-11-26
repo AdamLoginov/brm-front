@@ -69,7 +69,6 @@
                         <!-- новый код chat: порядковый номер и согласование -->
 <th v-if="selectionMode" class="salary-selection">Согл.</th><th class="salary-number">№</th><th scope="col">Сотрудник</th> <!-- новый код chat: компактные колонки согласования и номера -->
                         <th scope="col" class="text-end">Часы</th> <!-- новый код chat: сумма отработанных часов -->
-                        <th scope="col" class="text-end">Смены</th> <!-- новый код chat: часы отображаются в сменах -->
                         <th scope="col" class="text-end">Ставка</th> <!-- новый код chat: сокращённый заголовок, официальная ставка убрана из таблицы -->
                         <th scope="col" class="text-end">Начислено</th>
                         <th scope="col" class="text-end">Расходы</th> <!-- новый код chat -->
@@ -90,7 +89,6 @@
 <td v-if="selectionMode" class="salary-selection" @click.stop @keydown.stop><input v-model="approvalSelection[accrual.employee_card_id]" type="checkbox" class="form-check-input" :aria-label="`Согласовать: ${accrual.employee_name}`" :disabled="busy"></td><td class="salary-number">{{ index + 1 }}</td> <!-- новый код chat: компактное согласование, номер по центру -->
 <td :title="accrual.employee_name">{{ formatEmployeeName(accrual) }}</td> <!-- новый код chat: ФИО без ссылки, нажатие открывает подробности начисления -->
                         <td class="text-end">{{ String(accrual.total_hours ?? 0).replace('.', ',') }}</td> <!-- новый код chat: часы сотрудника из начисления без округления -->
-                        <td class="text-end">{{ formatShifts(accrual.total_hours, accrual.shift_hours) }}</td> <!-- новый код chat: норма смены из табеля -->
                         <!-- новый код chat: красная ячейка при нулевой ставке -->
                         <td class="text-end text-nowrap" :class="{'salary-zero-rate': Number(accrual.salary_rate_kopecks) === 0}">{{ formatMoney(accrual.salary_rate_kopecks) }}</td>
                         <td class="text-end text-nowrap fw-semibold">{{ formatMoney(accrual.amount_kopecks) }}</td>
@@ -128,7 +126,7 @@
                 <!-- новый код chat: жирное начертание всей строки итогов, включая долги -->
                 <tfoot class="table-light fw-bold">
                     <tr>
-                        <th scope="row" :colspan="selectionMode ? 6 : 5">Итого по выбранному табелю</th> <!-- новый код chat: учтено удаление колонки официальной ставки -->
+                        <th scope="row" :colspan="selectionMode ? 5 : 4">Итого по выбранному табелю</th> <!-- новый код chat: учтено удаление колонки смен -->
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalKopecks) }}</td>
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalExpensesKopecks) }}</td> <!-- новый код chat -->
                         <td class="text-end text-nowrap fw-bold">{{ formatMoney(totalAdvancesKopecks) }}</td>
@@ -274,7 +272,6 @@ const formatEmployeeName = (accrual) => {
     return [parts[0], ...parts.slice(1).map(part => `${part[0].toLocaleUpperCase('ru-RU')}.`)].join(' ');
 };
 // --------- конец нового кода chat
-const formatShifts = (hours, shiftHours) => (Number(hours) / Number(shiftHours)).toLocaleString('ru-RU', {minimumFractionDigits: 1, maximumFractionDigits: 1}); // новый код chat: смены с одним знаком после запятой
 const monthLabel = (month) => new Date(month.year, month.month - 1, 1).toLocaleDateString('ru-RU', {month: 'long', year: 'numeric'});
 const requestError = (err) => typeof err.response?.data === 'string' ? err.response.data.trim() : 'Не удалось выполнить запрос. Попробуйте ещё раз.';
 
@@ -489,7 +486,7 @@ onBeforeUnmount(() => {
 /* --------- конец нового кода chat */
 /* --------- новый код chat: компактная таблица с округлённой рамкой */
 .salary-table-wrap { border: 1px solid var(--bs-border-color); border-radius: 6px; overflow: auto; }
-.salary-table { font-size: 13px; margin-bottom: 0; } /* новый код chat: увеличенный шрифт таблицы */
+.salary-table { font-size: 13px; margin-bottom: 0; } /* новый код chat: шрифт таблицы 13 px */
 /* новый код chat: непрозрачная шапка поверх строк без дополнительной толстой рамки */
 .salary-sticky-header { position: relative; z-index: 5; background: #f8f9fa; }
 .salary-sticky-header th { background: #f8f9fa; }
@@ -499,7 +496,7 @@ onBeforeUnmount(() => {
 /* новый код chat: минимальная ширина согласования по содержимому */
 .salary-table .salary-selection { width: 1%; min-width: 0; padding: 3px 2px; text-align: center; white-space: nowrap; }
 .salary-payment-cell { position: relative; }
-.salary-table .salary-payment-heading, .salary-table .salary-payment-cell { width: 184px; min-width: 184px; } /* новый код chat: место для суммы 100 000 000,00 и кнопок */
+.salary-table .salary-payment-heading, .salary-table .salary-payment-cell { width: 169px; min-width: 169px; } /* новый код chat: колонка выплаты уменьшена на 15 px */
 .salary-table td.salary-payment-cell { padding: 0 2px; } /* новый код chat: минимальные боковые отступы группы ввода */
 .salary-draft-dot { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background-color: var(--bs-success); }
 /* --------- конец нового кода chat */
@@ -510,11 +507,11 @@ onBeforeUnmount(() => {
 .salary-table > :not(caption) > tr > :last-child { border-right: 0; }
 .salary-payment { width: 100px; font-size: 13px; padding: 2px 4px; min-height: 24px; } /* новый код chat: шрифт поля выплаты как в таблице */
 /* новый код chat: компактная группа без переноса кнопки */
-.salary-payment-group { width: 100%; min-width: 180px; flex-wrap: nowrap; } /* новый код chat: группа для большой суммы и обеих кнопок */
+.salary-payment-group { width: 100%; min-width: 165px; flex-wrap: nowrap; } /* новый код chat: группа выплаты уменьшена на 15 px */
 .salary-payment-group .dropdown-menu { font-size: 13px; text-align: left; }
 /* новый код chat: правые углы последней кнопки скруглены независимо от меню */
 .salary-payment-group > .salary-payment-menu-button { border-top-right-radius: var(--bs-border-radius-sm, .25rem) !important; border-bottom-right-radius: var(--bs-border-radius-sm, .25rem) !important; }
-.salary-payment-group .salary-payment { width: 1%; min-width: 130px; font-size: 13px; font-variant-numeric: tabular-nums; color: #000; } /* новый код chat: сумма 100 000 000,00 помещается целиком */
+.salary-payment-group .salary-payment { width: 1%; min-width: 115px; font-size: 13px; font-variant-numeric: tabular-nums; color: #000; } /* новый код chat: шрифт выплаты 13 px */
 /* новый код chat: сохранённая выплата — заливка кнопки как при наведении */
 .salary-payment-group .salary-save-saved:disabled { background-color: var(--bs-btn-hover-bg); border-color: var(--bs-btn-hover-border-color); color: var(--bs-btn-hover-color); opacity: 1; }
 .salary-payment-group .salary-payment:disabled { cursor: default; caret-color: transparent; } /* новый код chat: заблокированная выплата без курсора ввода */

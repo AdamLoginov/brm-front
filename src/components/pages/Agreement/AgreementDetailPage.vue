@@ -123,6 +123,7 @@
         {label: 'Суточные', route: 'agreement-daily-allowance', icon: 'bi-calendar-check'},
         {label: 'Начисления', route: 'agreement-salary-accruals', icon: 'bi-calculator'},
         {label: 'Авансы', route: 'agreement-salary-advances', icon: 'bi-wallet2'},
+        {label: 'Алименты', route: 'agreement-salary-alimony', icon: 'bi-person-heart'}, // новый код chat: переход к алиментам из договора
         {label: 'Премии', route: 'agreement-salary-bonuses', icon: 'bi-award'},
         {label: 'Штрафы', route: 'agreement-salary-penalties', icon: 'bi-exclamation-circle'},
         {label: 'Долги', route: 'agreement-salary-debts', icon: 'bi-arrow-left-right'},
