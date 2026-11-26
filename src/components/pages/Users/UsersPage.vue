@@ -15,6 +15,7 @@
                     <div class="col-10">Логин</div>
                     </div>
                 <div class="col-3">ФИО</div>
+                <div class="col-6">Последняя активность <span class="text-secondary fw-normal">(МСК)</span></div> <!-- новый код chat -->
             </div>
             <div v-for="(user, index) in users" :key="user.ID" class="list-group-item d-flex">
                 <div class="col-2 d-flex">
@@ -22,7 +23,7 @@
                     <div class="col-10">{{ user.login }}</div>
                     </div>
                 <div class="col-3">{{ user.employee_card.surname }} {{ user.employee_card.name }} {{ user.employee_card.middle_name }}</div>
-                <div class="col-6"></div>
+                <div class="col-6">{{ formatLastActivity(user.last_active_at) }}</div> <!-- новый код chat: дата посещения или прочерк -->
                 <div class="col-1 d-flex justify-content-end">
                     <div class="dropdown">
                         <a class="text-dark" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -49,6 +50,13 @@ import { useRoute } from 'vue-router';
 const route = useRoute();
 
 const users = ref(null);
+// новый код chat: единый часовой пояс независимо от настроек компьютера
+const formatLastActivity = value => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleString('ru-RU', {timeZone:'Europe/Moscow', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+};
 
 
 const deleteUserHandler = async(id) => {
