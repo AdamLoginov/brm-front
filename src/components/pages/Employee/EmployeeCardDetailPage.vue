@@ -123,6 +123,7 @@
           </section>
             </div>
           </div>
+<EmployeeStatisticsComponent :employee-id="route.params.id" /> <!-- новый код chat: годовая статистика перед документами -->
 <section class="employee-panel employee-documents">
             <div class="employee-panel-heading employee-documents-heading">
               <div class="d-flex align-items-center gap-2"><span class="employee-section-icon"><i class="bi bi-files" aria-hidden="true"></i></span><h2>Документы</h2><span class="employee-document-count">{{ documents.length }}</span></div>
@@ -191,6 +192,7 @@ const copyContactValue = async value => {
 onBeforeUnmount(() => { copyDisposed = true; clearTimeout(copyTimer); });
 // --------- конец нового кода chat
 import { formatDateStr } from '../../../utils/date';
+import EmployeeStatisticsComponent from './EmployeeStatisticsComponent.vue'; // новый код chat: статистика по табелям
 
 const route = useRoute();
 const employeeCard = ref(null);
