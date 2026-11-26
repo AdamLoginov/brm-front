@@ -41,12 +41,12 @@
       <div v-else-if="!filteredCards.length" class="empty-state"><i class="bi bi-people" aria-hidden="true"></i><h3>{{ cards.length ? 'Сотрудники не найдены' : 'Список сотрудников пока пуст' }}</h3><p>{{ cards.length ? 'Измените условия поиска или сбросьте фильтры.' : 'Создайте первую карточку сотрудника.' }}</p><button v-if="hasFilters" class="btn btn-outline-primary btn-sm" type="button" @click="resetFilters">Сбросить фильтры</button></div>
       <div v-else class="employees-table-scroll">
         <table class="table employees-table mb-0">
-          <thead><tr><th scope="col" class="number-cell">№</th><th scope="col">Сотрудник</th><th scope="col">Статус</th><th scope="col">Должность</th><th scope="col">Специализации</th><th scope="col">Место работы</th><th scope="col">Телефоны</th><th scope="col"><span class="visually-hidden">Действия</span></th></tr></thead>
+          <thead><tr><th scope="col" class="number-cell">№</th><th scope="col">Сотрудник</th><th scope="col" class="text-center">Статус</th><th scope="col">Должность</th><th scope="col">Специализации</th><th scope="col">Место работы</th><th scope="col">Телефоны</th><th scope="col"><span class="visually-hidden">Действия</span></th></tr></thead> <!-- новый код chat: заголовок статуса по центру -->
           <tbody><tr v-for="(card, index) in filteredCards" :key="card.ID" :class="{ 'dismissed-row': card.status }">
             <td class="number-cell">{{ index + 1 }}</td>
             <td class="name-cell"><router-link :to="{ name: 'employee-card-detail', params: { id: card.ID } }" class="employee-name">{{ fullName(card) || 'Без имени' }}</router-link><div v-if="card.officially_employed" class="employee-tags"><span class="employment-note"><i class="bi bi-shield-check" aria-hidden="true"></i>Устроен официально</span></div></td> <!-- новый код chat: отметка только для официально трудоустроенных -->
             <!-- новый код chat: статус располагается рядом с должностью на телефоне -->
-            <td class="employee-status-cell"><span class="status-badge" :class="card.status ? 'status-dismissed' : 'status-working'">{{ card.status ? 'Уволен' : 'Работает' }}</span></td>
+            <td class="employee-status-cell text-center"><span class="status-badge" :class="card.status ? 'status-dismissed' : 'status-working'">{{ card.status ? 'Уволен' : 'Работает' }}</span></td> <!-- новый код chat: теги статуса по центру -->
             <!-- новый код chat: отдельная колонка специализаций -->
             <!-- новый код chat: подписи полей для мобильных карточек -->
             <td class="profession-cell" data-label="Должность"><span v-if="card.profession?.trim()">{{ card.profession }}</span><span v-else class="text-secondary" aria-label="Должность не указана">—</span></td> <!-- новый код chat: прочерк как в специализации -->
