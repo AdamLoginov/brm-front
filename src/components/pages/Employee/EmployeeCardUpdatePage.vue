@@ -66,7 +66,7 @@
                                     <MoneyInputComponent id="update-employee-salary_rate" v-model="formData.salary_rate" class="form-control form-control-sm" placeholder="3 000" />
                                 </div>
                                 <div class="employee-employment-fields">
-                                    <EmployeeEmploymentFields v-model:officially-employed="formData.officially_employed" v-model:monthly-salary-kopecks="formData.monthly_salary_kopecks" />
+                                    <EmployeeEmploymentFields v-model:officially-employed="formData.officially_employed" v-model:monthly-salary-kopecks="formData.monthly_salary_kopecks" v-model:employment-order-number="formData.employment_order_number" v-model:employment-order-date="formData.employment_order_date" /> <!-- новый код chat: реквизиты приказа -->
                                 </div>
                                 <!-- --------- новый код chat: алименты под официальной оплатой, в стиле увольнения -->
                                 <div v-if="formData.officially_employed" class="employee-status-setting">
@@ -155,6 +155,8 @@ const formData = reactive({
     start_date: "",
     salary_rate: "",
     officially_employed: false, // новый код chat: по умолчанию не устроен официально
+    employment_order_number: '', // новый код chat: необязательные реквизиты приказа
+    employment_order_date: '', // новый код chat
     monthly_salary_kopecks: 0, // новый код chat: месячная зарплата в копейках
     education: "",
     experience: "",
@@ -216,6 +218,8 @@ const getEmployeeCardDetailHandler = async() =>{
     formData.start_date = res.data.start_date;
     formData.salary_rate = res.data.salary_rate;
     formData.officially_employed = res.data.officially_employed ?? false; // новый код chat
+    formData.employment_order_number = res.data.employment_order_number ?? ''; // новый код chat: сохранённые реквизиты, включая скрытые
+    formData.employment_order_date = res.data.employment_order_date ?? ''; // новый код chat
     formData.monthly_salary_kopecks = res.data.monthly_salary_kopecks ?? 0; // новый код chat
     formData.education = res.data.education;
     formData.experience = res.data.experience;

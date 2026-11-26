@@ -10,14 +10,23 @@
         <label for="employee-monthly-salary" class="form-label">ЗП в месяц, ₽</label>
         <MoneyInputComponent id="employee-monthly-salary" v-model="salaryInput" class="form-control form-control-sm" @focus="editing = true" @blur="editing = false" @input="changeSalary" />
     </div>
+    <!-- новый код chat: реквизиты приказа под официальным статусом и зарплатой -->
+    <div v-if="officiallyEmployed" class="col-4 pt-3">
+        <label for="employee-order-number" class="form-label">Номер приказа</label>
+        <input id="employee-order-number" type="text" class="form-control form-control-sm" :value="employmentOrderNumber" placeholder="Например, 15-к/2026" @input="emit('update:employmentOrderNumber', $event.target.value)">
+    </div>
+    <div v-if="officiallyEmployed" class="col-4 pt-3">
+        <label for="employee-order-date" class="form-label">Дата приказа</label>
+        <input id="employee-order-date" type="date" class="form-control form-control-sm" :value="employmentOrderDate" @input="emit('update:employmentOrderDate', $event.target.value)">
+    </div>
 </template>
 <!-- --------- конец нового кода chat -->
 <script setup>
 // --------- новый код chat: точное преобразование рублей в копейки
 import { computed, ref, watch } from 'vue';
 import MoneyInputComponent from '../../MoneyInputComponent.vue'; // новый код chat: единый ввод денег
-const props = defineProps({officiallyEmployed:Boolean, monthlySalaryKopecks:{type:Number, default:0}});
-const emit = defineEmits(['update:officiallyEmployed', 'update:monthlySalaryKopecks']);
+const props = defineProps({officiallyEmployed:Boolean, monthlySalaryKopecks:{type:Number, default:0}, employmentOrderNumber:{type:String,default:''}, employmentOrderDate:{type:String,default:''}}); // новый код chat
+const emit = defineEmits(['update:officiallyEmployed', 'update:monthlySalaryKopecks', 'update:employmentOrderNumber', 'update:employmentOrderDate']); // новый код chat
 const salaryText = computed(() => {
     const cents = BigInt(props.monthlySalaryKopecks || 0);
     return `${cents / 100n},${String(cents % 100n).padStart(2, '0')}`;

@@ -73,6 +73,11 @@
                   <dd class="employee-monthly-value">{{ money((employeeCard.monthly_salary_kopecks || 0) / 100) }}</dd>
                 </template>
               </div>
+              <!-- новый код chat: приказ логически продолжает блок официального трудоустройства -->
+              <div v-if="employeeCard.officially_employed" class="employee-order-summary">
+                <dt><i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Приказ о приёме</dt>
+                <dd><template v-if="employeeCard.employment_order_number || employeeCard.employment_order_date"><span v-if="employeeCard.employment_order_number">№ {{ employeeCard.employment_order_number }}</span><span v-if="employeeCard.employment_order_date">{{ employeeCard.employment_order_number ? ' от ' : 'От ' }}{{ displayDate(employeeCard.employment_order_date) }}</span></template><span v-else class="text-secondary">Не указан</span></dd>
+              </div>
               <!-- --------- конец нового кода chat -->
             </dl>
           </section>
@@ -305,6 +310,8 @@ dd a:hover, .employee-file-link:hover { text-decoration: underline; }
 .employee-employment-summary { flex-wrap: wrap; justify-content: flex-start; gap: 8px 10px; }
 .employee-employment-summary .employee-monthly-label { margin-left: auto; padding-left: 10px; border-left: 1px solid var(--bs-border-color); }
 .employee-monthly-value { font-size: 15px; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.employee-order-summary { padding: 10px 12px; border: 1px solid var(--bs-border-color); border-radius: 8px; background: #f8f9fa; } /* новый код chat: приказ в стилистике блока работы */
+.employee-order-summary dd { margin-bottom: 0; overflow-wrap: anywhere; } /* новый код chat */
 /* --------- конец нового кода chat */
 .employee-specialization { font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--bs-border-color); }
 .employee-money { font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }

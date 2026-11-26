@@ -63,7 +63,7 @@
                                     <MoneyInputComponent id="create-employee-salary_rate" v-model="formData.salary_rate" class="form-control form-control-sm" placeholder="3 000" />
                                 </div>
                                 <div class="employee-employment-fields">
-                                    <EmployeeEmploymentFields v-model:officially-employed="formData.officially_employed" v-model:monthly-salary-kopecks="formData.monthly_salary_kopecks" />
+                                    <EmployeeEmploymentFields v-model:officially-employed="formData.officially_employed" v-model:monthly-salary-kopecks="formData.monthly_salary_kopecks" v-model:employment-order-number="formData.employment_order_number" v-model:employment-order-date="formData.employment_order_date" /> <!-- новый код chat: реквизиты приказа -->
                                 </div>
                                 <!-- --------- новый код chat: алименты под официальной оплатой, в стиле увольнения -->
                                 <div v-if="formData.officially_employed" class="employee-status-setting">
@@ -146,6 +146,8 @@ const formData = reactive({
     start_date: "",
     salary_rate: "",
     officially_employed: false, // новый код chat: по умолчанию не устроен официально
+    employment_order_number: '', // новый код chat: необязательные реквизиты приказа
+    employment_order_date: '', // новый код chat
     monthly_salary_kopecks: 0, // новый код chat: месячная зарплата в копейках
     experience: "",
     education: "",
@@ -213,6 +215,8 @@ const createEmployeeCardHandler = async() =>{
         formData.start_date = "";
         formData.salary_rate = "";
         formData.officially_employed = false; // новый код chat
+        formData.employment_order_number = ''; // новый код chat: очистка после создания карточки
+        formData.employment_order_date = ''; // новый код chat
         formData.monthly_salary_kopecks = 0; // новый код chat
         formData.education = "";
         formData.experience = "";
