@@ -12,6 +12,7 @@
             <router-link :to="{name:'agreement-daily-allowance', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Суточные</router-link> <!-- новый код chat: после табеля -->
             <router-link :to="{name:'agreement-salary-accruals', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Начисления</router-link>
             <router-link :to="{name:'agreement-salary-advances', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Авансы</router-link>
+            <router-link :to="{name:'agreement-salary-alimony', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Алименты</router-link> <!-- новый код chat -->
             <router-link :to="{name:'agreement-salary-penalties', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Штрафы</router-link>
             <router-link :to="{name:'expenses', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Расходы</router-link> <!-- новый код chat -->
             <router-link :to="{name:'agreement-salary-bonuses', params:{id:route.params.id}}" class="nav-link" exact-active-class="active">Премии</router-link> <!-- новый код chat -->

@@ -13,7 +13,8 @@
                     <div class="heading-title">
                         <div class="text-secondary small mb-1">Договор № {{ agreement.number || '—' }}</div>
                         <h1>{{ agreement.name }}</h1>
-                        <span class="status-label mt-2">{{ agreement.status || 'Статус не указан' }}</span>
+<!-- новый код chat: подпись завершённого договора -->
+                        <span class="status-label mt-2">{{ ['Закончен', 'Законченный'].includes(agreement.status) ? 'Завершен' : agreement.status || 'Статус не указан' }}</span>
                     </div>
                     <div class="heading-actions">
                         <router-link :to="{name: 'agreement-update', params: {id: agreement.ID}}" class="btn btn-outline-primary btn-sm">

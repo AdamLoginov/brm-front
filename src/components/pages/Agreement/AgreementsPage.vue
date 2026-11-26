@@ -18,7 +18,8 @@
                 <label for="agreements-status" class="form-label">Статус</label>
                 <select id="agreements-status" v-model="status" class="form-select form-select-sm">
                     <option value="Активный">Активные</option>
-                    <option value="Закончен">Законченные</option>
+<!-- новый код chat: подпись завершённого договора -->
+                    <option value="Закончен">Завершен</option>
                     <option value="">Все</option>
                 </select>
             </div>
@@ -39,7 +40,8 @@
                 <router-link :to="{name:'agreement', params:{id:agreement.ID}}" class="agreement-card">
                     <div class="agreement-card-heading">
                         <h2>{{ agreement.short_name || agreement.name || 'Без названия' }}</h2>
-                        <span class="agreement-status" :class="{'agreement-status-active':agreement.status === 'Активный'}">{{ agreement.status || '—' }}</span>
+<!-- новый код chat: подпись завершённого договора -->
+                        <span class="agreement-status" :class="{'agreement-status-active':agreement.status === 'Активный'}">{{ ['Закончен', 'Законченный'].includes(agreement.status) ? 'Завершен' : agreement.status || '—' }}</span>
                     </div>
                     <p v-if="agreement.short_name && agreement.name" class="agreement-full-name">{{ agreement.name }}</p>
                     <dl class="agreement-info">

@@ -36,18 +36,13 @@
             <section class="salary-payment-panel mb-4">
               <div class="salary-payment-grid">
                <div class="salary-payable">
-                <div class="mb-2"><strong class="d-block">К выдаче</strong><strong class="d-block salary-payable-amount">{{ money(Math.max(0, previewPayable)) }}</strong></div> <!-- новый код chat: сумма под надписью, 16 px -->
+                <div class="mb-2"><strong class="d-block">Итого</strong><strong class="d-block salary-payable-amount">{{ money(Math.max(0, previewPayable)) }}</strong></div> <!-- новый код chat: название итоговой суммы, сумма под надписью, 16 px -->
                 <div v-if="previewPayable < 0" class="text-secondary small mb-2">Расчётный остаток: {{ money(previewPayable) }}</div>
                </div>
-                <!-- новый код chat: сумма алиментов сохраняется вместе с выплатой -->
-                <div v-if="accrual.has_alimony" class="salary-input-group">
-                    <label for="salary-detail-alimony" class="form-label">Алименты, ₽</label>
-                    <MoneyInputComponent id="salary-detail-alimony" v-model="editedAlimony" class="form-control form-control-sm" :disabled="approved || busy" :class="{'is-invalid': alimonyCents === null}" />
-                    <div v-if="alimonyCents === null" class="text-danger small">Введите сумму от нуля до копеек.</div>
-                </div>
+                <!-- новый код chat: алименты задаются в отдельной вкладке -->
                 <div class="salary-input-group">
                 <label for="salary-detail-payment" class="form-label">Выплата, ₽</label>
-                <MoneyInputComponent id="salary-detail-payment" v-model="editedPayment" class="form-control form-control-sm" :disabled="approved || busy" :class="{'is-invalid': !paymentPreview}" /> <!-- новый код chat: денежное поле с разделением разрядов -->
+                <MoneyInputComponent id="salary-detail-payment" v-model="editedPayment" class="form-control form-control-sm" :disabled="approved || busy || accrual.has_draft" :class="{'is-invalid': !paymentPreview}" /> <!-- новый код chat: сохранённая выплата заблокирована до сброса -->
                 <div v-if="!paymentPreview" class="text-danger small mt-1">Введите неотрицательную сумму до копеек.</div>
                 </div>
               </div>
@@ -55,11 +50,9 @@
                 <div v-if="actionError" class="alert alert-danger mt-2 mb-0" role="alert">{{ actionError }} <button class="btn btn-sm btn-outline-danger" :disabled="busy || saving" @click="emit('changed')">Обновить расчёт</button></div> <!-- новый код chat: восстановление после конфликта версии -->
                 <div class="salary-actions d-flex gap-2 flex-wrap align-items-center">
                     <template v-if="!approved">
-                        <button v-if="differsFromCalculation || alimonyChanged" class="btn btn-success btn-sm" :disabled="busy || saving || !paymentPreview || alimonyCents === null || savedPayment" @click="emit('save-payment',{amount:editedPayment,alimony_amount:editedAlimony,reset:false})">{{ savedPayment ? 'Сохранено' : 'Сохранить' }}</button>
+                        <button v-if="differsFromCalculation" class="btn btn-success btn-sm" :disabled="busy || saving || !paymentPreview || accrual.has_draft" @click="emit('save-payment',{amount:editedPayment,reset:false})">{{ savedPayment ? 'Сохранено' : 'Сохранить' }}</button>
                         <button v-if="accrual.has_draft" class="btn btn-outline-secondary btn-sm" :disabled="busy || saving" @click="emit('save-payment',{amount:'',reset:true})">Сбросить к расчётной</button>
-                        <button class="btn btn-primary btn-sm" :disabled="busy || saving || !paymentPreview || alimonyChanged || alimonyCents === null || !approvalDate" @click="emit('approve',editedPayment)">Согласовать</button> <!-- новый код chat: синяя кнопка -->
-                        <!-- новый код chat: согласование использует сохранённые алименты -->
-                        <span v-if="alimonyChanged" class="text-secondary small">Сначала сохраните сумму алиментов.</span>
+                        <button class="btn btn-primary btn-sm" :disabled="busy || saving || !paymentPreview || !approvalDate" @click="emit('approve',editedPayment)">Согласовать</button> <!-- новый код chat: синяя кнопка -->
                         <span class="text-secondary small">Дата согласования: {{ dateLabel(approvalDate) }}</span>
                     </template>
                     <template v-else><span class="text-success">Согласовано {{ dateLabel(approvalDate) }}</span><button class="btn btn-outline-secondary btn-sm" :disabled="busy || saving" @click="emit('cancel-approval')">Отменить согласование</button></template>
@@ -89,7 +82,8 @@
                             </div>
                             <div class="salary-entry-summary">
                                 <strong class="salary-entry-amount">{{ money(row.amount_kopecks) }}</strong>
-                                <div v-if="group.isBonus || group.isPenalty" class="salary-entry-actions">
+                                <div v-if="group.isBonus || group.isPenalty || group.isAlimony" class="salary-entry-actions">
+                                    <span v-if="group.isAlimony" class="badge rounded-5 border bg-white fw-normal" :class="approved || row.is_settled ? 'text-secondary border-secondary' : 'text-success border-success'">{{ approved || row.is_settled ? 'Закрыты' : 'Актуальны' }}</span> <!-- новый код chat -->
                                     <span v-if="group.isBonus" class="badge rounded-5 border bg-white fw-normal" :class="approved || row.is_paid ? 'text-secondary border-secondary' : 'text-success border-success'">{{ approved || row.is_paid ? 'Выплачена' : 'Не выплачена' }}</span>
                                     <span v-if="group.isPenalty" class="badge rounded-5 border bg-white fw-normal" :class="statusClass(approved && row.status === 'active' ? 'closed' : row.status)">{{ statusLabel(approved && row.status === 'active' ? 'closed' : row.status) }}</span>
                                     <button v-if="group.isPenalty && canForgive(row)" class="btn btn-sm btn-link salary-forgive-button" :disabled="saving || busy" @click="forgive(row)">Простить</button>
@@ -119,25 +113,9 @@ const props = defineProps({agreementId: {type: [String, Number], required: true}
 // --------- новый код chat: параметры согласованной выплаты
 // новый код chat: локальный ввод меняет только предварительное отображение до сохранения
 const editedPayment = ref(props.paymentAmount ?? '0');
-// --------- новый код chat: предварительный расчёт алиментов в копейках
-const editedAlimony = ref((Number(props.accrual.alimony_kopecks || 0)/100).toFixed(2));
-const alimonyCents = computed(() => {
-    const text = String(editedAlimony.value ?? '').replace(',', '.').trim();
-    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
-    const [whole, fraction = ''] = text.split('.');
-    const cents = BigInt(whole)*100n + BigInt(fraction.padEnd(2,'0'));
-    return cents <= 9007199254740991n ? Number(cents) : null;
-});
-const alimonyChanged = computed(() => alimonyCents.value !== Number(props.accrual.alimony_kopecks || 0));
-const previewPayable = computed(() => Number(props.accrual.payable_kopecks) + Number(props.accrual.alimony_kopecks || 0) - (alimonyCents.value ?? Number(props.accrual.alimony_kopecks || 0)));
-watch(previewPayable, (value, previous) => {
-    if (!props.approved && Number(editedPayment.value) === Math.max(0,previous)/100) editedPayment.value = (Math.max(0,value)/100).toFixed(2);
-});
-watch(() => [props.accrual,props.paymentAmount], () => {
-    editedAlimony.value = (Number(props.accrual.alimony_kopecks || 0)/100).toFixed(2);
-    editedPayment.value = props.paymentAmount ?? '0';
-});
-// --------- конец нового кода chat
+// новый код chat: сумма алиментов приходит из списка незакрытых удержаний
+const previewPayable = computed(() => Number(props.accrual.payable_kopecks));
+watch(() => [props.accrual,props.paymentAmount], () => { editedPayment.value = props.paymentAmount ?? '0'; });
 const paymentPreview = computed(() => {
     const text = String(editedPayment.value ?? '').replace(',', '.').trim();
     if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
@@ -152,14 +130,14 @@ const paymentPreview = computed(() => {
 const emit = defineEmits(['close', 'changed', 'save-payment', 'approve', 'cancel-approval']); // новый код chat: обновление начислений после прощения
 // --------- новый код chat: сохранение отличающейся суммы и финансовая сводка
 const differsFromCalculation = computed(() => !!paymentPreview.value && paymentPreview.value.amount !== Math.max(0,Number(previewPayable.value)));
-const savedPayment = computed(() => !alimonyChanged.value && props.accrual.has_draft && paymentPreview.value?.amount === Math.round(Number(props.paymentAmount)*100));
+const savedPayment = computed(() => props.accrual.has_draft && paymentPreview.value?.amount === Number(props.accrual.payment_kopecks)); // новый код chat: сравниваем с сохранённой суммой, а не вводом в таблице
 const financialRows = computed(() => [
     {label:'Начислено',value:props.accrual.amount_kopecks},
     {label:'Расходы',value:props.accrual.expenses_kopecks || 0},
     {label:'Авансы',value:props.accrual.advances_kopecks || 0},
     {label:'Штрафы',value:props.accrual.penalties_kopecks || 0},
     {label:'Вычет 13%',value:props.accrual.deduction_kopecks || 0},
-    {label:'Алименты',value:alimonyCents.value ?? props.accrual.alimony_kopecks ?? 0}, // новый код chat
+    {label:'Алименты',value:props.accrual.alimony_kopecks || 0}, // новый код chat
     {label:'Долг К.',value:props.accrual.company_debt_kopecks || 0},
     {label:'Долг С.',value:props.accrual.employee_debt_kopecks || 0},
 ]);
@@ -167,6 +145,7 @@ const financialRows = computed(() => [
 const saving = ref(false); // новый код chat: защита от повторной отправки
 const dialog = ref(null), loading = ref(true), error = ref('');
 const entries = ref([]), advances = ref([]), penalties = ref([]);
+const alimonies = ref([]); // новый код chat: список алиментов сотрудника
 const expenses = ref([]); // новый код chat: невозмещённые личные расходы
 const debts = ref([]); // новый код chat: активные долги расчёта
 const bonuses = ref([]); // новый код chat: премии выбранного месяца всех статусов
@@ -239,6 +218,7 @@ const groups = computed(() => [
     {title:'Долг сотрудника',description:'Вычитается из выплаты. Активные долги за все месяцы договора.',dateLabel:'Дата начисления',rows:debts.value.filter(row => row.side === 'employee'),empty:'Долгов сотрудника нет.'}, // новый код chat
     {title:'Премии', isBonus:true, description:'Премии за выбранный месяц. К выплате прибавляются только невыплаченные.', dateLabel:'Месяц премии', rows:bonuses.value, empty:'Премий за этот месяц нет.'}, // новый код chat
     {title:'Возмещение расходов', description:'Невозмещённые личные расходы по договору за все месяцы. Прибавляются к выплате.', dateLabel:'Дата расхода', rows:expenses.value, empty:'Невозмещённых личных расходов нет.'}, // новый код chat
+    {title:'Алименты', isAlimony:true, description:'Актуальные алименты сотрудника за все месяцы и договоры. Закрываются при согласовании зарплаты.', dateLabel:'Дата начисления', rows:alimonies.value, empty:'Актуальных алиментов нет.'}, // новый код chat
     {title:'Авансы', description:'Актуальные авансы по договору, учитываемые в начислении.', dateLabel:'Дата выплаты', rows:advances.value, empty:'Актуальных авансов нет.'},
     {title:'Штрафы', isPenalty:true, description:'Штрафы за месяц выбранного табеля. В сумму удержаний входят только актуальные.', dateLabel:'Дата назначения', rows:penalties.value, empty:'Штрафов за этот месяц нет.'}, // новый код chat: сохраняем видимость прощённых штрафов
 ]);
@@ -266,6 +246,7 @@ const load = async() => {
         const detail = props.accrual.detail;
         entries.value = detail.time_sheets || [];
         advances.value = detail.advances || [];
+        alimonies.value = detail.alimonies || []; // новый код chat
         penalties.value = detail.penalties || [];
         bonuses.value = detail.bonuses || [];
         debts.value = detail.debts || [];
@@ -275,11 +256,12 @@ const load = async() => {
     }
     // --------- конец нового кода chat
     try {
-        const [sheet, advanceRows, penaltyRows, expenseRows, bonusRows] = await Promise.all([ // новый код chat: загрузка премий
+        const [sheet, advanceRows, penaltyRows, expenseRows, alimonyRows, bonusRows] = await Promise.all([ // новый код chat: загрузка премий
             api.get(`/agreements/timesheetmonth/detail/${props.month.ID}`),
             api.get(`/agreements/${props.agreementId}/advances`),
             api.get(`/agreements/${props.agreementId}/penalties`),
             api.get(`/agreements/${props.agreementId}/expenses`), // новый код chat
+            api.get(`/agreements/${props.agreementId}/alimony`), // новый код chat: общие алименты
             api.get(`/agreements/${props.agreementId}/bonuses`), // новый код chat
         ]);
         if (current !== version) return;
@@ -290,6 +272,7 @@ const load = async() => {
         expenses.value = (expenseRows.data.expenses || []).filter(row => belongs(row) && row.account === 'employee' && !row.is_reimbursed).map(row => ({ID:row.ID, date:row.expense_date || row.CreatedAt.slice(0,10), amount_kopecks:Math.round(Number(row.price) * 100), comment:row.name})).sort(byDate); // новый код chat: дата расхода
         // --------- конец нового кода chat
         entries.value = (sheet.data.time_sheets || []).filter(belongs);
+        alimonies.value = (alimonyRows.data || []).filter(row => belongs(row) && !row.is_settled).sort(byDate); // новый код chat
         advances.value = (advanceRows.data || []).filter(row => belongs(row) && !row.is_settled).sort(byDate);
         penalties.value = (penaltyRows.data || []).filter(row => belongs(row) && row.date.startsWith(`${monthPrefix.value}-`)).sort(byDate); // новый код chat: все статусы штрафов выбранного месяца
     } catch (err) {
@@ -326,9 +309,9 @@ onBeforeUnmount(() => {
 .calendar-blank { visibility: hidden; }
 /* --------- конец нового кода chat */
 /* --------- конец нового кода chat */
-/* новый код chat: оформление ссылок ФИО */
-.salary-employee-link { color: inherit; text-decoration: none; }
-.salary-employee-link:hover { color: #0d6efd; text-decoration: underline; }
+/* новый код chat: стандартный цвет и подчёркивание ссылки Bootstrap */
+.salary-employee-link { color: var(--bs-link-color); text-decoration: underline; }
+.salary-employee-link:hover { color: var(--bs-link-hover-color); }
 .salary-employee-link:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
 
 /* --------- новый код chat: современная компоновка в стилистике карточек сайта */
@@ -350,6 +333,7 @@ onBeforeUnmount(() => {
 .salary-info-panel strong { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .salary-reference-panel { background: #fcfdff; }
 .salary-payment-panel { border: 1px solid #ccdcef; border-radius: 12px; background: #fff; padding: 18px; }
+#salary-detail-payment:disabled { cursor: default; caret-color: transparent; } /* новый код chat: заблокированная выплата без курсора ввода */
 .salary-payment-grid { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 18px 24px; }
 .salary-payable { flex: 1 1 210px; }
 .salary-payable > .mb-2 > strong:first-child { font-size: 12px; font-weight: 500; color: #41536c; margin-bottom: 6px; }

@@ -44,7 +44,8 @@
                                                 <input id="agreement-status" v-model="formData.status" class="form-check-input" type="checkbox" role="switch" true-value="Активный" false-value="Закончен">
                                                 <label for="agreement-status" class="form-check-label">Договор активен</label>
                                             </div>
-                                            <span class="agreement-status-label">{{ formData.status === 'Активный' ? 'Активный' : 'Закончен' }}</span>
+<!-- новый код chat: подпись завершённого договора -->
+                                            <span class="agreement-status-label">{{ formData.status === 'Активный' ? 'Активный' : 'Завершен' }}</span>
                                         </div>
                                     </div>
                                 </div>

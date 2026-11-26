@@ -67,6 +67,7 @@ import AgreementSalaryPage from '../components/pages/Agreement/AgreementSalaryPa
 import AgreementDailyAllowancePage from '../components/pages/Agreement/AgreementDailyAllowancePage.vue' // новый код chat: суточные
 import AgreementSalaryAccrualPage from '../components/pages/Agreement/AgreementSalaryAccrualPage.vue' // новый код chat: страница начислений
 import AgreementSalaryAdvancePage from '../components/pages/Agreement/AgreementSalaryAdvancePage.vue' // новый код chat: страница авансов
+import AgreementSalaryAlimonyPage from '../components/pages/Agreement/AgreementSalaryAlimonyPage.vue' // новый код chat: алименты
 import AgreementSalaryPenaltyPage from '../components/pages/Agreement/AgreementSalaryPenaltyPage.vue' // новый код chat: страница штрафов
 
 
@@ -99,6 +100,7 @@ const routes = [
       { path: 'timesheet', name: 'agreement-timesheet-detail', component: AgreementEmployee }, // новый код chat: табель внутри общей оболочки
       { path: 'accruals', name: 'agreement-salary-accruals', component: AgreementSalaryAccrualPage },
       { path: 'advances', name: 'agreement-salary-advances', component: AgreementSalaryAdvancePage },
+      { path: 'alimony', name: 'agreement-salary-alimony', component: AgreementSalaryAlimonyPage }, // новый код chat
       { path: 'debts', name: 'agreement-salary-debts', component: AgreementSalaryDebtPage }, // новый код chat
       { path: 'bonuses', name: 'agreement-salary-bonuses', component: AgreementSalaryBonusPage }, // новый код chat
       { path: 'penalties', name: 'agreement-salary-penalties', component: AgreementSalaryPenaltyPage },
