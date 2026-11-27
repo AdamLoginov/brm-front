@@ -52,7 +52,7 @@ import AgreementAppendEmployee from '../components/pages/AgreementAppendEmployee
 import EmployeeCardDetailPage from '../components/pages/Employee/EmployeeCardDetailPage.vue'
 import EmployeeCardDocumentCreate from '../components/pages/Employee/EmployeeCardDocumentCreate.vue'
 import EmployeeCardUpdatePage from '../components/pages/Employee/EmployeeCardUpdatePage.vue'
-import EmployeeCardDocumentCategory from '../components/pages/Employee/EmployeeCardDocumentCategory.vue'
+// новый код chat: категории документов открываются в модальном окне формы документа
 
 import UsersPage from '../components/pages/Users/UsersPage.vue'
 import UserCreatePage from '../components/pages/Users/UserCreatePage.vue'
@@ -222,12 +222,6 @@ const routes = [
 
   { 
     path: '/employeecards/:id/update', name :`employee-card-update`, component: EmployeeCardUpdatePage, meta:{requiresAuth: true,breadcrumb: [
-        { title: 'Сотрудники', name: 'employee-cards' },
-      ]
-    } 
-  }, 
-  { 
-    path: '/employeecards/document/category', name :`employee-document-category`, component: EmployeeCardDocumentCategory, meta:{requiresAuth: true,breadcrumb: [
         { title: 'Сотрудники', name: 'employee-cards' },
       ]
     } 

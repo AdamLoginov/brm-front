@@ -132,7 +132,11 @@
             <div v-if="documents.length" class="table-responsive">
               <table class="table employee-document-table mb-0">
                 <thead><tr><th class="text-center">№</th><th>Документ</th><th>Файл</th><th>Добавлен</th><th><span class="visually-hidden">Действия</span></th></tr></thead>
-                <tbody><tr v-for="(document, index) in documents" :key="document.ID">
+                <!-- новый код chat: разделы документов по приоритету надкатегории -->
+                <tbody v-for="group in documentGroups" :key="group.id">
+                  <!-- новый код chat: заголовок надкатегории с иконкой и количеством документов -->
+                  <tr class="document-group-heading"><th colspan="5" scope="rowgroup"><div class="document-group-title"><span class="document-group-icon"><i class="bi bi-folder2" aria-hidden="true"></i></span><h3>{{ group.name }}</h3><span class="document-group-count">{{ group.items.length }}</span></div></th></tr>
+                  <tr v-for="(document, index) in group.items" :key="document.ID">
                   <td class="text-center text-secondary">{{ index + 1 }}</td>
                   <!-- новый код chat: подписи документов в мобильном списке -->
                   <td data-label="Категория" :title="document.category_document_card?.category_name || 'Без категории'">{{ document.category_document_card?.category_name || 'Без категории' }}</td>
@@ -201,6 +205,26 @@ const loading = ref(true);
 const errorMessage = ref('');
 const deletingID = ref(null);
 const documents = computed(() => employeeCard.value?.employee_documents || []);
+// --------- новый код chat: надкатегории по приоритету, без группы в конце
+const documentGroups = computed(() => {
+  const groups = new Map();
+  for (const document of documents.value) {
+    const group = document.category_document_card?.group;
+    const id = group?.ID || 0;
+    if (!groups.has(id)) groups.set(id,{id,name:group?.name || 'Без группы',priority:group?.priority ?? Infinity,items:[]});
+    groups.get(id).items.push(document);
+  }
+  // новый код chat: внутри надкатегории документы упорядочены по категории и имени файла
+  for (const group of groups.values()) {
+    group.items.sort((a,b) =>
+      (a.category_document_card?.category_name || 'Без категории').localeCompare(b.category_document_card?.category_name || 'Без категории','ru') ||
+      (a.file_name || '').localeCompare(b.file_name || '', 'ru', {numeric:true}) ||
+      a.ID - b.ID
+    );
+  }
+  return [...groups.values()].sort((a,b) => a.priority - b.priority || a.name.localeCompare(b.name,'ru'));
+});
+// --------- конец нового кода chat
 const avatarDocument = computed(() => documents.value.filter(item => item.category_document_card?.category_name === 'Фото').at(-1));
 const fullName = computed(() => [employeeCard.value?.surname, employeeCard.value?.name, employeeCard.value?.middle_name].filter(Boolean).join(' ') || 'Без имени');
 const phones = computed(() => employeeCard.value?.phones?.length ? employeeCard.value.phones : (employeeCard.value?.phone ? [employeeCard.value.phone] : []));
@@ -318,6 +342,15 @@ dd a:hover, .employee-file-link:hover { text-decoration: underline; }
 .employee-specialization { font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--bs-border-color); }
 .employee-money { font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .employee-documents { padding: 0; overflow: hidden; }
+/* новый код chat: заголовки групп документов, в том числе на телефоне */
+.employee-document-table .document-group-heading {display:table-row;background:var(--bs-tertiary-bg);}
+.employee-document-table .document-group-heading th {padding:5px 16px;background:var(--bs-tertiary-bg);white-space:normal;border-bottom:1px solid var(--bs-border-color);} /* новый код chat: компактная высота заголовка */
+/* новый код chat: заголовки надкатегорий в едином стиле карточки сотрудника */
+.document-group-title {display:flex;align-items:center;gap:9px;color:var(--bs-body-color);}
+.document-group-title h3 {margin:0;font-size:14px;font-weight:600;overflow-wrap:anywhere;}
+.document-group-icon {display:inline-grid;place-items:center;width:22px;height:22px;flex-shrink:0;border-radius:5px;background:var(--bs-primary-bg-subtle);color:var(--bs-primary);font-size:13px;} /* новый код chat: уменьшенная иконка */
+.document-group-count {margin-left:auto;flex-shrink:0;padding:2px 8px;border-radius:20px;background:var(--bs-body-bg);border:1px solid var(--bs-border-color);font-size:12px;font-weight:400;color:var(--bs-secondary-color);}
+.employee-document-table tbody + tbody .document-group-heading th {border-top:1px solid var(--bs-border-color);}
 .employee-documents-heading { justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 18px; margin: 0; }
 .employee-document-count { border-radius: 5px; padding: 2px 6px; font-size: 13px; background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); }
 .employee-document-table { font-size: 15px; }
@@ -402,6 +435,10 @@ dd a:hover, .employee-file-link:hover { text-decoration: underline; }
   .employee-document-table { display: block; width: 100%; font-size: 12px; }
   .employee-document-table thead { display: none; }
   .employee-document-table tbody { display: grid; gap: 4px; }
+  /* новый код chat: заголовок группы занимает всю ширину мобильного списка */
+  .employee-document-table tbody + tbody {margin-top:12px;}
+  .employee-document-table .document-group-heading {display:block;border:0;padding:0;overflow:hidden;}
+  .employee-document-table .document-group-heading th {display:block;width:100%;padding:5px 10px;border:0;border-radius:6px;} /* новый код chat: компактный заголовок на телефоне */
   .employee-document-table tr { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr) 50px 28px; align-items: center; gap: 6px; padding: 5px 6px; border: 1px solid var(--bs-border-color); border-radius: 6px; }
   .employee-document-table td { display: block; min-width: 0; padding: 0; border: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .employee-document-table td:first-child { display: none; }
