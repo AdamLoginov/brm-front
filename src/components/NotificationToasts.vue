@@ -22,7 +22,7 @@ import { useRouter } from 'vue-router';
 import { notificationsState as state } from '../utils/notifications';
 const router = useRouter();
 const dismissed = ref([]);
-const titles = {assigned:'Вам назначена задача', reopened:'Задача возвращена в работу', completed:'Задача выполнена'};
+const titles = {assigned:'Вам назначена задача', reopened:'Задача возвращена в работу', completed:'Задача выполнена', updated:'Задача изменена'}; // новый код chat: уведомление о правке
 const key = () => 'notification-toast-dismissed:' + state.toastOwner;
 const restore = () => {
     try {

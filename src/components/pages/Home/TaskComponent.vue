@@ -36,7 +36,8 @@
             <div v-if="!tasks" class="task-empty" role="status">Загружаем задачи…</div>
             <div v-else-if="!tasks.length" class="task-empty"><i class="bi bi-check2-circle me-2"></i>Задач пока нет</div>
             <div v-else-if="!visibleTasks.length" class="task-empty" role="status">{{ taskFilter === 'assigned' ? 'Вам пока не назначены задачи' : 'Вы пока не создали задач' }}</div>
-            <article v-for="(task, index) in visibleTasks" :key="task.ID ?? index" :id="`task-item-${task.ID}`" tabindex="-1" class="task-card" :class="{'task-card-focused':task.ID === focusedTaskID, 'task-card-completed':task.status}">
+            <!-- новый код chat: фон задачи по сроку выполнения -->
+            <article v-for="(task, index) in visibleTasks" :key="task.ID ?? index" :id="`task-item-${task.ID}`" tabindex="-1" class="task-card" :class="{'task-card-focused':task.ID === focusedTaskID, 'task-card-completed':task.status, 'task-card-overdue':taskDeadlineRank(task) === 0, 'task-card-due-today':taskDeadlineRank(task) === 1}">
                 <span class="task-number">{{ index + 1 }}</span>
                 <div class="task-card-content">
                     <div class="task-message">{{ task.message || 'Без описания' }}</div>
@@ -57,6 +58,7 @@
                     <span class="task-priority" :title="`Приоритет: ${task.priority}`">П{{ task.priority }}</span>
                     <div class="task-actions">
                         <button v-if="!task.status && canComplete(task)" type="button" class="task-action task-action-complete" title="Отметить выполненной" aria-label="Отметить задачу выполненной" :disabled="taskBusy" @click="updateSuccessTaskHanlder(task.ID)"><i class="bi bi-check2" aria-hidden="true"></i></button>
+                        <span v-else class="task-action-placeholder" aria-hidden="true"></span> <!-- новый код chat: сохраняем место недоступной кнопки -->
                         <button type="button" class="task-action" title="Изменить" aria-label="Изменить задачу" :disabled="taskBusy" data-bs-toggle="modal" data-bs-target="#change" @click="fillFormDataChange(task.ID)"><i class="bi bi-pencil" aria-hidden="true"></i></button>
                         <button type="button" class="task-action task-action-delete" title="Удалить" aria-label="Удалить задачу" :disabled="taskBusy" @click="deleteTaskHandler(task.ID)"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                     </div>
@@ -121,7 +123,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, computed, watch, nextTick } from 'vue'; // новый код chat
+import { onMounted, onBeforeUnmount, reactive, ref, computed, watch, nextTick } from 'vue'; // новый код chat
 import { useRoute } from 'vue-router';
 import { refreshNotifications } from '../../../utils/notifications'; // новый код chat
 import api from '../../../api';
@@ -169,6 +171,30 @@ const taskFilters = [
     { value: 'assigned', label: 'Назначены мне' },
     { value: 'created', label: 'Созданы мной' },
 ];
+// --------- новый код chat: срок по московской дате, обновление при смене дня без перезагрузки
+const taskTodayDate = () => {
+    const parts = new Intl.DateTimeFormat('en-US',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const value = type => parts.find(part => part.type === type).value;
+    return value('year') + '-' + value('month') + '-' + value('day');
+};
+const taskToday = ref(taskTodayDate());
+const refreshTaskToday = () => {taskToday.value = taskTodayDate();};
+let taskDateTimer;
+onMounted(() => {
+    taskDateTimer = window.setInterval(refreshTaskToday,30000);
+    document.addEventListener('visibilitychange',refreshTaskToday);
+});
+onBeforeUnmount(() => {
+    window.clearInterval(taskDateTimer);
+    document.removeEventListener('visibilitychange',refreshTaskToday);
+});
+const taskDeadlineRank = task => {
+    if (task.status) return 3;
+    if (!task.due_date) return 2;
+    if (task.due_date < taskToday.value) return 0;
+    return task.due_date === taskToday.value ? 1 : 2;
+};
+// --------- конец нового кода chat
 const visibleTasks = computed(() => {
     const userID = Number(localStorage.getItem('user-id'));
     return (tasks.value || []).filter(task => {
@@ -176,7 +202,7 @@ const visibleTasks = computed(() => {
         if (!userID) return false;
         if (taskFilter.value === 'created') return Number(task.from_user_id) === userID;
         return taskAssignees(task).some(user => Number(user.ID) === userID);
-    });
+    }).sort((a,b) => taskDeadlineRank(a) - taskDeadlineRank(b) || Number(a.priority) - Number(b.priority)); // новый код chat: срочность, затем приоритет
 });
 // --------- конец нового кода chat
 
@@ -294,6 +320,9 @@ onMounted(getUsersHandler);
 .task-card { display: flex; align-items: flex-start; gap: 10px; padding: 9px 8px; border: 1px solid transparent; border-bottom-color: var(--bs-border-color); }
 .task-card:last-child { border-bottom-color: transparent; }
 .task-card:hover { background: var(--bs-tertiary-bg); border-radius: 6px; }
+/* новый код chat: сроки незавершённых задач, фон сохраняется при наведении */
+.task-card.task-card-overdue, .task-card.task-card-overdue:hover {background:#fce8e8;}
+.task-card.task-card-due-today, .task-card.task-card-due-today:hover {background:#fff5d6;}
 /* новый код chat: увеличенный порядковый номер задачи */
 .task-number { flex: 0 0 22px; padding-top: 1px; text-align: center; color: #000; font-size: 13px; }
 .task-card-content { flex: 1; min-width: 0; }
@@ -303,12 +332,13 @@ onMounted(getUsersHandler);
 .task-meta > span { overflow-wrap: anywhere; }
 .task-meta time { white-space: nowrap; }
 .task-card-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; flex: 0 0 auto; }
-.task-status { display: inline-flex; align-items: center; gap: 4px; border: 1px solid; border-radius: 6px; padding: 2px 6px; font-size: 11px; white-space: nowrap; }
+.task-status { display: inline-flex; align-items: center; justify-content:center; width:94px; flex-shrink:0; gap: 4px; border: 1px solid; border-radius: 6px; padding: 2px 6px; font-size: 11px; white-space: nowrap; } /* новый код chat: одинаковая ширина обоих статусов */
 .task-status-done { color: #000; border-color: var(--bs-success-border-subtle); background: var(--bs-success-bg-subtle); }
 .task-status-open { color: #000; border-color: var(--bs-primary-border-subtle); background: var(--bs-primary-bg-subtle); }
 /* новый код chat: круглая метка приоритета с бледно-жёлтой заливкой */
 .task-priority { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; padding: 0; border: 1px solid #eadca5; border-radius: 50%; background: #fff8db; color: #000; font-size: 11px; line-height: 1; white-space: nowrap; }
 .task-actions { display: flex; gap: 2px; }
+.task-action-placeholder {width:27px;height:27px;flex:0 0 27px;} /* новый код chat: статусы и приоритеты не сдвигаются без кнопки выполнения */
 .task-action { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; border: 0; border-radius: 5px; background: transparent; color: #000; }
 .task-action:hover { background: var(--bs-secondary-bg); color: var(--bs-primary); }
 .task-action-complete:hover { color: var(--bs-success); }

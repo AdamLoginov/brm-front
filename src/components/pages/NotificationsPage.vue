@@ -44,9 +44,10 @@
 import { onMounted, onBeforeUnmount, computed, ref, watch, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { notificationsState as state, startNotifications, stopNotifications, refreshNotifications, readNotifications, locateNotification } from '../../utils/notifications';
-const icons = {assigned:'bi-person-plus', reopened:'bi-arrow-counterclockwise', completed:'bi-check2'}; // новый код chat: иконки событий
-const titles = {assigned:'Вам назначена задача',reopened:'Задача возвращена в работу',completed:'Задача выполнена'};
-const actorLabels = {assigned:'Назначил',reopened:'Вернул в работу',completed:'Отметил выполнение'};
+// новый код chat: оформление события изменения задачи
+const icons = {assigned:'bi-person-plus', reopened:'bi-arrow-counterclockwise', completed:'bi-check2',updated:'bi-pencil'};
+const titles = {assigned:'Вам назначена задача',reopened:'Задача возвращена в работу',completed:'Задача выполнена',updated:'Задача изменена'};
+const actorLabels = {assigned:'Назначил',reopened:'Вернул в работу',completed:'Отметил выполнение',updated:'Изменил'};
 const dateLabel = value => new Date(value).toLocaleString('ru-RU');
 // --------- новый код chat: поиск и подсветка уведомления без прочтения
 const route = useRoute();
@@ -93,7 +94,7 @@ onBeforeUnmount(() => { focusVersion++; stopNotifications(); });
 /* новый код chat: выделение уведомления, открытого из toast */
 .notification-selected { background: var(--bs-primary-bg-subtle); box-shadow: inset 0 0 0 2px var(--bs-primary); outline: none; }
 .notification-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 30px; height: 30px; border-radius: 8px; background: var(--bs-tertiary-bg); color: var(--bs-secondary-color); font-size: 16px; }
-.notification-icon-assigned { background: var(--bs-primary-bg-subtle); color: var(--bs-primary); }
+.notification-icon-assigned, .notification-icon-updated { background: var(--bs-primary-bg-subtle); color: var(--bs-primary); } /* новый код chat */
 .notification-icon-completed { background: var(--bs-success-bg-subtle); color: var(--bs-success); }
 .notification-icon-reopened { background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
 .notification-content { flex: 1; min-width: 0; }
