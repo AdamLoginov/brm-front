@@ -4,7 +4,7 @@
         <router-link :to="{name:'employee-card-detail',params:{id:route.params.id}}" class="document-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> Карточка сотрудника</router-link> <!-- новый код chat: корректное имя маршрута -->
         <header class="document-page-heading">
             <span class="document-section-icon"><i class="bi bi-file-earmark-plus" aria-hidden="true"></i></span>
-            <div><h1>Добавить документ</h1><p>Выберите категорию и прикрепите файл сотрудника.</p></div>
+            <div><h1>Добавить документ</h1><p>Выберите категорию и прикрепите документы сотрудника.</p></div>
         </header>
         <form class="document-form" @submit.prevent="SendEmail">
             <section class="document-form-body">
@@ -20,14 +20,34 @@
                     </optgroup>
                 </select>
                 <div class="document-file-block">
-                    <div class="document-file-heading"><span class="document-file-icon"><i class="bi bi-paperclip" aria-hidden="true"></i></span><div><h2>Файл документа</h2><p>{{ SelectFile ? SelectFile.name : 'Выберите файл на компьютере' }}</p></div></div>
-                    <label for="formFile" class="visually-hidden">Файл документа</label>
-                    <input class="form-control form-control-sm" type="file" id="formFile" :disabled="isSubmit" @change="handleFileChange">
+                    <!-- новый код chat: выбор и предварительный просмотр файлов как в задачах -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <!-- новый код chat: заголовок блока выбора документа -->
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="document-file-icon" aria-hidden="true">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m8 13 7-7a2.5 2.5 0 0 1 3.5 3.5l-9 9a4.5 4.5 0 0 1-6.4-6.4l10-10" />
+                                </svg>
+                            </span>
+                            <div><h2>Файл документа</h2><p class="mt-1 mb-0 text-body-secondary">Выберите файл на компьютере</p></div>
+                        </div>
+                        <label class="btn btn-outline-primary btn-sm document-upload">
+                            <i class="bi bi-paperclip" aria-hidden="true"></i> Добавить файлы
+                            <input class="visually-hidden" type="file" multiple :disabled="isSubmit" @change="handleFileChange">
+                        </label>
+                    </div>
+                    <div v-if="files.length" class="d-flex flex-wrap gap-2 mt-2">
+                        <div v-for="file in files" :key="file.id" class="position-relative">
+                            <TaskAttachmentPreview :file="file" />
+                            <button type="button" class="document-remove" :disabled="isSubmit" :aria-label="'Убрать ' + file.name" :title="'Убрать ' + file.name" @click="files = files.filter(item => item.id !== file.id)"><i class="bi bi-x" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
                 </div>
+                <div v-if="uploadError" class="alert alert-danger py-2 mt-2 mb-0" role="alert">{{ uploadError }}</div>
             </section>
             <footer class="document-form-footer">
                 <router-link :to="{name:'employee-card-detail',params:{id:route.params.id}}" class="btn btn-outline-secondary btn-sm">К карточке</router-link> <!-- новый код chat: корректное имя маршрута -->
-                <button class="btn btn-primary btn-sm" type="submit" :disabled="isSubmit"><span v-if="isSubmit" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span><i v-else class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i>{{ isSubmit ? 'Загрузка…' : 'Добавить документ' }}</button>
+                <button class="btn btn-primary btn-sm" type="submit" :disabled="isSubmit || !files.length || formData.category_employee_document_id === 'no'"><span v-if="isSubmit" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span><i v-else class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i>{{ isSubmit ? 'Загрузка…' : 'Загрузить' }}</button>
             </footer>
         </form>
         <EmployeeCardDocumentCategory ref="categoryModal" @changed="updateCategories" @created="selectCreatedCategory" />
@@ -37,6 +57,7 @@
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue';
 import EmployeeCardDocumentCategory from './EmployeeCardDocumentCategory.vue'; // новый код chat
+import TaskAttachmentPreview from '../Home/TaskAttachmentPreview.vue'; // новый код chat
 
 import { useRoute } from 'vue-router';
 import api from '../../../api';
@@ -70,11 +91,16 @@ const updateCategories = categories => {
 const selectCreatedCategory = category => { formData.category_employee_document_id = category.ID; };
 // --------- конец нового кода chat
 
-const SelectFile = ref(null);
+const files = ref([]); // новый код chat: файлы выбранной категории
+const uploadError = ref('');
+let nextFileID = 0;
 const isSubmit = ref(false);
 
 const handleFileChange = (event) =>{
-    SelectFile.value = event.target.files[0];
+    for (const source of event.target.files) {
+        files.value.push({ id: ++nextFileID, name: source.name, mime: source.type, source });
+    }
+    event.target.value = '';
 };
 
 const getCategoryEmployeeCardDocumentHandler = async() =>{
@@ -90,19 +116,23 @@ const getCategoryEmployeeCardDocumentHandler = async() =>{
 }
 
 const SendEmail = async()=>{
+    if (isSubmit.value || !files.value.length || formData.category_employee_document_id === 'no') return;
+    uploadError.value = '';
     try{
         isSubmit.value = true;
         
-        const SendFormData = new FormData();
-        SendFormData.append('category_employee_document_id', formData.category_employee_document_id);
-        SendFormData.append('file', SelectFile.value);
-
-        const res = await api.post(`/employeescard/${route.params.id}/document/create`, SendFormData);
-
-        SelectFile.value = null;
+        // новый код chat: каждый файл сохраняется как отдельный документ
+        for (const file of [...files.value]) {
+            const payload = new FormData();
+            payload.append('category_employee_document_id', formData.category_employee_document_id);
+            payload.append('file', file.source);
+            await api.post(`/employeescard/${route.params.id}/document/create`, payload);
+            files.value = files.value.filter(item => item.id !== file.id);
+        }
         formData.category_employee_document_id = "no";
     }catch(err){
-        console.log(err);
+        const reason = typeof err.response?.data === 'string' ? err.response.data : 'Попробуйте ещё раз.';
+        uploadError.value = `Не удалось загрузить «${files.value[0]?.name}». ${reason}`;
     }finally{
         isSubmit.value = false;
     }
@@ -127,10 +157,11 @@ onMounted(getCategoryEmployeeCardDocumentHandler);
 /* новый код chat: размер кнопок задаётся стандартным Bootstrap btn-sm */
 .document-form .form-control,.document-form .form-select {font-size:13px;}
 .document-file-block {margin-top:20px;padding:16px;border:1px dashed var(--bs-border-color);border-radius:8px;background:var(--bs-tertiary-bg);}
-.document-file-heading {display:flex;gap:10px;align-items:center;margin-bottom:12px;}
-.document-file-heading > div {min-width:0;}
-.document-file-heading p {margin:4px 0 0;color:var(--bs-secondary-color);overflow-wrap:anywhere;}
-.document-file-icon {display:grid;place-items:center;width:34px;height:34px;flex-shrink:0;background:var(--bs-body-bg);border-radius:8px;color:var(--bs-primary);font-size:20px;}
+.document-upload:focus-within {outline:2px solid var(--bs-primary);outline-offset:2px;}
+.document-file-icon {display:grid;place-items:center;width:34px;height:34px;flex-shrink:0;border-radius:8px;background:var(--bs-body-bg);color:var(--bs-primary);}
+.document-remove {position:absolute;top:7px;right:3px;display:grid;place-items:center;width:22px;height:22px;padding:0;line-height:1;border:1px solid var(--bs-border-color);border-radius:50%;background:white;color:#495057;}
+.document-remove i {display:grid;place-items:center;}
+.document-remove:hover {color:var(--bs-danger);}
 .document-form-footer {display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:12px 20px;border-top:1px solid var(--bs-border-color);}
 @media(max-width:575px) {.document-form-body {padding:14px;}.document-form-footer {padding:12px 14px;}.document-file-block {padding:12px;}}
 /* --------- конец нового кода chat */
