@@ -57,7 +57,7 @@
 
         <!-- новый код chat: окно редактирования поверх страницы при адаптивной ширине доски -->
         <Teleport to="body">
-        <div class="modal fade" id="change" aria-labelledby="task-modal-title" tabindex="-1" aria-hidden="true">
+        <div class="modal fade" id="change" aria-labelledby="task-modal-title" tabindex="-1" aria-hidden="true" @paste="pasteImages">
             <!-- новый код chat: общий редактор задачи -->
             <div class="modal-dialog modal-dialog-centered task-editor">
                 <form class="modal-content" @submit.prevent="saveTask">
@@ -130,9 +130,24 @@ import TaskAttachmentPreview from './TaskAttachmentPreview.vue'; // новый �
 // новый код chat: выбранные файлы остаются локальными до сохранения задачи
 const pendingFiles = ref([]);
 let nextFileID = 0;
+// --------- новый код chat: выбор и вставка используют один список вложений
+const addFile = source => {
+    pendingFiles.value.push({ id: 'local-' + ++nextFileID, name: source.name, mime: source.type, source });
+};
+const pasteImages = event => {
+    if (taskBusy.value || !event.clipboardData) return;
+    const images = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/'));
+    if (!images.length) return;
+    event.preventDefault();
+    for (const file of images) {
+        const extension = file.name.match(/\.([a-z0-9]+)$/i)?.[1] || file.type.split('/')[1];
+        addFile(new File([file], `Скриншот-${nextFileID + 1}.${extension}`, { type: file.type }));
+    }
+};
+// --------- конец нового кода chat
 const selectFiles = event => {
     for (const source of event.target.files) {
-        pendingFiles.value.push({ id: 'local-' + ++nextFileID, name: source.name, mime: source.type, source });
+        addFile(source);
     }
     event.target.value = '';
 };
@@ -197,7 +212,7 @@ const users = ref(null)
 
 const tasks = ref(null)
 // --------- новый код chat: авторство и участие, включая общие задачи
-const taskFilter = ref('all');
+const taskFilter = ref(route.query.filter === 'assigned' ? 'assigned' : 'all'); // новый код chat: переход из сводки
 const taskFilters = [
     { value: 'all', label: 'Все' },
     { value: 'assigned', label: 'Назначены мне' },
