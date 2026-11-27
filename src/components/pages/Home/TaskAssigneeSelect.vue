@@ -1,6 +1,6 @@
 <template>
   <!-- --------- новый код chat: выбор нескольких участников без Ctrl -->
-  <details class="task-assignee-picker">
+  <details ref="picker" class="task-assignee-picker">
     <summary :id="id">{{ modelValue.length ? 'Выбрано: ' + modelValue.length : 'Не назначены' }}</summary>
     <div class="assignee-options">
       <label v-for="user in users || []" :key="user.ID" class="assignee-option">
@@ -13,6 +13,17 @@
   <!-- --------- конец нового кода chat -->
 </template>
 <script setup>
+// --------- новый код chat: закрытие списка исполнителей при нажатии снаружи
+import { onMounted, onBeforeUnmount, ref } from 'vue';
+const picker = ref(null);
+function closeOnOutsidePress(event) {
+    if (picker.value?.open && !picker.value.contains(event.target)) {
+        picker.value.open = false;
+    }
+}
+onMounted(() => document.addEventListener('pointerdown', closeOnOutsidePress, true));
+onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutsidePress, true));
+// --------- конец нового кода chat
 // --------- новый код chat: массив уникальных ID участников
 const props = defineProps({ modelValue: { type: Array, default: () => [] }, users: Array, userName: Function, id: String, disabled: Boolean });
 const emit = defineEmits(['update:modelValue']);

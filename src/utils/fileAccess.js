@@ -17,7 +17,7 @@ export const clearFileAccess = async() => {
     const response = await fetch('/api/files/logout', {method:'POST', credentials:'same-origin'});
     if (!response.ok) throw new Error('Не удалось завершить доступ к файлам. Повторите выход.');
 };
-export const openDocumentFile = async id => {
+export const openDocumentFile = async (id, url = documentFileUrl(id)) => { // новый код chat
     const tab = window.open('about:blank','_blank');
     if (!tab) { window.alert('Разрешите открытие новой вкладки для просмотра документа.'); return; }
     tab.opener = null;
@@ -25,7 +25,7 @@ export const openDocumentFile = async id => {
     tab.document.body.textContent = 'Открываем документ…';
     try {
         await ensureFileAccess();
-        if (!tab.closed) tab.location.replace(documentFileUrl(id));
+        if (!tab.closed) tab.location.replace(url);
     } catch (error) { tab.close(); window.alert(error.message); }
 };
 // --------- конец нового кода chat

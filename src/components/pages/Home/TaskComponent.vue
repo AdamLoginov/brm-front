@@ -4,35 +4,14 @@
         <!-- новый код chat: заголовок страницы и главное действие -->
         <header class="task-board-header">
             <div class="d-flex align-items-center gap-2"><span class="board-icon"><i class="bi bi-list-task" aria-hidden="true"></i></span><h1>Задачи</h1></div>
-            <button class="btn btn-outline-primary btn-sm" type="button" :aria-label="showCreate ? 'Скрыть форму' : 'Новая задача'" :title="showCreate ? 'Скрыть форму' : 'Новая задача'" :aria-expanded="showCreate" aria-controls="task-create" @click="showCreate = !showCreate"><i :class="showCreate ? 'bi bi-x-lg' : 'bi bi-plus-lg'" aria-hidden="true"></i></button>
+            <!-- новый код chat: фильтр рядом с заголовком задач -->
+            <div class="task-filters" role="group" aria-label="Показать задачи">
+                <button v-for="item in taskFilters" :key="item.value" type="button" :aria-pressed="taskFilter === item.value" :class="{ active: taskFilter === item.value }" @click="taskFilter = item.value">{{ item.label }}</button>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" type="button" aria-label="Новая задача" title="Новая задача" data-bs-toggle="modal" data-bs-target="#change" :disabled="taskBusy" @click="openNewTask"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
         </header>
         <div v-if="taskError" class="alert alert-danger m-2" role="alert">{{ taskError }}</div>
         <div v-if="focusedTaskID && tasks && !tasks.some(task => task.ID === focusedTaskID)" class="alert alert-info m-2">Задача больше недоступна.</div>
-        <form v-show="showCreate" id="task-create" class="task-create-form" @submit.prevent="createTaskHandler()">
-            <div class="task-create-message">
-                <label for="task-new-message">Описание задачи</label>
-                <textarea id="task-new-message" v-model="formData.message" class="form-control form-control-sm" rows="1" placeholder="Что нужно сделать?"></textarea>
-            </div>
-            <div>
-                <!-- новый код chat: множественный выбор исполнителей -->
-                <label for="task-new-user">Исполнители</label>
-                <TaskAssigneeSelect id="task-new-user" v-model="formData.assignee_ids" :users="users" :user-name="taskUserName" :disabled="taskBusy" />
-            </div>
-            <div>
-                <label for="task-new-priority">Приоритет</label>
-                <select id="task-new-priority" v-model="formData.priority" class="form-select form-select-sm">
-                    <option v-for="priority in 10" :key="priority" :value="priority">{{ priority }}</option>
-                </select>
-            </div>
-            <!-- новый код chat: необязательный срок выполнения -->
-            <div><label for="task-new-due">Срок выполнения</label><input id="task-new-due" v-model="formData.due_date" type="date" max="9999-12-31" class="form-control form-control-sm" :disabled="taskBusy" title="До выбранной даты включительно"></div>
-            <button type="submit" class="btn btn-sm btn-primary" :disabled="taskBusy"><i class="bi bi-plus-lg me-1"></i>Создать</button>
-        </form>
-        <!-- --------- новый код chat: фильтры задач текущего пользователя -->
-        <div class="task-filters" role="group" aria-label="Показать задачи">
-            <button v-for="item in taskFilters" :key="item.value" type="button" :aria-pressed="taskFilter === item.value" :class="{ active: taskFilter === item.value }" @click="taskFilter = item.value">{{ item.label }}</button>
-        </div>
-        <!-- --------- конец нового кода chat -->
         <div class="task-list">
             <div v-if="!tasks" class="task-empty" role="status">Загружаем задачи…</div>
             <div v-else-if="!tasks.length" class="task-empty"><i class="bi bi-check2-circle me-2"></i>Задач пока нет</div>
@@ -41,10 +20,14 @@
             <template v-for="(task, index) in visibleTasks" :key="task.ID">
             <!-- новый код chat: границы групп видны и без цветовой подсветки -->
             <h2 v-if="index === 0 || taskDeadlineRank(task) !== taskDeadlineRank(visibleTasks[index - 1])" class="task-group-heading">{{ groupTitles[taskDeadlineRank(task)] }}</h2>
-            <article :id="`task-item-${task.ID}`" tabindex="-1" class="task-card" :class="{'task-card-focused':task.ID === focusedTaskID, 'task-card-completed':task.status, 'task-card-overdue':taskDeadlineRank(task) === 0, 'task-card-due-today':taskDeadlineRank(task) === 1}">
+            <article :id="`task-item-${task.ID}`" tabindex="-1" class="task-card" :class="{'task-card-focused':task.ID === focusedTaskID, 'task-card-completed':task.status, 'task-card-overdue':taskDeadlineRank(task) === 0, 'task-card-due-today':taskDeadlineRank(task) === 1, 'task-card-due-tomorrow':taskDeadlineRank(task) === 2}">
                 <span class="task-number">{{ index + 1 }}</span>
                 <div class="task-card-content">
                     <div class="task-message">{{ task.message || 'Без описания' }}</div>
+                    <!-- новый код chat: доступ через защищённый просмотр -->
+                    <div v-if="task.attachments?.length" class="d-flex flex-wrap gap-2">
+                        <TaskAttachmentPreview v-for="file in task.attachments" :key="file.id" :file="file" />
+                    </div>
                     <div class="task-meta">
                         <span title="Исполнители"><i class="bi bi-people me-1" aria-hidden="true"></i>{{ taskAssignees(task).map(taskUserName).join(', ') || 'Не назначены' }}</span>
                         <span class="task-author">От: {{ taskUserName(task.from_user_card) }}</span>
@@ -74,55 +57,63 @@
 
         <!-- новый код chat: окно редактирования поверх страницы при адаптивной ширине доски -->
         <Teleport to="body">
-        <div class="modal fade" id="change" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="exampleModalLabel">Изменить данные задачи</h1>
-                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-5">
-                            <!-- новый код chat: изменение состава участников -->
-                            <label for="task-edit-users">Исполнители</label>
-                            <TaskAssigneeSelect id="task-edit-users" v-model="formDataChange.assignee_ids" :users="users" :user-name="taskUserName" :disabled="taskBusy" />
-                        </div>
-                        <div class="col-3">
-                            <label>Приоритет</label>
-                            <select v-model="formDataChange.priority" class="form-select form-select-sm">
-                                <option :value="1">1</option>
-                                <option :value="2">2</option>
-                                <option :value="3">3</option>
-                                <option :value="4">4</option>
-                                <option :value="5">5</option>
-                                <option :value="6">6</option>
-                                <option :value="7">7</option>
-                                <option :value="8">8</option>
-                                <option :value="9">9</option>
-                                <option :value="10">10</option>
-                            </select>
-                        </div>
-                        <div class="col-4">
-                            <label>Статус</label>
-                            <select v-model="formDataChange.status" :disabled="!canChangeStatus" class="form-select form-select-sm">
-                                <option :value="true">Выполнено</option>
-                                <option :value="false">Не выполнено</option>
-                            </select>
-                        </div>
-                        <!-- новый код chat: изменение и очистка срока -->
-                        <div class="col-12 my-2"><label for="task-edit-due">Срок выполнения</label><input id="task-edit-due" v-model="formDataChange.due_date" type="date" max="9999-12-31" class="form-control form-control-sm" :disabled="taskBusy"><small>По выбранную дату включительно. Можно оставить пустым.</small></div>
-                        <div class="col-12">
-                            <label>Текст задачи</label>
-                            <textarea v-model="formDataChange.message" class="form-control" rows="5" style="font-size: 14px;"></textarea>
-                        </div>
+        <div class="modal fade" id="change" aria-labelledby="task-modal-title" tabindex="-1" aria-hidden="true">
+            <!-- новый код chat: общий редактор задачи -->
+            <div class="modal-dialog modal-dialog-centered task-editor">
+                <form class="modal-content" @submit.prevent="saveTask">
+                    <div class="modal-header">
+                        <i class="bi bi-list-task editor-icon" aria-hidden="true"></i>
+                        <h1 class="modal-title" id="task-modal-title">{{ formDataChange.ID ? 'Изменить задачу' : 'Новая задача' }}</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
-                    <button type="button" class="btn btn-primary btn-sm" @click="updateTaskHandler()" :disabled="taskBusy">Сохранить</button>
-                </div>
-                </div>
+                    <div class="modal-body">
+                        <label class="editor-label" for="task-message">Описание задачи</label>
+                        <textarea id="task-message" v-model="formDataChange.message" class="form-control editor-message" rows="3" placeholder="Что нужно сделать?" :disabled="taskBusy"></textarea>
+                        <div class="editor-settings">
+                            <div class="editor-assignees">
+                                <label class="editor-label" for="task-edit-users">Исполнители</label>
+                                <TaskAssigneeSelect id="task-edit-users" v-model="formDataChange.assignee_ids" :users="users" :user-name="taskUserName" :disabled="taskBusy" />
+                            </div>
+                            <div>
+                                <label class="editor-label" for="task-edit-due">Срок включительно</label>
+                                <input id="task-edit-due" v-model="formDataChange.due_date" type="date" max="9999-12-31" class="form-control form-control-sm" :disabled="taskBusy">
+                            </div>
+                            <div>
+                                <label class="editor-label" for="task-priority">Приоритет</label>
+                                <select id="task-priority" v-model="formDataChange.priority" class="form-select form-select-sm" :disabled="taskBusy">
+                                    <option v-for="value in 10" :key="value" :value="value">{{ value }}</option>
+                                </select>
+                            </div>
+                            <div v-if="formDataChange.ID">
+                                <label class="editor-label" for="task-status">Статус</label>
+                                <select id="task-status" v-model="formDataChange.status" :disabled="taskBusy || !canChangeStatus" class="form-select form-select-sm">
+                                    <option :value="false">Не выполнено</option>
+                                    <option :value="true">Выполнено</option>
+                                </select>
+                            </div>
+                        </div>
+                        <section class="editor-files">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <h2>Вложения</h2>
+                                <label class="btn btn-sm btn-outline-primary editor-upload">
+                                    <i class="bi bi-paperclip" aria-hidden="true"></i> Добавить файлы
+                                    <input class="visually-hidden" type="file" multiple :disabled="taskBusy" @change="selectFiles">
+                                </label>
+                            </div>
+                            <div v-if="existingFiles.length || pendingFiles.length" class="d-flex flex-wrap gap-2 mt-2">
+                                <div v-for="file in [...existingFiles, ...pendingFiles]" :key="file.id" class="position-relative">
+                                    <TaskAttachmentPreview :file="file" />
+                                    <button type="button" class="editor-remove" :title="'Убрать ' + file.name" :aria-label="'Убрать ' + file.name" :disabled="taskBusy" @click="removeFile(file)"><i class="bi bi-x" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </section>
+                        <div v-if="taskError" class="alert alert-danger py-2 mt-3 mb-0" role="alert">{{ taskError }}</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary btn-sm" :disabled="taskBusy">{{ formDataChange.ID ? 'Сохранить' : 'Создать задачу' }}</button>
+                    </div>
+                </form>
             </div>
         </div>
         </Teleport>
@@ -134,6 +125,36 @@ import { onMounted, onBeforeUnmount, reactive, ref, computed, watch, nextTick } 
 import { useRoute } from 'vue-router';
 import { refreshNotifications } from '../../../utils/notifications'; // новый код chat
 import api from '../../../api';
+// --------- новый код chat: отправка задачи и файлов одним запросом
+import TaskAttachmentPreview from './TaskAttachmentPreview.vue'; // новый код chat
+// новый код chat: выбранные файлы остаются локальными до сохранения задачи
+const pendingFiles = ref([]);
+let nextFileID = 0;
+const selectFiles = event => {
+    for (const source of event.target.files) {
+        pendingFiles.value.push({ id: 'local-' + ++nextFileID, name: source.name, mime: source.type, source });
+    }
+    event.target.value = '';
+};
+const existingFiles = ref([]), removedFiles = ref([]);
+const removeFile = file => {
+    if (!window.confirm('Убрать файл из задачи?')) return;
+    if (file.source) {
+        pendingFiles.value = pendingFiles.value.filter(item => item.id !== file.id);
+        return;
+    }
+    removedFiles.value.push(file.id);
+    existingFiles.value = existingFiles.value.filter(item => item.id !== file.id);
+};
+const taskPayload = (task, files, removed = []) => {
+    if (!files.length && !removed.length) return task;
+    const data = new FormData();
+    data.append('task', JSON.stringify(task));
+    data.append('removed', JSON.stringify(removed));
+    for (const file of files) data.append('files', file.source);
+    return data;
+};
+// --------- конец нового кода chat
 import { refreshTaskCount } from '../../../utils/tasks'; // новый код chat: счётчик sidebar
 import TaskAssigneeSelect from './TaskAssigneeSelect.vue'; // новый код chat
 
@@ -178,7 +199,7 @@ const tasks = ref(null)
 // --------- новый код chat: авторство и участие, включая общие задачи
 const taskFilter = ref('all');
 const taskFilters = [
-    { value: 'all', label: 'Все задачи' },
+    { value: 'all', label: 'Все' },
     { value: 'assigned', label: 'Назначены мне' },
     { value: 'created', label: 'Созданы мной' },
 ];
@@ -189,6 +210,12 @@ const taskTodayDate = () => {
     return value('year') + '-' + value('month') + '-' + value('day');
 };
 const taskToday = ref(taskTodayDate());
+// новый код chat: следующий календарный день относительно московской даты
+const taskTomorrow = computed(() => {
+    const date = new Date(taskToday.value + 'T00:00:00Z');
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString().slice(0, 10);
+});
 const refreshTaskToday = () => {taskToday.value = taskTodayDate();};
 let taskDateTimer;
 onMounted(() => {
@@ -200,14 +227,14 @@ onBeforeUnmount(() => {
     document.removeEventListener('visibilitychange',refreshTaskToday);
 });
 const taskDeadlineRank = task => {
-    if (task.status) return 3;
-    if (!task.due_date) return 2;
+    if (task.status) return 4;
+    if (!task.due_date) return 3;
     if (task.due_date < taskToday.value) return 0;
-    return task.due_date === taskToday.value ? 1 : 2;
+    if (task.due_date === taskToday.value) return 1;
+    return task.due_date === taskTomorrow.value ? 2 : 3;
 };
 // --------- конец нового кода chat
 // новый код chat: независимые фильтры участников и сроков
-const showCreate = ref(false);
 
 const visibleTasks = computed(() => {
     const userID = Number(localStorage.getItem('user-id'));
@@ -221,14 +248,7 @@ const visibleTasks = computed(() => {
 // --------- конец нового кода chat
 
 // новый код chat: общие названия групп и значки фильтров задач
-const groupTitles = ['Просроченные', 'Срок сегодня', 'Остальные в работе', 'Выполненные'];
-const formData = reactive({
-    due_date: "", // новый код chat: необязательная дата
-    message: "", 
-    assignee_ids: [], // новый код chat: список исполнителей
-    // новый код chat: from_user_id берётся backend из авторизации
-    priority:10
-});
+const groupTitles = ['Просроченные', 'Срок сегодня', 'Срок завтра', 'Остальные в работе', 'Выполненные'];
 
 const formDataChange = reactive({
     ID: 0,
@@ -269,13 +289,22 @@ const runTaskAction = async action => {
     catch (err) { taskError.value=taskErrorText(err); }
     finally { taskBusy.value=false; }
 };
-const createTaskHandler = () => runTaskAction(async() => {
-    await api.post('/task/create',formData);
-    showCreate.value = false; // новый код chat: закрываем после успешного создания
-    formData.message=''; formData.assignee_ids=[]; formData.due_date='';
-});
 const updateSuccessTaskHanlder = id => runTaskAction(() => api.post(`/task/success/${id}`));
-const updateTaskHandler = () => runTaskAction(() => api.post('/task/update',{...formDataChange}));
+// новый код chat: единое окно создания и редактирования
+const openNewTask = () => {
+    Object.assign(formDataChange, { ID: 0, due_date: '', message: '', assignee_ids: [], priority: 10, status: false });
+    existingFiles.value = [];
+    removedFiles.value = [];
+    pendingFiles.value = [];
+    taskError.value = '';
+};
+const saveTask = () => runTaskAction(async () => {
+    const path = formDataChange.ID ? '/task/update' : '/task/create';
+    await api.post(path, taskPayload({...formDataChange}, pendingFiles.value, removedFiles.value));
+    pendingFiles.value = [];
+    removedFiles.value = [];
+    document.querySelector('#change .btn-close').click();
+});
 const deleteTaskHandler = id => {
     if (taskBusy.value || !window.confirm('Удалить задачу и все связанные уведомления?')) return;
     return runTaskAction(() => api.delete(`/task/delete/${id}`));
@@ -284,6 +313,10 @@ const deleteTaskHandler = id => {
 
 const fillFormDataChange = (id) =>{
     const task = tasks.value.find(item => item.ID === id)
+    existingFiles.value = [...(task.attachments || [])]; // новый код chat
+    removedFiles.value = [];
+    pendingFiles.value = [];
+    taskError.value = '';
     formDataChange.ID = task.ID
     formDataChange.due_date = task.due_date || '' // новый код chat
     formDataChange.message = task.message
@@ -311,6 +344,28 @@ onMounted(getUsersHandler);
 </script>
 
 <style scoped>
+/* новый код chat: оформление редактора задач */
+.task-editor { --bs-modal-width: 620px; }
+.task-editor .modal-content { border: 0; border-radius: 14px; box-shadow: 0 16px 54px #18243429; }
+.task-editor .modal-header, .task-editor .modal-body, .task-editor .modal-footer { padding: 16px 20px; }
+.task-editor .modal-title { font-size: 18px; font-weight: 650; }
+.editor-icon { display: grid; place-items: center; width: 32px; height: 32px; margin-right: 10px; border-radius: 9px; background: #eaf2ff; color: var(--bs-primary); }
+.editor-label, .editor-files h2 { display: block; margin: 0 0 5px; font-size: 13px; font-weight: 600; color: var(--bs-body-color); }
+.editor-message { font-size: 14px; resize: vertical; }
+.editor-settings { display: grid; grid-template-columns: repeat(auto-fit,minmax(112px,1fr)); gap: 12px; margin-top: 16px; }
+.editor-settings > div { min-width: 0; }
+.editor-files { margin-top: 20px; padding: 12px; border: 1px solid var(--bs-border-color); border-radius: 9px; background: var(--bs-tertiary-bg); }
+.editor-files h2 { margin: 0; }
+.editor-upload:focus-within { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+/* новый код chat: круглая кнопка с центровкой крестика */
+.editor-remove { position: absolute; top: 7px; right: 3px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; line-height: 1; border: 1px solid var(--bs-border-color); border-radius: 50%; background: white; color: #495057; }
+.editor-remove i { display: grid; place-items: center; }
+.editor-remove:hover { color: var(--bs-danger); }
+.task-editor .modal-footer { padding-block: 10px; }
+@media (max-width: 575px) {
+    .editor-settings { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .editor-assignees { grid-column: 1 / -1; }
+}
 /* --------- новый код chat: чёрный текст задач и полей для читаемости */
 .task-board .form-control, .task-board .form-select, .task-board .modal-content { color: #000; }
 .task-board .form-control::placeholder { color: #000; opacity: 1; }
@@ -321,13 +376,8 @@ onMounted(getUsersHandler);
 .board-icon {display:grid;place-items:center;background:var(--bs-primary-bg-subtle);color:var(--bs-primary);width:36px;height:36px;border-radius:10px;font-size:19px;}
 .task-board-header {padding:0 0 16px;}
 .task-board-header h1 {font-size:22px;font-weight:650;margin:0;}
-.task-create-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, 190px) 75px 145px auto; gap: 8px; align-items: end; padding: 0 14px 12px; border-bottom: 1px solid var(--bs-border-color); }
-.task-create-form > div { min-width: 0; }
-.task-create-form label { display: block; margin-bottom: 4px; font-size: 11px; color: #000; }
-.task-create-form textarea { resize: vertical; min-height: 31px; max-height: 140px; }
-.task-create-form .form-control, .task-create-form .form-select { font-size: 13px; }
 /* --------- новый код chat: компактный переключатель списка задач */
-.task-filters { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 14px 4px; padding: 3px; width: fit-content; max-width: calc(100% - 28px); background: #f3f5f8; border-radius: 8px; }
+.task-filters { display: flex; gap: 4px; margin-right: auto; padding: 3px; min-width: 0; overflow-x: auto; white-space: nowrap; background: #f3f5f8; border-radius: 8px; }
 .task-filters button { border: 1px solid transparent; border-radius: 6px; background: transparent; color: #000; font-size: 12px; padding: 5px 10px; }
 .task-filters button.active { background: #fff; border-color: #dfe5ee; box-shadow: 0 1px 3px #2634450a; }
 .task-filters button:hover { background: #fff; }
@@ -337,17 +387,19 @@ onMounted(getUsersHandler);
 /* новый код chat: компактная сводка по срокам */
 
 
-.task-filters {margin:0;max-width:100%;}
 .task-list {background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:10px;padding:0 12px;}
 .task-group-heading {margin:0;padding:12px 8px 7px;color:#424c59;font-weight:650;font-size:13px;}
 .task-card + .task-group-heading {margin-top:6px;border-top:1px solid var(--bs-border-color);}
-.task-board .task-create-form {padding:14px;margin-bottom:14px;border:1px solid var(--bs-border-color);border-radius:10px;background:var(--bs-body-bg);}
 .task-card { display: flex; align-items: flex-start; gap: 10px; padding: 9px 8px; border: 1px solid transparent; border-bottom-color: var(--bs-border-color); }
 .task-card:last-child { border-bottom-color: transparent; }
 .task-card:hover { background: var(--bs-tertiary-bg); border-radius: 6px; }
 /* новый код chat: сроки незавершённых задач, фон сохраняется при наведении */
 .task-card.task-card-overdue, .task-card.task-card-overdue:hover {background:#fce8e8;}
 .task-card.task-card-due-today, .task-card.task-card-due-today:hover {background:#fff5d6;}
+.task-card.task-card-due-tomorrow, .task-card.task-card-due-tomorrow:hover {background:#eaf6ec;} /* новый код chat: бледно-зелёный фон завтрашних задач */
+/* новый код chat: скругление цветных строк и небольшой зазор между задачами */
+.task-card:is(.task-card-overdue, .task-card-due-today, .task-card-due-tomorrow) {border-radius:6px;}
+.task-card + .task-card {margin-top:2px;}
 /* новый код chat: увеличенный порядковый номер задачи */
 .task-number { flex: 0 0 22px; padding-top: 1px; text-align: center; color: #000; font-size: 13px; }
 .task-card-content { flex: 1; min-width: 0; }
@@ -377,13 +429,9 @@ onMounted(getUsersHandler);
     .task-card { flex-wrap: wrap; }
     .task-card-controls { flex-basis: 100%; padding-left: 32px; justify-content: flex-start; }
     .task-actions { margin-left: auto; }
-    .task-create-form { grid-template-columns: minmax(130px, 1fr) 75px 145px auto; }
-    .task-create-message { grid-column: 1 / -1; }
 }
 @container (max-width: 575px) {
     .task-list {padding:0 6px;}
-    .task-create-form { grid-template-columns: minmax(0, 1fr) 85px; }
-    .task-create-form > button { grid-column: 1 / -1; }
     .task-card { gap: 6px; }
     .task-number { flex-basis: 18px; }
     .task-card-controls { padding-left: 24px; }
@@ -393,7 +441,5 @@ onMounted(getUsersHandler);
 .task-board {border:1px solid var(--bs-border-color);border-radius:10px;background:var(--bs-body-bg);}
 .task-board-header {padding:12px 16px 8px;}
 .task-board-header h1 {font-size:18px;}
-.task-filters {margin:0 14px 10px;}
 .task-list {border:0;border-top:1px solid var(--bs-border-color);border-radius:0 0 10px 10px;}
-.task-board .task-create-form {margin:0 14px 12px;}
 </style>
