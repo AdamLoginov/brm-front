@@ -5,32 +5,32 @@
         <p class="text-secondary">Алименты закреплены за сотрудником, а не за договором. Все актуальные записи удерживаются при первом согласовании зарплаты и закрываются. Отключение отметки в профиле не отменяет назначенные алименты.</p>
         <hr>
         <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div>
-        <form class="row g-2 align-items-end mb-3" @submit.prevent="saveAlimonyHandler">
-            <div class="col-md-3">
+        <!-- новый код chat: форма в модальном окне -->
+        <div class="d-flex justify-content-end gap-2 mb-3"><button type="button" class="btn btn-sm btn-outline-primary" :disabled="busy" @click="resetForm(); errorMessage = ''; entryOpen = true"><i class="bi bi-plus-lg me-1"></i>Добавить алименты</button></div>
+        <SalaryEntryModal v-if="entryOpen" :title="editingID ? 'Изменить алименты' : 'Добавить алименты'" :busy="busy" :error="errorMessage" @close="resetForm">
+            <form class="row g-3" @submit.prevent="saveAlimonyHandler">
+            <div class="col-sm-6">
                 <label for="alimony-employee" class="form-label">Сотрудник</label>
-                <select id="alimony-employee" v-model="form.employee_card_id" class="form-select form-select-sm" required :disabled="busy || editingSettled">
-                    <option :value="null" disabled>Выберите сотрудника</option>
-                    <option v-if="previousEmployee" :value="previousEmployee.employee_card_id">{{ previousEmployee.employee_name }} (ранее назначенные алименты)</option>
-                    <option v-for="employee in employees" :key="employee.ID" :value="employee.ID">{{ employeeName(employee) }}</option>
-                </select>
+                <fieldset :disabled="busy || editingSettled" :inert="busy || editingSettled" class="border-0 p-0 m-0"><MultiSelect :model-value="form.employee_card_id ? [form.employee_card_id] : []" @update:model-value="ids => form.employee_card_id = ids[0] || null" :options="employeeOptions" :label-key="employeeLabel" :search-key="employeeSearch" plain-selection :multiple="false" placeholder="Выберите сотрудника" search-placeholder="Поиск по ФИО" aria-label="Сотрудник" /></fieldset>
             </div>
-            <div class="col-md-2">
+            <div class="col-sm-6">
                 <label for="alimony-date" class="form-label">Дата начисления</label>
                 <input id="alimony-date" v-model="form.date" type="date" class="form-control form-control-sm" required :disabled="busy">
             </div>
-            <div class="col-md-2">
+            <div class="col-sm-6">
                 <label for="alimony-amount" class="form-label">Сумма, ₽</label>
                 <MoneyInputComponent id="alimony-amount" v-model="form.amount" class="form-control form-control-sm" placeholder="0,00" required :disabled="busy" /> <!-- новый код chat: денежное поле с разделением разрядов -->
             </div>
-            <div class="col-md-3">
+            <div class="col-sm-6">
                 <label for="alimony-comment" class="form-label">Комментарий</label>
                 <input id="alimony-comment" v-model="form.comment" class="form-control form-control-sm" :disabled="busy">
             </div>
-            <div class="col-md-2 d-flex gap-1">
-                <button class="btn btn-primary btn-sm" :disabled="busy || (!employees.length && !editingID)">{{ editingID ? 'Сохранить' : 'Добавить' }}</button>
-                <button v-if="editingID" type="button" class="btn btn-outline-secondary btn-sm" :disabled="busy" @click="resetForm">Отмена</button>
+            <div class="col-12 d-flex justify-content-end gap-2">
+                <button class="btn btn-primary btn-sm" :disabled="busy || !form.employee_card_id">{{ editingID ? 'Сохранить' : 'Добавить' }}</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" :disabled="busy" @click="resetForm">Отмена</button>
             </div>
         </form>
+        </SalaryEntryModal>
         <p v-if="!busy && !employees.length" class="text-secondary">Нет доступных сотрудников с отметкой «Алименты». Включите её в карточке сотрудника.</p>
         <div v-if="busy" class="text-secondary py-3" role="status">Загружаем данные…</div>
         <div v-else class="col-12 col-xl-11 list-group">
@@ -68,6 +68,8 @@
 <!-- --------- конец нового кода chat -->
 
 <script setup>
+import MultiSelect from '../../MultiSelect.vue';
+import SalaryEntryModal from './SalaryEntryModal.vue'; // новый код chat
 // --------- новый код chat: создание, редактирование и удаление алиментов
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -100,9 +102,14 @@ const previousEmployee = computed(() => {
     const row = alimonies.value.find(item => item.ID === editingID.value);
     return row && !employees.value.some(item => item.ID === row.employee_card_id) ? row : null;
 });
-const resetForm = () => { editingID.value = null; form.value = emptyForm(); };
+// новый код chat: поиск по полному имени с компактной подписью
+const entryOpen = ref(false);
+const employeeOptions = computed(() => previousEmployee.value ? [...employees.value, { ID: previousEmployee.value.employee_card_id, historicalName: previousEmployee.value.employee_name }] : employees.value);
+const employeeSearch = e => e.historicalName || employeeName(e);
+const employeeLabel = e => e.historicalName || [e.surname, ...[e.name,e.middle_name].filter(Boolean).map(n=>n[0]+'.')].filter(Boolean).join(' ');
+const resetForm = () => { entryOpen.value = false; editingID.value = null; form.value = emptyForm(); };
 const editAlimonyHandler = (row) => {
-    editingID.value = row.ID;
+    entryOpen.value = true; errorMessage.value = ''; editingID.value = row.ID;
     // Копейки преобразуются в строку без промежуточного округления большой суммы.
     const cents = BigInt(row.amount_kopecks);
     form.value = {employee_card_id:row.employee_card_id, date:row.date, amount:`${cents / 100n}.${String(cents % 100n).padStart(2,'0')}`, comment:row.comment};

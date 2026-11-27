@@ -1,9 +1,9 @@
 <template>
     <!-- новый код chat: общий контейнер и заголовок находятся в AgreementSalaryPage -->
     <div class="pb-3"> <!-- новый код chat: нижний отступ вкладки -->
-        <!-- новый код chat: действия табеля выровнены справа -->
-        <div class="d-flex justify-content-end border-bottom pb-2"> <!-- новый код chat: отступ под кнопками -->
-            <!-- <router-link :to="{name: 'agreement-employee-advance'}">Авансы</router-link> -->
+        <!-- новый код chat: управление месячным табелем -->
+        <div class="sheet-heading">
+            <h2><i class="bi bi-calendar3" aria-hidden="true"></i>Рабочий табель</h2>
             <fieldset :disabled="editingList || listBusy" :inert="editingList || listBusy" class="d-flex gap-2 align-items-center border-0 p-0 m-0"> <!-- новый код chat: настройки и меню недоступны при правке списка -->
                 <time-sheet-create-update-component/>
                 <!-- новый код chat: передача настроек смены, штрафа и суточных -->
@@ -24,13 +24,14 @@
         <div v-if="saveTimesheetError" class="alert alert-danger" role="alert">{{ saveTimesheetError }}</div>
         <div v-if="clipboardError" class="alert alert-warning" role="alert">{{ clipboardError }}</div> <!-- новый код chat: ошибка вставки диапазона -->
         <!-- --------- новый код chat: правила работы над табелем -->
-        <div class="text-secondary mt-3"> <!-- новый код chat: шрифт пояснения как во вкладке штрафов -->
+        <details class="sheet-help">
+            <summary>Как работать с ячейками</summary>
             <div>Работа с ячейками: выделяйте область мышью с зажатой левой кнопкой, Shift + щелчок или Shift + стрелки. Стрелки и Enter перемещают выбор.</div>
             <div>Ctrl+C — копировать, Ctrl+V — вставить, Delete — очистить выделение. Одно скопированное значение заполняет всю выбранную область. Можно копировать данные из Excel и обратно.</div>
             <div>В режиме «Изменить» тяните квадрат в правом нижнем углу выделения: значение или шаблон повторится в соседних ячейках. Отпустите мышь для заполнения; Escape отменяет протягивание.</div> <!-- новый код chat: правило протягивания -->
             <div>Ctrl+Z или Ctrl+Я — отменить последнее изменение. Вставка, очистка и протягивание области отменяются целиком. История действует до сохранения или смены табеля.</div> <!-- новый код chat: отмена операций -->
             <div>Для вставки и очистки нажмите «Изменить», затем «Сохранить». Допустимы 0–24, П, Б, Д, В, Н и пустые ячейки. Блок с ошибками или за границами табеля не вставляется.</div> <!-- новый код chat: не работает на объекте -->
-        </div>
+        </details>
         <!-- --------- конец нового кода chat -->
         <fieldset :disabled="savingTimesheet || listBusy" class="border-0 p-0 m-0">
         <div class="list-group pt-3 ">
@@ -44,7 +45,7 @@
                 <div class="d-flex gap-2">
                    
                     <!-- новый код chat: загрузка табеля сразу после выбора -->
-                    <select v-model="table_select" :disabled="editingList" class="form-select form-select-sm" aria-label="Выбрать табель" style="width: 250px;" @change="changeMonth()">
+                    <select v-model="table_select" :disabled="editingList" class="form-select form-select-sm" aria-label="Выбрать табель" style="width: clamp(115px, 24vw, 240px);" @change="changeMonth()">
                         <option v-for="table in timesheetMonth" :key="table.ID" :value="table.ID">{{ `${monthValue[table.month]} ${table.year}` }}</option>
                     </select>
                 </div>
@@ -76,6 +77,13 @@
                     <button v-if="!editingList" type="button" class="btn  btn-sm" :class="isChange ? 'btn-success' : 'btn-primary'" @click="isChange ? postTimesheetHandler() : changeTimesheet()">{{ isChange ? 'Сохранить' : 'Изменить' }}</button>
                 </div>
             </div>
+            <section v-if="timesheetMonth_select.ID" class="list-group-item sheet-summary" aria-label="Итого за месяц">
+                <dl>
+                    <div><dt>Отработано часов</dt><dd>{{ monthTotals.hours.toLocaleString('ru-RU') }}</dd></div>
+                    <div><dt>Человеко-дней</dt><dd>{{ monthTotals.workdays }}</dd></div>
+                    <div v-for="(label, mark) in markLabels" :key="mark"><dt>{{ label }}</dt><dd>{{ monthTotals.marks[mark] }}</dd></div>
+                </dl>
+            </section>
             <!-- --------- новый код chat: шапка закрепляется в пределах строк табеля -->
             <div ref="timesheetTableArea">
             <div ref="timesheetStickyHeader" class="timesheet-sticky-header" :style="{transform: `translateY(${headerOffset}px)`}">
@@ -390,6 +398,29 @@ const editableDays = employee => {
     return Number(employee.dismissal_date.slice(8, 10)) - 1;
 };
 const isDismissedCell = (row, col) => col >= editableDays(tableEmployees.value?.[row]);
+// новый код chat: положительные часы дают один рабочий день сотрудника
+const markLabels = { П: 'Прогулы', Д: 'В дороге', Б: 'Больничные', В: 'Выходные' };
+const monthTotals = computed(() => {
+    const totals = { hours: 0, workdays: 0, marks: { П: 0, Д: 0, Б: 0, В: 0 } };
+    for (const employee of timesheetMonth_select.value.employees || []) {
+        const cells = timesheet.value[employee.ID];
+        if (!cells) continue;
+        const lastDay = editableDays(employee);
+        for (let day = 1; day <= lastDay; day++) {
+            const mark = String(cells[getDate(day, month.value, year.value)]?.status ?? '').trim().toUpperCase();
+            if (Object.hasOwn(markLabels, mark)) {
+                totals.marks[mark]++;
+            } else {
+                const hours = Number(mark.replace(',', '.'));
+                if (hours > 0 && hours <= 24) {
+                    totals.hours += hours;
+                    totals.workdays++;
+                }
+            }
+        }
+    }
+    return totals;
+});
 // новый код chat: подсветка ФИО только в месяце увольнения
 const dismissedInCurrentMonth = employee => employee.status && employee.dismissal_date?.slice(0, 7) === getDate(1, month.value, year.value).slice(0, 7);
 // --------- конец нового кода chat
@@ -749,6 +780,7 @@ onMounted(getTimeSheetMonthHandler);
     min-width: 0;
 }
 .day-cell input {
+    font-weight: inherit; /* новый код chat: сохраняем полужирное начертание ячейки при вводе */
     width: 100%;
     height: 100%;
     min-width: 0;
@@ -777,4 +809,17 @@ onMounted(getTimeSheetMonthHandler);
 .timesheet-employee-link { color: inherit; text-decoration: none; }
 .timesheet-employee-link:hover { text-decoration: underline; }
 .timesheet-employee-link:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
+/* новый код chat: оформление управления и итогов рабочего табеля */
+.sheet-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:12px 16px; border:1px solid var(--bs-border-color); border-radius:10px; background:var(--bs-body-bg); }
+.sheet-heading h2 { display:flex; align-items:center; gap:10px; margin:0; font-size:18px; font-weight:650; }
+.sheet-heading h2 i { display:grid; place-items:center; width:32px; height:32px; border-radius:8px; color:var(--bs-primary); background:var(--bs-primary-bg-subtle); }
+.sheet-help { margin-top:10px; padding:6px 12px; border-left:3px solid var(--bs-primary-border-subtle); font-size:13px; color:var(--bs-secondary-color); }
+.sheet-help summary { color:var(--bs-body-color); font-weight:600; cursor:pointer; }
+.sheet-help[open] div { margin-top:6px; }
+.sheet-summary { padding:3px 14px; line-height:1.25; background:#e9ecef; }
+.sheet-summary dl { display:flex; flex-wrap:wrap; flex:1 1 320px; gap:3px 14px; margin:0; }
+.sheet-summary dl > div { display:inline-flex; align-items:baseline; gap:5px; } /* новый код chat: подпись и значение в одной строке */
+.sheet-summary dt { font-size:12px; color:var(--bs-secondary-color); font-weight:500; }
+.sheet-summary dd { font-size:13px; margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
+.timesheet-month-navigation { padding-block:12px; }
 </style>

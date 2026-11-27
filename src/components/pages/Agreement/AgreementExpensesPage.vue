@@ -3,20 +3,14 @@
         <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div> <!-- новый код chat -->
 
         <!-- --------- новый код chat: единый блок создания той же ширины, что фильтры и таблица -->
-        <section class="expense-create border rounded-3 p-3 col-12" aria-labelledby="expense-create-title"> <!-- новый код chat: полная ширина -->
-            <!-- новый код chat: доступное сворачивание без сброса введённых данных -->
-            <h2 id="expense-create-title" class="expense-section-heading">
-                <button type="button" class="expense-section-toggle" :aria-expanded="createExpanded" aria-controls="expense-create-body" @click="createExpanded = !createExpanded">
-                    <i class="bi bi-pencil-square text-primary" aria-hidden="true"></i>
-                    {{ editingExpenseID ? 'Изменить расход' : 'Новый расход' }}
-                    <i class="bi ms-auto" :class="createExpanded ? 'bi-chevron-up' : 'bi-chevron-down'" aria-hidden="true"></i>
-                </button>
-            </h2>
-            <form v-show="createExpanded" id="expense-create-body" class="pt-3" @submit.prevent="postExpensesHandler">
+        <!-- новый код chat: форма в модальном окне -->
+        <div class="d-flex justify-content-end gap-2 mb-3"><button type="button" class="btn btn-sm btn-outline-primary" :disabled="isSubmit" @click="resetExpenseForm(); errorMessage = ''; createExpanded = true"><i class="bi bi-plus-lg me-1"></i>Добавить расход</button> <button type="button" class="btn btn-outline-secondary btn-sm" @click="categoryModal?.open()"><i class="bi bi-tags me-1" aria-hidden="true"></i>Категории расходов</button></div>
+        <SalaryEntryModal v-if="createExpanded" :title="editingExpenseID ? 'Изменить расход' : 'Добавить расход'" :busy="isSubmit" :error="errorMessage" @close="resetExpenseForm">
+            <form  id="expense-create-body"  @submit.prevent="postExpensesHandler">
                 <div class="row g-3 align-items-end">
 
                     <!-- новый код chat: дата расхода, включая прошлые и будущие дни -->
-                    <div class="col-12 col-md-6 col-xl-2">
+                    <div class="col-12 col-md-6 col-xl-6">
                         <label for="expense-create-date" class="form-label">Дата расхода</label>
                         <input id="expense-create-date" v-model="formData.expense_date" type="date" required class="form-control form-control-sm">
                     </div>
@@ -26,17 +20,17 @@
                     </div>
 
                     <!-- новый код chat: необязательная категория расхода -->
-                    <div class="col-12 col-md-6 col-xl-4">
+                    <div class="col-12 col-md-6 col-xl-6">
                         <div id="expense-create-category-label" class="form-label">Категория</div>
                         <MultiSelect v-model="createCategorySelection" plain-selection :options="categoryOptions" :multiple="false" placeholder="Без категории" search-placeholder="Поиск категории" aria-labelledby="expense-create-category-label" /> <!-- новый код chat: обычный текст вместо тегов -->
                     </div>
-                    <div class="col-12 col-md-6 col-xl-5"> <!-- новый код chat: поля второй строки занимают всю ширину -->
+                    <div class="col-12 col-md-6 col-xl-6"> <!-- новый код chat: поля второй строки занимают всю ширину -->
                         <!-- новый код chat: тот же поиск, что в фильтрах, с выбором одного сотрудника -->
                         <div id="expense-create-employee-label" class="form-label">Сотрудник</div>
                         <MultiSelect v-model="createEmployeeSelection" plain-selection :options="managerCards || []" :label-key="createEmployeeLabel" :search-key="employeeSearchLabel" :multiple="false" placeholder="Выбрать сотрудника" search-placeholder="Поиск сотрудника" aria-labelledby="expense-create-employee-label" /> <!-- новый код chat: обычный текст как у счёта, поиск по полному ФИО сохранён -->
                     </div>
 
-                    <div class="col-12 col-md-6 col-xl-4"> <!-- новый код chat: место для суммы и выражения -->
+                    <div class="col-12 col-md-6 col-xl-6"> <!-- новый код chat: место для суммы и выражения -->
                         <label for="expense-amount" class="form-label">Сумма</label>
                         <MoneyInputComponent id="expense-amount" ref="amountInput" v-model="formData.price" allow-expressions required class="form-control form-control-sm" placeholder="1 000 или =500*2" title="Можно вводить формулы с =, операции +, -, *, / и скобки. Расчёт при выходе из поля." /> <!-- новый код chat: сумма с вычислением выражений -->
                     </div>
@@ -52,12 +46,11 @@
                     <!-- новый код chat: сохранение и отмена редактирования -->
                     <div class="d-flex gap-2 ms-auto">
                         <button v-if="editingExpenseID" class="btn btn-outline-secondary btn-sm" type="button" :disabled="isSubmit" @click="resetExpenseForm">Отмена</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" @click="categoryModal?.open()"><i class="bi bi-tags me-1" aria-hidden="true"></i>Категории расходов</button> <!-- новый код chat: рядом с добавлением, общий размер кнопок формы -->
                         <button class="btn btn-primary btn-sm" type="submit" :disabled="isSubmit">{{ isSubmit ? 'Сохранение…' : editingExpenseID ? 'Сохранить' : 'Добавить расход' }}</button>
                     </div>
                 </div>
             </form>
-        </section>
+        </SalaryEntryModal>
         <!-- --------- конец нового кода chat -->
 
         <!-- --------- новый код chat: фильтры расходов, применяются совместно без отправки формы -->
@@ -213,6 +206,7 @@
 </template>
 
 <script setup>
+import SalaryEntryModal from './SalaryEntryModal.vue'; // новый код chat
 import { onMounted, reactive, ref, computed, watch } from 'vue'; // новый код chat: обновление при смене договора
 import api from '../../../api';
 import ExpenseCategoryModal from './ExpenseCategoryModal.vue'; // новый код chat
@@ -371,6 +365,7 @@ const onlyDate = (date) =>{
 // --------- новый код chat: редактирование в общей форме и дата старых записей
 const expenseDisplayDate = item => item.expense_date ? item.expense_date.split('-').reverse().join('.') : onlyDate(item.CreatedAt);
 const resetExpenseForm = () => {
+    createExpanded.value = false;
     editingExpenseID.value = null;
     Object.assign(formData, { name: '', price: '', account: 'none', employee_card_id: 0, expense_date: expenseDateKey(new Date()), category_id: null }); // новый код chat
 };

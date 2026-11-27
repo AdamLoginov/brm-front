@@ -19,7 +19,7 @@
         </div>
 
         <!-- Выпадающий список -->
-        <div v-if="isOpen" class="multi-select-dropdown" style="font-size: 14px;">
+        <div v-if="isOpen" ref="menuRef" class="multi-select-dropdown" style="font-size: 14px;">
             <!-- Поиск -->
             <div v-if="searchable" class="mb-2">
                 <input v-model="search" type="text" class="form-control form-control-sm" :placeholder="searchPlaceholder" @click.stop @keydown.enter.prevent> <!-- новый код chat: поиск не отправляет форму -->
@@ -49,7 +49,8 @@
 
 <script setup>
 
-import { ref, computed, onMounted, onBeforeUnmount, useId } from 'vue' // новый код chat: уникальная группа радиокнопок
+import { ref, computed, onMounted, onBeforeUnmount, useId, watch } from 'vue' // новый код chat
+import { createPopper } from '@popperjs/core'
 
 
 const props = defineProps({
@@ -114,6 +115,26 @@ const emit = defineEmits([
 const isOpen = ref(false)
 const search = ref('')
 const selectRef = ref(null)
+// новый код chat: в финансовом окне список позиционируется относительно экрана
+const menuRef = ref(null)
+watch(menuRef, (menu, previous, onCleanup) => {
+    const anchor = selectRef.value
+    if (!menu || !anchor?.closest('dialog.entry-window')) return
+    const resize = () => { menu.style.width = anchor.getBoundingClientRect().width + 'px' }
+    resize()
+    const popup = createPopper(anchor, menu, {
+        strategy: 'fixed',
+        placement: 'bottom-start',
+        modifiers: [
+            { name: 'offset', options: { offset: [0, 3] } },
+            { name: 'flip', options: { boundary: [], padding: 8, fallbackPlacements: ['top-start'] } },
+            { name: 'preventOverflow', options: { boundary: [], padding: 8 } }
+        ]
+    })
+    const observer = new ResizeObserver(() => { resize(); popup.update() })
+    observer.observe(anchor)
+    onCleanup(() => { observer.disconnect(); popup.destroy() })
+}, { flush: 'post' })
 const singleGroup = useId() // новый код chat: независимые одиночные списки
 
 // Открыть / закрыть
