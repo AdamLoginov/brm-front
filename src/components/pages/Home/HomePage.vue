@@ -2,7 +2,7 @@
     <div class="container-fluid pt-3">
         <div class="d-flex">
             <div class="col-lg-8" >
-                <TaskComponent></TaskComponent>
+                <!-- новый код chat: задачи перенесены на отдельную страницу /tasks -->
             </div>
 
             
@@ -11,7 +11,6 @@
 </template>
 
 <script setup>
-import TaskComponent from './TaskComponent.vue';
 
 
 </script>

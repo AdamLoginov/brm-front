@@ -23,16 +23,18 @@
             </span>
             <router-link v-else :to="{ name: item.name }" class="sidebar-link" :class="{ selected: activeSection === item.name }"
               :aria-current="activeSection === item.name ? 'page' : undefined"
-              :aria-label="item.label + (item.name === 'notifications' ? ', непрочитанных: ' + notificationsState.unread : '')"
+              :aria-label="item.label + (item.name === 'notifications' ? ', непрочитанных: ' + notificationsState.unread : item.name === 'tasks' ? ', назначено незавершённых: ' + tasksState.count : '')"
               :title="collapsed ? item.label : undefined" @click="emit('navigate')">
               <i :class="['bi', item.icon]" aria-hidden="true"></i>
               <span v-if="!collapsed" class="label">{{ item.label }}</span>
               <span v-if="item.name === 'notifications' && notificationsState.unread" class="count" aria-hidden="true">{{ notificationsState.unread > 99 ? '99+' : notificationsState.unread }}</span>
+              <span v-if="item.name === 'tasks' && tasksState.count" class="count" aria-hidden="true">{{ tasksState.count > 99 ? '99+' : tasksState.count }}</span> <!-- новый код chat: мои незавершённые задачи -->
             </router-link>
           </li>
         </ul>
       </section>
       <p v-if="notificationsState.error && !collapsed" class="message" role="status">Не удалось обновить уведомления</p>
+      <p v-if="tasksState.error && !collapsed" class="message" role="status">{{ tasksState.error }}</p> <!-- новый код chat -->
     </nav>
     <footer>
       <details ref="profileMenu" @keydown.esc.stop="closeProfile(true)">
@@ -59,6 +61,7 @@ import { useRouter, useRoute } from 'vue-router';
 import api from '../api';
 import { notificationsState, startNotifications, stopNotifications, refreshNotifications } from '../utils/notifications';
 import { clearFileAccess } from '../utils/fileAccess';
+import { tasksState, startTaskCount, stopTaskCount, refreshTaskCount } from '../utils/tasks'; // новый код chat
 
 const props = defineProps({ collapsed: Boolean, mobile: Boolean });
 const emit = defineEmits(['toggle', 'close', 'navigate']);
@@ -75,12 +78,14 @@ const groups = [
   ] },
   { label: 'Общение', items: [
     { name: 'dialogs', label: 'Сообщения', icon: 'bi-chat-left-text', disabled: true }, // новый код chat: временная блокировка
+    { name: 'tasks', label: 'Задачи', icon: 'bi-list-task' }, // новый код chat
     { name: 'notifications', label: 'Уведомления', icon: 'bi-bell' },
   ] },
 ];
 const activeSection = computed(() => {
   const path = route.path;
   if (path === '/') return 'home';
+  if (path === '/tasks') return 'tasks'; // новый код chat
   if (path === '/mtr' || path.startsWith('/mtr/')) return 'mtr'; // новый код chat: все вкладки МТР
   if (/^\/(agreements?|estimate)(\/|$)/.test(path)) return 'agreements';
   if (/^\/employeecards(\/|$)/.test(path)) return 'employee-cards';
@@ -125,6 +130,7 @@ const handleLogout = async () => {
     localStorage.removeItem('user-id');
     localStorage.removeItem('employee-card-id');
     refreshNotifications();
+    refreshTaskCount(true); // новый код chat: сброс счётчика при выходе
     await router.push('/login');
   } catch (error) { logoutError.value = error.message || 'Не удалось выйти. Повторите попытку.'; }
   finally { loggingOut.value = false; }
@@ -137,10 +143,11 @@ watch(() => route.fullPath, () => {
     user.value = null;
     getUserHandler();
     refreshNotifications(1, true);
+    refreshTaskCount(true); // новый код chat: смена пользователя
   }
 }, { immediate: true });
-onMounted(() => { startNotifications(); document.addEventListener('pointerdown', outsideProfile); });
-onBeforeUnmount(() => { userRequest++; stopNotifications(); document.removeEventListener('pointerdown', outsideProfile); });
+onMounted(() => { startNotifications(); startTaskCount(); document.addEventListener('pointerdown', outsideProfile); }); // новый код chat
+onBeforeUnmount(() => { userRequest++; stopNotifications(); stopTaskCount(); document.removeEventListener('pointerdown', outsideProfile); }); // новый код chat
 </script>
 
 <style scoped>

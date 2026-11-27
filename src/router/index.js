@@ -72,6 +72,7 @@ import AgreementSalaryPenaltyPage from '../components/pages/Agreement/AgreementS
 
 
 const routes = [
+  { path:'/tasks', name:'tasks', component:() => import('../components/pages/Home/TasksPage.vue'), meta:{requiresAuth:true} }, // новый код chat
   // новый код chat: сводная проверка сведений и документов сотрудников
   { path: '/employeecards/completeness', name: 'employee-completeness', component: () => import('../components/pages/Employee/EmployeeCompletenessPage.vue'), meta: { requiresAuth: true } },
   { path:'/notifications', name:'notifications', component:NotificationsPage, meta:{requiresAuth:true} }, // новый код chat

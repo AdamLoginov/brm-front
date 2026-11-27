@@ -25,7 +25,7 @@
                         <div class="notification-meta"><span>{{ actorLabels[item.kind] || 'Пользователь' }}: {{ item.actor_name }}</span><time :datetime="item.CreatedAt">{{ dateLabel(item.CreatedAt) }}</time></div>
                     </div>
                     <div class="notification-actions">
-                        <router-link :to="{name:'home',query:{task:String(item.task_id)}}" class="notification-task-link">К задаче <i class="bi bi-arrow-up-right" aria-hidden="true"></i></router-link>
+                        <router-link :to="{name:'tasks',query:{task:String(item.task_id)}}" class="notification-task-link">К задаче <i class="bi bi-arrow-up-right" aria-hidden="true"></i></router-link> <!-- новый код chat: отдельная страница задач -->
                         <button v-if="!item.read_at" class="btn btn-outline-primary btn-sm" :disabled="state.busy" @click="readNotifications(item.ID)"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Прочитать</button>
                         <span v-else class="notification-read"><i class="bi bi-check2-all me-1" aria-hidden="true"></i>Прочитано</span>
                     </div>
